@@ -25,6 +25,7 @@ function OrdinalswalletPage(props) {
   var _h = React.useState(0);
   var tick = _h[0];
   var setTick = _h[1];
+  var scrollContainerRef = React.useRef(null);
   var _i = React.useState(false);
   var statsUnchanged = _i[0];
   var setStatsUnchanged = _i[1];
@@ -74,6 +75,13 @@ function OrdinalswalletPage(props) {
     vm.triggerManualRefresh();
   };
 
+  var handleScrollCheck = function() {
+    var container = scrollContainerRef.current;
+    if (!container) return;
+    var nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 300;
+    if (nearBottom) { vm.loadMore(); }
+  };
+
   var sortButtons = [
     { key: 'listedAtDesc', label: 'Recientes' },
     { key: 'priceDesc', label: '$ Alto' },
@@ -115,7 +123,7 @@ function OrdinalswalletPage(props) {
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted hidden sm:inline' },
           'cargados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, cacheCount + ' / ' + BitmapUtils.formatNumber(totalListings))
+          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length) + ' / ' + BitmapUtils.formatNumber(totalListings))
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
           'listados: ',
@@ -158,7 +166,7 @@ function OrdinalswalletPage(props) {
       ? React.createElement('div', { className: 'flex items-center justify-center py-16' },
           React.createElement('div', { className: 'font-acme text-bitmap-muted' }, 'Cargando datos...')
         )
-      : React.createElement('div', { className: 'flex-1 overflow-y-auto pl-14 pr-4' },
+      : React.createElement('div', { ref: scrollContainerRef, onScroll: handleScrollCheck, className: 'flex-1 overflow-y-auto pl-14 pr-4' },
           filtered.length === 0
             ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
@@ -205,11 +213,12 @@ function OrdinalswalletPage(props) {
                     )
                   );
                 })
-              )
+              ),
+          vm.getIsLoadingMore() ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Cargando m\u00e1s...') : null,
+          !vm.getHasMore() && listings.length > 0 ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Todos los listados cargados') : null
         )
   );
 }
-
 function UnisatPage(props) {
   var navigate = props.navigate;
   var _a = React.useState([]);
@@ -247,7 +256,7 @@ function UnisatPage(props) {
         React.createElement('input', {
           type:'text', value:searchQuery,
           onChange:function(e) { setSearchQuery(e.target.value); },
-          placeholder:'Buscar por número de bloque...',
+          placeholder:'Buscar por n\u00famero de bloque...',
           className:'flex-1 bg-bitmap-surface border border-bitmap-border rounded-lg px-4 py-2.5 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
         }),
         React.createElement('select', {
