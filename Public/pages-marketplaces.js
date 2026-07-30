@@ -25,15 +25,9 @@ function OrdinalswalletPage(props) {
   var _h = React.useState(0);
   var tick = _h[0];
   var setTick = _h[1];
-  var _j = React.useState(vm.getHasMore());
-  var hasMore = _j[0];
-  var setHasMore = _j[1];
-  var _k = React.useState(vm.getIsLoadingMore());
-  var isLoadingMore = _k[0];
-  var setIsLoadingMore = _k[1];
-  var _l = React.useState(false);
-  var statsUnchanged = _l[0];
-  var setStatsUnchanged = _l[1];
+  var _i = React.useState(false);
+  var statsUnchanged = _i[0];
+  var setStatsUnchanged = _i[1];
 
   React.useEffect(function() {
     vm.loadFromCacheOnly();
@@ -66,16 +60,7 @@ function OrdinalswalletPage(props) {
     return function() { clearInterval(timer); };
   }, []);
 
-  var handleScrollCheck = function() {
-    var container = scrollContainerRef.current;
-    if (!container || !hasMore || isLoadingMore) return;
-    var { scrollTop, scrollHeight, clientHeight } = container;
-    if (scrollHeight - scrollTop <= clientHeight + 600) {
-      vm.loadMore();
-    }
-  };
-
-  var displayCount = totalListings || cacheCount || listings.length;
+  var remaining = Math.max(0, Math.floor(300 - ((Date.now() - lastUpdateTime) / 1000) % 300));
   var mins = Math.floor(remaining / 60);
   var secs = remaining % 60;
   var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
@@ -130,7 +115,7 @@ function OrdinalswalletPage(props) {
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted hidden sm:inline' },
           'cargados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(displayCount))
+          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, cacheCount + ' / ' + BitmapUtils.formatNumber(totalListings))
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
           'listados: ',
@@ -173,11 +158,7 @@ function OrdinalswalletPage(props) {
       ? React.createElement('div', { className: 'flex items-center justify-center py-16' },
           React.createElement('div', { className: 'font-acme text-bitmap-muted' }, 'Cargando datos...')
         )
-      : React.createElement('div', {
-          ref: scrollContainerRef,
-          className: 'flex-1 overflow-y-auto pl-14 pr-4',
-          onScroll: handleScrollCheck
-        },
+      : React.createElement('div', { className: 'flex-1 overflow-y-auto pl-14 pr-4' },
           filtered.length === 0
             ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
@@ -193,7 +174,7 @@ function OrdinalswalletPage(props) {
                   },
                     React.createElement('div', { className: 'flex items-center gap-3' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
-                        React.createElement(MondrianCanvas, {
+                        React.createElement(LazyMondrian, {
                           blockNumber: item.bitmapNumber || 0,
                           size: 80,
                           hash: item.hash || '',
@@ -224,68 +205,6 @@ function OrdinalswalletPage(props) {
                     )
                   );
                 })
-              )
-        : React.createElement('div', { className: 'flex items-center justify-center py-16' },
-            React.createElement('div', { className: 'font-acme text-bitmap-muted' }, 'Cargando datos...')
-          )
-      : React.createElement('div', {
-          ref: scrollContainerRef,
-          className: 'flex-1 overflow-y-auto pl-14 pr-4',
-          onScroll: handleScrollCheck
-        },
-          filtered.length === 0
-            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
-            : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
-                filtered.map(function(item, i) {
-                  var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
-                  var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
-                  var etiquetas = item.etiquetas || '';
-                  var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-                  var isPunk = etiquetas.indexOf('Punk') !== -1;
-                  return React.createElement('div', {
-                    key: item.bitmapId || i,
-                    className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
-                  },
-                    React.createElement('div', { className: 'flex items-center gap-3' },
-                      React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
-                        React.createElement(MondrianCanvas, {
-                          blockNumber: item.bitmapNumber || 0,
-                          size: 80,
-                          hash: item.hash || '',
-                          totalTransactions: item.totalTransacciones || 0,
-                          etiquetas: etiquetas,
-                          isPerfect: isPerfect,
-                          isPunk: isPunk
-                        })
-                      ),
-                      React.createElement('div', { className: 'flex-1 min-w-0' },
-                        React.createElement('div', { className: 'flex items-center justify-between' },
-                          React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
-                            '#' + (item.bitmapNumber || '?') + '.bitmap'
-                          ),
-                          React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
-                            btcPrice + ' BTC'
-                          )
-                        ),
-                        React.createElement('div', { className: 'flex items-center justify-between mt-0.5' },
-                          React.createElement('div', { className: 'flex-1 min-w-0' },
-                            etiquetas
-                              ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 })
-                              : null
-                          ),
-                          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr)
-                        )
-                      )
-                    )
-                  );
-                }),
-                isLoadingMore
-                  ? React.createElement('div', { className: 'py-4 text-center font-acme text-bitmap-muted text-sm' }, 'Cargando más...')
-                  : null,
-                !hasMore && listings.length > 0
-                  ? React.createElement('div', { className: 'py-4 text-center font-acme text-bitmap-muted text-sm' }, 'Todos los listados cargados')
-                  : null,
-                React.createElement('div', { className: 'scroll-sentinel', style: { height: 1 } })
               )
         )
   );
