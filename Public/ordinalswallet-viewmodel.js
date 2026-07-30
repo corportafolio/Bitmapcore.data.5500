@@ -75,6 +75,7 @@ var OrdinalswalletViewModel = {
     OrdinalswalletViewModel._isLoading = true;
     OrdinalswalletViewModel._emit('loading');
     OrdinalswalletViewModel._loadBatch();
+    OrdinalswalletViewModel.loadStats();
   },
 
   _loadBatch: function() {
