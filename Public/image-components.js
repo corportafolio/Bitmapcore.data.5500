@@ -1,3 +1,19 @@
+var _genQueue = [];
+var _genProcessing = false;
+
+function _processGenQueue() {
+  if (_genQueue.length === 0) { _genProcessing = false; return; }
+  _genProcessing = true;
+  var task = _genQueue.shift();
+  task();
+  requestAnimationFrame(_processGenQueue);
+}
+
+function _scheduleGeneration(fn) {
+  _genQueue.push(fn);
+  if (!_genProcessing) _processGenQueue();
+}
+
 function MondrianCanvas(props) {
   var blockNumber = props.blockNumber || 0;
   var size = props.size || 320;
@@ -31,7 +47,10 @@ function MondrianCanvas(props) {
       };
       img.src = dataURL;
     } else {
-      ImageViewModel.generateToCanvas(canvas, blockNumber, options, size);
+      _scheduleGeneration(function() {
+        if (cancelled) return;
+        ImageViewModel.generateToCanvas(canvas, blockNumber, options, size);
+      });
     }
 
     return function() { cancelled = true; };
@@ -43,55 +62,8 @@ function MondrianCanvas(props) {
     height: size,
     onClick: onClick,
     className: onClick ? 'cursor-pointer w-full h-full' : 'w-full h-full',
-    style: { imageRendering: 'pixelated' }
+    style: { imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: size === 80 ? 4 : 0 }
   });
-}
-
-function LazyMondrian(props) {
-  var blockNumber = props.blockNumber || 0;
-  var size = props.size || 80;
-  var hash = props.hash || '';
-  var totalTransactions = props.totalTransactions || 0;
-  var etiquetas = props.etiquetas || '';
-  var isPerfect = props.isPerfect || false;
-  var isPunk = props.isPunk || false;
-
-  var containerRef = React.useRef(null);
-  var _a = React.useState(false);
-  var isVisible = _a[0];
-  var setIsVisible = _a[1];
-
-  React.useEffect(function() {
-    var node = containerRef.current;
-    if (!node) return;
-    var observer = new IntersectionObserver(function(entries) {
-      if (entries[0].isIntersecting) {
-        setIsVisible(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: '200px' });
-    observer.observe(node);
-    return function() { observer.disconnect(); };
-  }, []);
-
-  if (!isVisible) {
-    return React.createElement('div', {
-      ref: containerRef,
-      style: { width: size, height: size, background: '#1a1a1a', borderRadius: 4 }
-    });
-  }
-
-  return React.createElement('div', { ref: containerRef },
-    React.createElement(MondrianCanvas, {
-      blockNumber: blockNumber,
-      size: size,
-      hash: hash,
-      totalTransactions: totalTransactions,
-      etiquetas: etiquetas,
-      isPerfect: isPerfect,
-      isPunk: isPunk
-    })
-  );
 }
 
 function BlockThumbnail(props) {
