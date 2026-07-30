@@ -25,7 +25,15 @@ app.use(cors({
 app.use(express.json());
 
 const publicDir = path.join(__dirname, 'Public');
-app.use(express.static(publicDir));
+app.use(express.static(publicDir, {
+  setHeaders: function(res, filePath) {
+    if (filePath.endsWith('.js') || filePath.endsWith('.html')) {
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+    }
+  }
+}));
 
 let db = null;
 try {
