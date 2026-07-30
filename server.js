@@ -821,8 +821,109 @@ async function pollUnisat() {
   if (!dbUnisat) return;
   uniPollingActive = true;
   try {
-    console.log('[UNI] Fetching listings from Unisat...');
+    console.log('[UNI] Fetching from Unisat v3...');
 
+    const now = Date.now();
+    const API_KEY = process.env.UNISAT_API_KEY || '';
+    const headers = { 'Content-Type': 'application/json' };
+    if (API_KEY) headers['Authorization'] = 'Bearer ' + API_KEY;
+
+    const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // ===== PHASE 1: Fetch ALL "Listed" events =====
+    console.log('[UNI] Phase 1: Fetching Listed events...');
+    const listedEvents = [];
+    let listedOffset = 0;
+    let hasMoreListed = true;
+    while (hasMoreListed) {
+      try {
+        const res = await axios.post('https://open-api.unisat.io/v3/market/collection/auction/actions', {
+          filter: { collectionId: 'bitmap', event: 'Listed' },
+          sort: { timestamp: -1 },
+          start: listedOffset,
+          limit: 60
+        }, { headers, timeout: 15000 });
+        const items = (res.data?.data?.list || []);
+        listedEvents.push(...items);
+        hasMoreListed = items.length === 60;
+        listedOffset += 60;
+        if (hasMoreListed) await delay(200);
+      } catch (e) {
+        console.error('[UNI] Listed error at offset ' + listedOffset + ':', e.message);
+        hasMoreListed = false;
+      }
+    }
+    console.log('[UNI] Listed events: ' + listedEvents.length);
+
+    // ===== PHASE 2: Fetch "Sold" events =====
+    console.log('[UNI] Phase 2: Fetching Sold events...');
+    const soldBitmapIds = new Set();
+    let soldOffset = 0;
+    let hasMoreSold = true;
+    while (hasMoreSold) {
+      try {
+        const res = await axios.post('https://open-api.unisat.io/v3/market/collection/auction/actions', {
+          filter: { collectionId: 'bitmap', event: 'Sold' },
+          sort: { timestamp: -1 },
+          start: soldOffset,
+          limit: 60
+        }, { headers, timeout: 15000 });
+        const items = (res.data?.data?.list || []);
+        for (const item of items) {
+          const insId = item.inscriptionId || item.inscription_id || '';
+          if (insId) soldBitmapIds.add(insId);
+        }
+        hasMoreSold = items.length === 60;
+        soldOffset += 60;
+        if (hasMoreSold) await delay(200);
+      } catch (e) {
+        console.error('[UNI] Sold error at offset ' + soldOffset + ':', e.message);
+        hasMoreSold = false;
+      }
+    }
+    console.log('[UNI] Sold events: ' + soldBitmapIds.size);
+
+    // ===== PHASE 3: Fetch "Cancel" events =====
+    console.log('[UNI] Phase 3: Fetching Cancel events...');
+    const cancelBitmapIds = new Set();
+    let cancelOffset = 0;
+    let hasMoreCancel = true;
+    while (hasMoreCancel) {
+      try {
+        const res = await axios.post('https://open-api.unisat.io/v3/market/collection/auction/actions', {
+          filter: { collectionId: 'bitmap', event: 'Cancel' },
+          sort: { timestamp: -1 },
+          start: cancelOffset,
+          limit: 60
+        }, { headers, timeout: 15000 });
+        const items = (res.data?.data?.list || []);
+        for (const item of items) {
+          const insId = item.inscriptionId || item.inscription_id || '';
+          if (insId) cancelBitmapIds.add(insId);
+        }
+        hasMoreCancel = items.length === 60;
+        cancelOffset += 60;
+        if (hasMoreCancel) await delay(200);
+      } catch (e) {
+        console.error('[UNI] Cancel error at offset ' + cancelOffset + ':', e.message);
+        hasMoreCancel = false;
+      }
+    }
+    console.log('[UNI] Cancel events: ' + cancelBitmapIds.size);
+
+    // ===== PHASE 4: Remove Sold/Cancelled from cache =====
+    const allRemoved = new Set([...soldBitmapIds, ...cancelBitmapIds]);
+    if (allRemoved.size > 0) {
+      const removedArr = [...allRemoved];
+      for (let i = 0; i < removedArr.length; i += 100) {
+        const batch = removedArr.slice(i, i + 100);
+        const placeholders = batch.map(() => '?').join(',');
+        dbUnisat.prepare(`DELETE FROM unisat_cache WHERE bitmapId IN (${placeholders})`).run(...batch);
+      }
+      console.log('[UNI] Removed ' + allRemoved.size + ' sold/cancelled from cache');
+    }
+
+    // ===== PHASE 5: Insert/Update Listed events =====
     const insertStmt = dbUnisat.prepare(`
       INSERT OR REPLACE INTO unisat_cache
       (bitmapNumber, bitmapId, listedPrice, listedAt, ownerAddress, extraData, extraData2, timestamp, insertionOrder)
@@ -830,44 +931,29 @@ async function pollUnisat() {
     `);
 
     let totalSaved = 0;
-    let insertionOrder = 1;
-    const now = Date.now();
-    const seenBitmaps = new Set();
+    let insertionOrder = (dbUnisat.prepare("SELECT MAX(insertionOrder) as m FROM unisat_cache").get()?.m || 0) + 1;
 
-    const API_KEY = process.env.UNISAT_API_KEY || '';
+    for (const item of listedEvents) {
+      const insId = item.inscriptionId || item.inscription_id || '';
+      if (!insId) continue;
+      const name = item.collectionItemName || item.collection_item_name || '';
 
-    for (let offset = 0; offset < 300; offset += 60) {
-      try {
-        const headers = {};
-        if (API_KEY) headers['Authorization'] = 'Bearer ' + API_KEY;
-        const res = await axios.get('https://open-api.unisat.io/v1/indexer/market/collection/bitmap/listings', {
-          params: { offset, limit: 60 },
-          headers: headers,
-          timeout: 15000
-        });
-        const items = Array.isArray(res.data) ? res.data : (res.data?.data?.listings || []);
-        for (const item of items) {
-          const bn = item.bitmapNumber || item.blockNumber || parseBitmapNumber(item.name) || 0;
-          const bid = item.auctionId || item.auction_id || item.bitmapId || '';
-          const price = item.listedPrice || item.price || item.satoshiPrice || item.auctionPrice || 0;
-          const listedAt = item.listedAt || item.listed_at || item.timestamp || now;
-          const owner = item.ownerAddress || item.owner || item.sellerAddress || '';
-          const name = item.name || item.extraData || '';
-          
-          insertStmt.run(bn, bid, price, listedAt, owner, name, null, now, insertionOrder++);
-          seenBitmaps.add(bid);
-          totalSaved++;
-        }
-        console.log('[UNI] Offset ' + offset + ': ' + items.length + ' items');
-      } catch (e) {
-        console.error('[UNI] Error fetching offset ' + offset + ':', e.message);
-      }
+      insertStmt.run(
+        parseBitmapNumber(name),
+        insId,
+        item.price || item.unitPrice || 0,
+        (item.timestamp || now),
+        (item.from || ''),
+        name,
+        null,
+        now,
+        insertionOrder++
+      );
+      totalSaved++;
     }
+    console.log('[UNI] Listed saved: ' + totalSaved);
 
-    try {
-      dbUnisat.prepare("DELETE FROM unisat_cache WHERE bitmapId != '' AND bitmapId NOT IN (SELECT value FROM json_each(?))").run(JSON.stringify([...seenBitmaps]));
-    } catch (e) { /* cleanup failed, keep all */ }
-
+    // ===== PHASE 6: Calculate stats =====
     const minPriceRow = dbUnisat.prepare("SELECT MIN(listedPrice) as minPrice FROM unisat_cache WHERE bitmapId != '' AND listedPrice > 0").get();
     const calculatedFloor = minPriceRow ? minPriceRow.minPrice : 0;
 
@@ -878,7 +964,7 @@ async function pollUnisat() {
     dbUnisat.prepare("INSERT OR REPLACE INTO unisat_stats (key, value, updatedAt) VALUES ('total_listed', ?, ?)").run(calculatedListed, now);
     dbUnisat.prepare("INSERT OR REPLACE INTO unisat_stats (key, value, updatedAt) VALUES ('last_poll_time', ?, ?)").run(now, now);
 
-    console.log('[UNI] Poll complete: ' + totalSaved + ' tokens saved, floor=' + calculatedFloor + ', listed=' + calculatedListed);
+    console.log('[UNI] Poll complete: ' + totalSaved + ' saved, ' + allRemoved.size + ' removed, floor=' + calculatedFloor + ', listed=' + calculatedListed);
     uniLastPollTime = now;
   } catch (err) {
     console.error('[UNI] Poll error:', err.message);
