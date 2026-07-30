@@ -193,12 +193,11 @@ function OrdinalswalletPage(props) {
                       ),
                       React.createElement('div', { className: 'flex-1 min-w-0' },
                         React.createElement('div', { className: 'flex items-center justify-between' },
-                          React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
+                          React.createElement('div', { className: 'flex items-center gap-2' },
                             React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
                               '#' + (item.bitmapNumber || '?') + '.bitmap'
                             ),
-                            React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt)),
-                            React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted truncate' }, addr)
+                            React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
                           ),
                           React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
                             btcPrice + ' BTC'
@@ -209,7 +208,8 @@ function OrdinalswalletPage(props) {
                             etiquetas
                               ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 })
                               : null
-                          )
+                          ),
+                          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr)
                         )
                       )
                     )
