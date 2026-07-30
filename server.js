@@ -862,7 +862,7 @@ async function pollUnisat() {
         try {
           const res = await axios.post("https://open-api.unisat.io/v3/market/collection/auction/actions", {
             filter: { collectionId: "bitmap", event: evt },
-            sort: { timestamp: -1 }, start: start, limit: 60
+            sort: { timestamp: -1 }, start: start, limit: 400
           }, { headers, timeout: 15000 });
           const items = (res.data?.data?.list || []);
           total += items.length;
