@@ -4,6 +4,17 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const axios = require('axios');
 
+try {
+  const fs = require('fs');
+  const envFile = path.join(__dirname, '.env');
+  if (fs.existsSync(envFile)) {
+    fs.readFileSync(envFile, 'utf8').split('\n').forEach(function(line) {
+      var m = line.match(/^([^=]+)=(.*)$/);
+      if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+    });
+  }
+} catch(e) {}
+
 const app = express();
 const PORT = 5500;
 
