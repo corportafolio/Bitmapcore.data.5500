@@ -33,14 +33,19 @@ var ImageViewModel = {
     this._notify();
   },
 
-  getCachedSync: function(blockNumber, size) {
-    return this._state.imageCache[blockNumber + '_' + (size || 320)] || null;
+  getCachedSync: function(blockNumber, size, options) {
+    var extra = '';
+    if (options) {
+      extra = '_' + (options.hash || '') + '_' + (options.totalTransactions || 0) + '_' + (options.etiquetas || '');
+    }
+    return this._state.imageCache[blockNumber + '_' + (size || 320) + extra] || null;
   },
 
   getImage: function(blockNumber, options, size) {
     var self = this;
     size = size || 320;
-    var key = blockNumber + '_' + size;
+    var extra = options ? '_' + (options.hash || '') + '_' + (options.totalTransactions || 0) + '_' + (options.etiquetas || '') : '';
+    var key = blockNumber + '_' + size + extra;
     if (self._state.imageCache[key]) {
       var s = Object.assign({}, self._state.stats);
       s.cached++;
@@ -62,11 +67,12 @@ var ImageViewModel = {
 
   generateToCanvas: function(canvas, blockNumber, options, size) {
     MondrianGenerator.generate(canvas, blockNumber, options || {}, size || 320);
-    this.cacheResult(blockNumber, size || 320, canvas);
+    this.cacheResult(blockNumber, size || 320, canvas, options);
   },
 
-  cacheResult: function(blockNumber, size, canvas) {
-    var key = blockNumber + '_' + (size || 320);
+  cacheResult: function(blockNumber, size, canvas, options) {
+    var extra = options ? '_' + (options.hash || '') + '_' + (options.totalTransactions || 0) + '_' + (options.etiquetas || '') : '';
+    var key = blockNumber + '_' + (size || 320) + extra;
     var dataURL = canvas.toDataURL();
     var newCache = Object.assign({}, this._state.imageCache);
     newCache[key] = dataURL;
@@ -81,7 +87,8 @@ var ImageViewModel = {
     var canvas = document.createElement('canvas');
     MondrianGenerator.generate(canvas, blockNumber, options || {}, size || 320);
     var dataURL = canvas.toDataURL();
-    var key = blockNumber + '_' + (size || 320);
+    var extra = options ? '_' + (options.hash || '') + '_' + (options.totalTransactions || 0) + '_' + (options.etiquetas || '') : '';
+    var key = blockNumber + '_' + (size || 320) + extra;
     var newCache = Object.assign({}, self._state.imageCache);
     newCache[key] = dataURL;
     var s = Object.assign({}, self._state.stats);
@@ -96,8 +103,9 @@ var ImageViewModel = {
     self._set({ isGenerating: true });
     var promises = [];
     var seen = {};
+    var extra = options ? '_' + (options.hash || '') + '_' + (options.totalTransactions || 0) + '_' + (options.etiquetas || '') : '';
     for (var i = 0; i < blockNumbers.length; i++) {
-      var key = blockNumbers[i] + '_' + (size || 320);
+      var key = blockNumbers[i] + '_' + (size || 320) + extra;
       if (!seen[key] && !self._state.imageCache[key]) {
         seen[key] = true;
         promises.push(self.getImage(blockNumbers[i], options, size));

@@ -19,7 +19,7 @@ function MondrianCanvas(props) {
     var canvas = canvasRef.current;
     var cancelled = false;
 
-    var dataURL = ImageViewModel.getCachedSync(blockNumber, size);
+    var dataURL = ImageViewModel.getCachedSync(blockNumber, size, options);
     if (dataURL) {
       var img = new Image();
       img.onload = function() {
@@ -45,6 +45,53 @@ function MondrianCanvas(props) {
     className: onClick ? 'cursor-pointer w-full h-full' : 'w-full h-full',
     style: { imageRendering: 'pixelated' }
   });
+}
+
+function LazyMondrian(props) {
+  var blockNumber = props.blockNumber || 0;
+  var size = props.size || 80;
+  var hash = props.hash || '';
+  var totalTransactions = props.totalTransactions || 0;
+  var etiquetas = props.etiquetas || '';
+  var isPerfect = props.isPerfect || false;
+  var isPunk = props.isPunk || false;
+
+  var containerRef = React.useRef(null);
+  var _a = React.useState(false);
+  var isVisible = _a[0];
+  var setIsVisible = _a[1];
+
+  React.useEffect(function() {
+    var node = containerRef.current;
+    if (!node) return;
+    var observer = new IntersectionObserver(function(entries) {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(node);
+    return function() { observer.disconnect(); };
+  }, []);
+
+  if (!isVisible) {
+    return React.createElement('div', {
+      ref: containerRef,
+      style: { width: size, height: size, background: '#1a1a1a', borderRadius: 4 }
+    });
+  }
+
+  return React.createElement('div', { ref: containerRef },
+    React.createElement(MondrianCanvas, {
+      blockNumber: blockNumber,
+      size: size,
+      hash: hash,
+      totalTransactions: totalTransactions,
+      etiquetas: etiquetas,
+      isPerfect: isPerfect,
+      isPunk: isPunk
+    })
+  );
 }
 
 function BlockThumbnail(props) {

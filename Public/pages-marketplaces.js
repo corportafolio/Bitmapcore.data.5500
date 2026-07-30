@@ -174,7 +174,7 @@ function OrdinalswalletPage(props) {
                   },
                     React.createElement('div', { className: 'flex items-center gap-3' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
-                        React.createElement(MondrianCanvas, {
+                        React.createElement(LazyMondrian, {
                           blockNumber: item.bitmapNumber || 0,
                           size: 80,
                           hash: item.hash || '',
