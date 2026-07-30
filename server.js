@@ -888,7 +888,7 @@ async function pollUnisat() {
           }
           hasMore = items.length === 60;
           start += 60;
-          if (hasMore) await delay(100);
+          if (hasMore) await delay(2000);
         } catch (e) {
           console.error("[UNI] " + evt + " error page " + pages + ": " + e.message);
           hasMore = false;
