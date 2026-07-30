@@ -6,6 +6,10 @@ var OrdinalswalletViewModel = {
   _lastUpdateTime: 0,
   _isLoading: false,
   _cacheCount: 0,
+  _offset: 0,
+  _limit: 100,
+  _hasMore: true,
+  _isLoadingMore: false,
   _pollInterval: null,
   _listeners: {},
 
@@ -56,16 +60,56 @@ var OrdinalswalletViewModel = {
     return OrdinalswalletViewModel._cacheCount;
   },
 
+  getHasMore: function() {
+    return OrdinalswalletViewModel._hasMore;
+  },
+
+  getIsLoadingMore: function() {
+    return OrdinalswalletViewModel._isLoadingMore;
+  },
+
   loadFromCacheOnly: function() {
-    ApiClient.get('/api/v1/ordinalswallet/cache/listings?sort=' + OrdinalswalletViewModel._currentSort, true)
+    OrdinalswalletViewModel._offset = 0;
+    OrdinalswalletViewModel._hasMore = true;
+    OrdinalswalletViewModel._listings = [];
+    OrdinalswalletViewModel._isLoading = true;
+    OrdinalswalletViewModel._emit('loading');
+    OrdinalswalletViewModel._loadBatch();
+  },
+
+  _loadBatch: function() {
+    var self = OrdinalswalletViewModel;
+    var url = '/api/v1/ordinalswallet/cache/listings?sort=' + self._currentSort + '&offset=' + self._offset + '&limit=' + self._limit;
+    ApiClient.get(url, true)
       .then(function(res) {
         var items = res.data || [];
-        OrdinalswalletViewModel._listings = items;
-        OrdinalswalletViewModel._cacheCount = items.length;
-        OrdinalswalletViewModel._emit('listings');
+        if (self._offset === 0) {
+          self._listings = items;
+        } else {
+          self._listings = self._listings.concat(items);
+        }
+        self._offset += items.length;
+        self._hasMore = items.length === self._limit;
+        self._cacheCount = items.length;
+        self._isLoading = false;
+        self._isLoadingMore = false;
+        self._emit('listings');
+        self._emit('loading');
       })
-      .catch(function() {});
+      .catch(function() {
+        OrdinalswalletViewModel._isLoading = false;
+        OrdinalswalletViewModel._isLoadingMore = false;
+        OrdinalswalletViewModel._emit('loading');
+      });
+  },
 
+  loadMore: function() {
+    if (OrdinalswalletViewModel._isLoadingMore || !OrdinalswalletViewModel._hasMore) return;
+    OrdinalswalletViewModel._isLoadingMore = true;
+    OrdinalswalletViewModel._loadBatch();
+  },
+
+  loadStats: function() {
     ApiClient.get('/api/v1/ordinalswallet/cache/stats', true)
       .then(function(res) {
         OrdinalswalletViewModel._floorPrice = res.data.floorPrice || 0;

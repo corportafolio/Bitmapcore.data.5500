@@ -776,6 +776,8 @@ app.get('/api/v1/ordinalswallet/cache/listings', (req, res) => {
   if (!dbOw) return sendSuccess(res, []);
   try {
     const sortBy = req.query.sort || 'listedAtDesc';
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 100;
     let orderBy;
     if (sortBy === 'priceDesc') {
       orderBy = 'oc.listedPrice DESC, oc.listedAt DESC';
@@ -796,9 +798,10 @@ app.get('/api/v1/ordinalswallet/cache/listings', (req, res) => {
         LEFT JOIN maindb.blocks b ON oc.bitmapNumber = b.bloque
         WHERE oc.bitmapId != ''
         ORDER BY ${orderBy}
-      `).all();
+        LIMIT ? OFFSET ?
+      `).all(limit, offset);
     } else {
-      rows = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != '' ORDER BY " + orderBy.replace(/oc\./g, '')).all();
+      rows = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != '' ORDER BY " + orderBy.replace(/oc\./g, '') + " LIMIT ? OFFSET ?").all(limit, offset);
     }
 
     sendSuccess(res, rows);
