@@ -45,6 +45,15 @@ try {
     );
     CREATE INDEX IF NOT EXISTS idx_ow_listedAt ON ordinalswallet_cache(listedAt DESC);
     CREATE INDEX IF NOT EXISTS idx_ow_insertion ON ordinalswallet_cache(insertionOrder DESC);
+    CREATE TABLE IF NOT EXISTS block_images (
+      block_number  INTEGER NOT NULL,
+      size          INTEGER NOT NULL DEFAULT 80,
+      options_hash  TEXT NOT NULL,
+      image_data    BLOB NOT NULL,
+      created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (block_number, size, options_hash)
+    ) WITHOUT ROWID;
+    CREATE INDEX IF NOT EXISTS idx_block_images_block ON block_images(block_number);
     CREATE TABLE IF NOT EXISTS ordinalswallet_stats (
       key       TEXT PRIMARY KEY,
       value     INTEGER,
@@ -887,8 +896,60 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
+// ===== BLOCK IMAGES =====
+app.get('/api/v1/block-image/:blockNumber', (req, res) => {
+  try {
+    const blockNumber = parseInt(req.params.blockNumber);
+    const size = parseInt(req.query.size) || 80;
+    const etiquetas = req.query.etiquetas || '';
+    const tx = parseInt(req.query.tx) || 0;
+    const hash = req.query.hash || '';
+    const perfect = req.query.perfect === 'true';
+    const punk = req.query.punk === 'true';
+
+    const cryptoModule = require('crypto');
+    const optsHash = cryptoModule.createHash('md5')
+      .update(etiquetas + '|' + tx + '|' + (perfect ? 1 : 0) + '|' + (punk ? 1 : 0) + '|' + hash)
+      .digest('hex');
+
+    if (!dbOw) return res.status(503).send('DB not ready');
+
+    const row = dbOw.prepare(
+      'SELECT image_data FROM block_images WHERE block_number=? AND size=? AND options_hash=?'
+    ).get(blockNumber, size, optsHash);
+
+    if (row) {
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.send(row.image_data);
+    }
+
+    // Generate on the fly if not cached
+    const { createCanvas } = require('canvas');
+    const MondrianGenerator = require('./utils-mondrian');
+    const canvas = createCanvas(size, size);
+    MondrianGenerator.generate(canvas, blockNumber, {
+      totalTransactions: tx,
+      hash: hash,
+      etiquetas: etiquetas,
+      isPerfect: perfect,
+      isPunk: punk
+    }, size);
+
+    const png = canvas.toBuffer('image/png');
+    dbOw.prepare('INSERT OR REPLACE INTO block_images VALUES (?,?,?,?,CURRENT_TIMESTAMP)')
+        .run(blockNumber, size, optsHash, png);
+
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(png);
+  } catch(err) {
+    res.status(500).send('Internal error');
+  }
+});
+
 // ===== SPA CATCH-ALL =====
-app.get('*', (req, res) => {
+app.use(function(req, res) {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
