@@ -776,14 +776,31 @@ app.get('/api/v1/ordinalswallet/cache/listings', (req, res) => {
   if (!dbOw) return sendSuccess(res, []);
   try {
     const sortBy = req.query.sort || 'listedAtDesc';
-    let rows;
+    let orderBy;
     if (sortBy === 'priceDesc') {
-      rows = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != '' ORDER BY listedPrice DESC, listedAt DESC").all();
+      orderBy = 'oc.listedPrice DESC, oc.listedAt DESC';
     } else if (sortBy === 'priceAsc') {
-      rows = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != '' ORDER BY listedPrice ASC, listedAt DESC").all();
+      orderBy = 'oc.listedPrice ASC, oc.listedAt DESC';
     } else {
-      rows = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != '' ORDER BY listedAt DESC, insertionOrder DESC").all();
+      orderBy = 'oc.listedAt DESC, oc.insertionOrder DESC';
     }
+
+    const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
+    try { dbOw.prepare('ATTACH DATABASE ? AS maindb').run(mainDbPath); } catch (e) { /* already attached */ }
+
+    let rows;
+    if (tableExists('blocks')) {
+      rows = dbOw.prepare(`
+        SELECT oc.*, b.hash, b.etiquetas, b.totalTransacciones, b.totalBtc
+        FROM ordinalswallet_cache oc
+        LEFT JOIN maindb.blocks b ON oc.bitmapNumber = b.bloque
+        WHERE oc.bitmapId != ''
+        ORDER BY ${orderBy}
+      `).all();
+    } else {
+      rows = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != '' ORDER BY " + orderBy.replace(/oc\./g, '')).all();
+    }
+
     sendSuccess(res, rows);
   } catch (err) {
     sendError(res, err.message);

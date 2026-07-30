@@ -164,25 +164,42 @@ function OrdinalswalletPage(props) {
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
                   var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
-                  var timeAgo = item.listedAt ? BitmapUtils.timeAgo(new Date(item.listedAt)) : '';
                   var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
+                  var etiquetas = item.etiquetas || '';
+                  var isPerfect = etiquetas.indexOf('Perfect') !== -1;
+                  var isPunk = etiquetas.indexOf('Punk') !== -1;
                   return React.createElement('div', {
                     key: item.bitmapId || i,
                     className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
                   },
-                    React.createElement('div', { className: 'flex items-center justify-between' },
-                      React.createElement('div', { className: 'flex-1 min-w-0' },
-                        React.createElement('div', { className: 'flex items-center gap-2' },
-                          React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
-                            '#' + (item.bitmapNumber || '?')
-                          ),
-                          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, timeAgo)
-                        ),
-                        React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted mt-0.5 truncate' }, addr)
+                    React.createElement('div', { className: 'flex items-center gap-3' },
+                      React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
+                        React.createElement(MondrianCanvas, {
+                          blockNumber: item.bitmapNumber || 0,
+                          size: 80,
+                          hash: item.hash || '',
+                          totalTransactions: item.totalTransacciones || 0,
+                          etiquetas: etiquetas,
+                          isPerfect: isPerfect,
+                          isPunk: isPunk
+                        })
                       ),
-                      React.createElement('div', { className: 'text-right flex-shrink-0 ml-3' },
-                        React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
-                          btcPrice + ' BTC'
+                      React.createElement('div', { className: 'flex-1 min-w-0' },
+                        React.createElement('div', { className: 'flex items-center justify-between' },
+                          React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
+                            '#' + (item.bitmapNumber || '?') + '.bitmap'
+                          ),
+                          React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
+                            btcPrice + ' BTC'
+                          )
+                        ),
+                        React.createElement('div', { className: 'flex items-center justify-between mt-0.5' },
+                          React.createElement('div', { className: 'flex-1 min-w-0' },
+                            etiquetas
+                              ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 })
+                              : null
+                          ),
+                          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr)
                         )
                       )
                     )
