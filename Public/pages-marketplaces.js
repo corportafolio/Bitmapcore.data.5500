@@ -197,6 +197,7 @@ function OrdinalswalletPage(props) {
                             React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
                               '#' + (item.bitmapNumber || '?') + '.bitmap'
                             ),
+                            React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt)),
                             React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted truncate' }, addr)
                           ),
                           React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
@@ -208,8 +209,7 @@ function OrdinalswalletPage(props) {
                             etiquetas
                               ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 })
                               : null
-                          ),
-                          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2' }, BitmapUtils.timeAgo(item.listedAt))
+                          )
                         )
                       )
                     )
