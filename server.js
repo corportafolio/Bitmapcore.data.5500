@@ -65,6 +65,38 @@ try {
   console.error('Ordinalswallet cache DB not created:', err.message);
 }
 
+let dbUnisat = null;
+try {
+  const fs = require('fs');
+  const dataDir = path.join(__dirname, 'data');
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  dbUnisat = new Database(path.join(dataDir, 'unisat_cache.db'));
+  dbUnisat.pragma('journal_mode = WAL');
+  dbUnisat.exec(`
+    CREATE TABLE IF NOT EXISTS unisat_cache (
+      bitmapNumber  INTEGER,
+      bitmapId      TEXT PRIMARY KEY,
+      listedPrice   INTEGER,
+      listedAt      INTEGER,
+      ownerAddress  TEXT,
+      extraData     TEXT,
+      extraData2    TEXT,
+      timestamp     INTEGER DEFAULT 0,
+      insertionOrder INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_uni_listedAt ON unisat_cache(listedAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_uni_insertion ON unisat_cache(insertionOrder DESC);
+    CREATE TABLE IF NOT EXISTS unisat_stats (
+      key       TEXT PRIMARY KEY,
+      value     INTEGER,
+      updatedAt INTEGER
+    );
+  `);
+  console.log('Unisat cache DB connected');
+} catch (err) {
+  console.error('Unisat cache DB not created:', err.message);
+}
+
 function getTableNames() {
   if (!db) return [];
   try {
@@ -779,6 +811,84 @@ async function pollOrdinalswallet() {
 pollOrdinalswallet();
 setInterval(pollOrdinalswallet, 300000);
 
+// ===== UNISAT POLLING SERVICE + CACHE =====
+
+let uniPollingActive = false;
+let uniLastPollTime = 0;
+
+async function pollUnisat() {
+  if (uniPollingActive) return;
+  if (!dbUnisat) return;
+  uniPollingActive = true;
+  try {
+    console.log('[UNI] Fetching listings from Unisat...');
+
+    const insertStmt = dbUnisat.prepare(`
+      INSERT OR REPLACE INTO unisat_cache
+      (bitmapNumber, bitmapId, listedPrice, listedAt, ownerAddress, extraData, extraData2, timestamp, insertionOrder)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let totalSaved = 0;
+    let insertionOrder = 1;
+    const now = Date.now();
+    const seenBitmaps = new Set();
+
+    const API_KEY = process.env.UNISAT_API_KEY || '';
+
+    for (let offset = 0; offset < 300; offset += 60) {
+      try {
+        const headers = {};
+        if (API_KEY) headers['Authorization'] = 'Bearer ' + API_KEY;
+        const res = await axios.get('https://open-api.unisat.io/v1/indexer/market/collection/bitmap/listings', {
+          params: { offset, limit: 60 },
+          headers: headers,
+          timeout: 15000
+        });
+        const items = Array.isArray(res.data) ? res.data : (res.data?.data?.listings || []);
+        for (const item of items) {
+          const bn = item.bitmapNumber || item.blockNumber || parseBitmapNumber(item.name) || 0;
+          const bid = item.auctionId || item.auction_id || item.bitmapId || '';
+          const price = item.listedPrice || item.price || item.satoshiPrice || item.auctionPrice || 0;
+          const listedAt = item.listedAt || item.listed_at || item.timestamp || now;
+          const owner = item.ownerAddress || item.owner || item.sellerAddress || '';
+          const name = item.name || item.extraData || '';
+          
+          insertStmt.run(bn, bid, price, listedAt, owner, name, null, now, insertionOrder++);
+          seenBitmaps.add(bid);
+          totalSaved++;
+        }
+        console.log('[UNI] Offset ' + offset + ': ' + items.length + ' items');
+      } catch (e) {
+        console.error('[UNI] Error fetching offset ' + offset + ':', e.message);
+      }
+    }
+
+    try {
+      dbUnisat.prepare("DELETE FROM unisat_cache WHERE bitmapId != '' AND bitmapId NOT IN (SELECT value FROM json_each(?))").run(JSON.stringify([...seenBitmaps]));
+    } catch (e) { /* cleanup failed, keep all */ }
+
+    const minPriceRow = dbUnisat.prepare("SELECT MIN(listedPrice) as minPrice FROM unisat_cache WHERE bitmapId != '' AND listedPrice > 0").get();
+    const calculatedFloor = minPriceRow ? minPriceRow.minPrice : 0;
+
+    const countRow = dbUnisat.prepare("SELECT COUNT(*) as c FROM unisat_cache WHERE bitmapId != ''").get();
+    const calculatedListed = countRow ? countRow.c : 0;
+
+    dbUnisat.prepare("INSERT OR REPLACE INTO unisat_stats (key, value, updatedAt) VALUES ('floor_price', ?, ?)").run(calculatedFloor, now);
+    dbUnisat.prepare("INSERT OR REPLACE INTO unisat_stats (key, value, updatedAt) VALUES ('total_listed', ?, ?)").run(calculatedListed, now);
+    dbUnisat.prepare("INSERT OR REPLACE INTO unisat_stats (key, value, updatedAt) VALUES ('last_poll_time', ?, ?)").run(now, now);
+
+    console.log('[UNI] Poll complete: ' + totalSaved + ' tokens saved, floor=' + calculatedFloor + ', listed=' + calculatedListed);
+    uniLastPollTime = now;
+  } catch (err) {
+    console.error('[UNI] Poll error:', err.message);
+  }
+  uniPollingActive = false;
+}
+
+pollUnisat();
+setInterval(pollUnisat, 300000);
+
 // ===== ENDPOINTS DE CACHE ORDINALSWALLET =====
 
 app.get('/api/v1/ordinalswallet/cache/listings', (req, res) => {
@@ -850,6 +960,77 @@ app.get('/api/v1/ordinalswallet/cache/count', (req, res) => {
   }
 });
 
+// ===== ENDPOINTS DE CACHE UNISAT =====
+
+app.get('/api/v1/unisat/cache/listings', (req, res) => {
+  if (!dbUnisat) return sendSuccess(res, []);
+  try {
+    const sortBy = req.query.sort || 'listedAtDesc';
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 100;
+    let orderBy;
+    if (sortBy === 'priceDesc') {
+      orderBy = 'uc.listedPrice DESC, uc.listedAt DESC';
+    } else if (sortBy === 'priceAsc') {
+      orderBy = 'uc.listedPrice ASC, uc.listedAt DESC';
+    } else {
+      orderBy = 'uc.listedAt DESC, uc.insertionOrder DESC';
+    }
+
+    const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
+    try { dbUnisat.prepare('ATTACH DATABASE ? AS maindb').run(mainDbPath); } catch (e) { /* already attached */ }
+
+    let rows;
+    if (tableExists('blocks')) {
+      rows = dbUnisat.prepare(`
+        SELECT uc.*, b.hash, b.etiquetas, b.totalTransacciones, b.totalBtc
+        FROM unisat_cache uc
+        LEFT JOIN maindb.blocks b ON uc.bitmapNumber = b.bloque
+        WHERE uc.bitmapId != ''
+        ORDER BY ${orderBy}
+        LIMIT ? OFFSET ?
+      `).all(limit, offset);
+    } else {
+      rows = dbUnisat.prepare("SELECT * FROM unisat_cache WHERE bitmapId != '' ORDER BY " + orderBy.replace(/uc\./g, '') + " LIMIT ? OFFSET ?").all(limit, offset);
+    }
+
+    sendSuccess(res, rows);
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/unisat/cache/stats', (req, res) => {
+  if (!dbUnisat) return sendSuccess(res, { floorPrice: 0, totalListed: 0 });
+  try {
+    const floor = (dbUnisat.prepare("SELECT value FROM unisat_stats WHERE key='floor_price'").get() || {}).value || 0;
+    const listed = (dbUnisat.prepare("SELECT value FROM unisat_stats WHERE key='total_listed'").get() || {}).value || 0;
+    sendSuccess(res, { floorPrice: floor, totalListed: listed });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/unisat/cache/last-update', (req, res) => {
+  if (!dbUnisat) return sendSuccess(res, { lastUpdate: 0 });
+  try {
+    const row = dbUnisat.prepare("SELECT value FROM unisat_stats WHERE key='last_poll_time'").get();
+    sendSuccess(res, { lastUpdate: row ? row.value : 0 });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/unisat/cache/count', (req, res) => {
+  if (!dbUnisat) return sendSuccess(res, { count: 0 });
+  try {
+    const row = dbUnisat.prepare("SELECT COUNT(*) as c FROM unisat_cache WHERE bitmapId != ''").get();
+    sendSuccess(res, { count: row ? row.c : 0 });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
 // ===== SELECTOR SCREEN =====
 app.get('/api/v1/selector/previews', (req, res) => {
   if (!db) return sendSuccess(res, []);
@@ -890,9 +1071,12 @@ app.get('/api/v1/health', (req, res) => {
     port: PORT,
     database: db ? 'connected' : 'not connected',
     ordinalswalletCache: dbOw ? 'connected' : 'not connected',
+    unisatCache: dbUnisat ? 'connected' : 'not connected',
     tables: getTableNames(),
     owPollingActive: owPollingActive,
-    owLastPollTime: owLastPollTime
+    owLastPollTime: owLastPollTime,
+    uniPollingActive: uniPollingActive,
+    uniLastPollTime: uniLastPollTime
   });
 });
 
