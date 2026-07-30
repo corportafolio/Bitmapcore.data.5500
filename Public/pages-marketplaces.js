@@ -182,14 +182,13 @@ function OrdinalswalletPage(props) {
                   },
                     React.createElement('div', { className: 'flex items-center gap-3' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
-                        React.createElement(MondrianCanvas, {
-                          blockNumber: item.bitmapNumber || 0,
-                          size: 80,
-                          hash: item.hash || '',
-                          totalTransactions: item.totalTransacciones || 0,
-                          etiquetas: etiquetas,
-                          isPerfect: isPerfect,
-                          isPunk: isPunk
+                        React.createElement('img', {
+                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                          width: 80,
+                          height: 80,
+                          loading: 'lazy',
+                          style: { imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: 4 },
+                          alt: ''
                         })
                       ),
                       React.createElement('div', { className: 'flex-1 min-w-0' },
