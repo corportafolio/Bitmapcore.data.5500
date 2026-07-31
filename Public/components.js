@@ -162,7 +162,7 @@ function Sidebar(props) {
                   '#' + (item.bitmapNumber || '?') + '.bitmap'
                 ),
                 React.createElement('div', { className:'flex items-center gap-1' },
-                  React.createElement('span', { className:'font-acme text-[9px] text-bitmap-muted' },
+                  React.createElement('span', { className:'font-acme text-[9px] text-white' },
                     BitmapUtils.timeAgo(item.listedAt)
                   ),
                   React.createElement('span', { className:'font-acme text-[9px] text-bitmap-orange-light' },
