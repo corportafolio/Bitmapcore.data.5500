@@ -330,7 +330,8 @@ var MondrianGenerator = {
                 rem.x += rem.h; rem.w -= rem.h;
               }
             }
-            i = 0;
+            if (ts.r <= 0) { /* slot was removed, next shifted here */ }
+            else i++;
           } else {
             i++;
           }
