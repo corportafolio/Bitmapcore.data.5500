@@ -128,7 +128,7 @@ function Sidebar(props) {
                 tags.slice(0, 3).map(function(tag, ti) {
                   return React.createElement('span', {
                     key: ti,
-                    style:{ display:'inline-block', backgroundColor:'#FFD700', color:'#000', fontSize:'7px', borderRadius:'8px', padding:'1px 4px', whiteSpace:'nowrap', fontFamily:'Alfa Slab One, serif', fontWeight:'bold', lineHeight:'1.2' }
+                    style:{ display:'inline-block', backgroundColor:'#FE3E00', color:'#000', fontSize:'7px', borderRadius:'8px', padding:'1px 4px', whiteSpace:'nowrap', fontFamily:'Alfa Slab One, serif', fontWeight:'bold', lineHeight:'1.2' }
                   }, tag.trim());
                 })
               ),
