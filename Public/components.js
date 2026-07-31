@@ -96,7 +96,7 @@ function Sidebar(props) {
   }) : null;
 
   var sidebar = React.createElement('aside', {
-    className: 'fixed top-14 left-0 bottom-0 w-72 bg-bitmap-black border-r border-bitmap-border z-50 transform transition-transform duration-200 ' + (isOpen ? 'translate-x-0' : '-translate-x-full') + ' lg:translate-x-0 lg:relative lg:top-0 lg:z-0 overflow-y-auto'
+    className: 'fixed top-14 left-0 bottom-0 w-60 bg-bitmap-black border-r border-bitmap-border z-50 transform transition-transform duration-200 ' + (isOpen ? 'translate-x-0' : '-translate-x-full') + ' lg:translate-x-0 lg:relative lg:top-0 lg:z-0 overflow-y-auto'
   },
     React.createElement('div', { className:'divide-y divide-bitmap-border' },
       sorted.length === 0
