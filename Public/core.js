@@ -14,15 +14,31 @@
     var _sidebar = React.useState(false);
     var sidebarOpen = _sidebar[0];
     var setSidebarOpen = _sidebar[1];
+    var _collapsed = React.useState(false);
+    var collapsed = _collapsed[0];
+    var setCollapsed = _collapsed[1];
+
+    React.useEffect(function() {
+      if (collapsed) { document.body.classList.add('sidebar-collapsed'); }
+      else { document.body.classList.remove('sidebar-collapsed'); }
+      return function() { document.body.classList.remove('sidebar-collapsed'); };
+    }, [collapsed]);
+
+    var handleToggleCollapse = function() {
+      setCollapsed(function(prev) { return !prev; });
+    };
 
     return React.createElement('div', { className:'flex flex-col h-full' },
       React.createElement(HeaderBar, {
         onMenuToggle: function() { setSidebarOpen(!sidebarOpen); },
+        collapsed: collapsed,
+        onToggleCollapse: handleToggleCollapse,
         navigate: navigate
       }),
       React.createElement('div', { className:'flex flex-1 overflow-hidden' },
         React.createElement(Sidebar, {
           isOpen: sidebarOpen,
+          collapsed: collapsed,
           onClose: function() { setSidebarOpen(false); },
           navigate: navigate,
           currentPath: currentPath
