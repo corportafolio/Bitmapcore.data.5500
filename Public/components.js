@@ -103,6 +103,7 @@ function Sidebar(props) {
         ? React.createElement('div', { className:'text-center py-8 font-acme text-xs text-bitmap-muted' }, 'Cargando...')
         : sorted.map(function(item, i) {
             var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
+            var tags = (item.etiquetas || '').split('|').filter(function(t) { return t.trim() !== ''; });
             return React.createElement('div', {
               key: (item.source || '') + '_' + (item.bitmapId || i),
               className: 'flex items-center gap-2 px-[3px] py-[3px] hover:bg-bitmap-surface transition-colors cursor-pointer',
@@ -110,22 +111,34 @@ function Sidebar(props) {
             },
           React.createElement('img', {
             src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=false&punk=false',
-            style: { width: 40, height: 40, borderRadius: 4, background: '#1a1a1a', imageRendering: 'pixelated', flexShrink: 0 },
+            style: { width: 35, height: 35, borderRadius: 4, background: '#1a1a1a', imageRendering: 'pixelated', flexShrink: 0 },
             loading: 'lazy', alt: ''
           }),
           React.createElement('div', { className:'flex-1 min-w-0' },
-            React.createElement('div', { className:'font-alfaslab text-[9px] text-bitmap-orange truncate' },
-              '#' + (item.bitmapNumber || '?') + '.bitmap'
+            React.createElement('div', { className:'flex justify-between items-center' },
+              React.createElement('div', { className:'font-alfaslab text-[9px] text-bitmap-orange truncate' },
+                '#' + (item.bitmapNumber || '?') + '.bitmap'
+              ),
+              React.createElement('div', { className:'font-acme text-[9px] text-bitmap-orange-light ml-1' },
+                btcPrice
+              )
             ),
-            React.createElement('div', { className:'font-acme text-[9px] text-bitmap-orange-light' },
-              btcPrice + ' BTC'
+            React.createElement('div', { className:'flex justify-between items-center' },
+              React.createElement('div', { style:{ display:'flex', flexWrap:'nowrap', overflow:'hidden', gap:'4px' } },
+                tags.slice(0, 3).map(function(tag, ti) {
+                  return React.createElement('span', {
+                    key: ti,
+                    style:{ display:'inline-block', backgroundColor:'#FFD700', color:'#000', fontSize:'7px', borderRadius:'8px', padding:'1px 4px', whiteSpace:'nowrap', fontFamily:'Alfa Slab One, serif', fontWeight:'bold', lineHeight:'1.2' }
+                  }, tag.trim());
+                })
+              ),
+              React.createElement('img', {
+                src: item.source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : 'unisat_logo.png',
+                style: { width: 10, height: 10, flexShrink: 0 },
+                alt: ''
+              })
             )
-          ),
-          React.createElement('img', {
-            src: item.source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : 'unisat_logo.png',
-            style: { width: 10, height: 10, flexShrink: 0 },
-            alt: ''
-          })
+          )
             );
           })
     )
