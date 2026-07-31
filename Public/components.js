@@ -161,8 +161,13 @@ function Sidebar(props) {
                 React.createElement('div', { className:'font-alfaslab text-[9px] text-bitmap-orange truncate' },
                   '#' + (item.bitmapNumber || '?') + '.bitmap'
                 ),
-                React.createElement('div', { className:'font-acme text-[9px] text-bitmap-orange-light ml-1' },
-                  btcPrice
+                React.createElement('div', { className:'flex items-center gap-1' },
+                  React.createElement('span', { className:'font-acme text-[9px] text-bitmap-muted' },
+                    BitmapUtils.timeAgo(item.listedAt)
+                  ),
+                  React.createElement('span', { className:'font-acme text-[9px] text-bitmap-orange-light' },
+                    btcPrice
+                  )
                 )
               ),
               React.createElement('div', { className:'flex justify-between items-center' },
