@@ -116,6 +116,40 @@ try {
   console.error('Unisat cache DB not created:', err.message);
 }
 
+let dbUnified = null;
+try {
+  const fs = require('fs');
+  const dataDir = path.join(__dirname, 'data');
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  dbUnified = new Database(path.join(dataDir, 'unified_cache.db'));
+  dbUnified.pragma('journal_mode = WAL');
+  dbUnified.exec(`
+    CREATE TABLE IF NOT EXISTS unified_listings (
+      bitmapNumber  INTEGER,
+      bitmapId      TEXT,
+      listedPrice   INTEGER,
+      listedAt      INTEGER,
+      ownerAddress  TEXT,
+      extraData     TEXT,
+      extraData2    TEXT,
+      timestamp     INTEGER DEFAULT 0,
+      insertionOrder INTEGER,
+      source        TEXT,
+      PRIMARY KEY (bitmapId, source)
+    );
+    CREATE INDEX IF NOT EXISTS idx_unified_listedAt ON unified_listings(listedAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_unified_insertion ON unified_listings(insertionOrder DESC);
+    CREATE TABLE IF NOT EXISTS unified_stats (
+      key       TEXT PRIMARY KEY,
+      value     INTEGER,
+      updatedAt INTEGER
+    );
+  `);
+  console.log('Unified cache DB connected');
+} catch (err) {
+  console.error('Unified cache DB not created:', err.message);
+}
+
 function getTableNames() {
   if (!db) return [];
   try {
@@ -917,6 +951,118 @@ async function pollUnisat() {
 pollUnisat();
 setInterval(pollUnisat, 300000);
 
+// ===== UNIFIED POLLING =====
+
+async function pollUnified() {
+  if (!dbUnified) return;
+  if (!dbOw || !dbUnisat) return;
+  try {
+    console.error('[UNI-F] Merging OW + Unisat into unified listings...');
+    const now = Date.now();
+
+    dbUnified.prepare("DELETE FROM unified_listings").run();
+
+    const insertStmt = dbUnified.prepare(`
+      INSERT OR REPLACE INTO unified_listings
+      (bitmapNumber, bitmapId, listedPrice, listedAt, ownerAddress, extraData, extraData2, timestamp, insertionOrder, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let insertionOrder = 1;
+    let total = 0;
+
+    const owRows = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != ''").all();
+    for (const row of owRows) {
+      insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
+        row.ownerAddress, row.extraData, row.extraData2, row.timestamp, insertionOrder++, 'ordinalswallet');
+      total++;
+    }
+
+    const uniRows = dbUnisat.prepare("SELECT * FROM unisat_cache WHERE bitmapId != ''").all();
+    for (const row of uniRows) {
+      insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
+        row.ownerAddress, row.extraData, row.extraData2, row.timestamp, insertionOrder++, 'unisat');
+      total++;
+    }
+
+    const minRow = dbUnified.prepare("SELECT MIN(listedPrice) as p FROM unified_listings WHERE listedPrice > 0").get();
+    const countRow = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_listings").get();
+
+    dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('floor_price',?,?)").run(minRow?.p || 0, now);
+    dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('total_listed',?,?)").run(countRow?.c || 0, now);
+    dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('last_poll_time',?,?)").run(now, now);
+
+    console.error('[UNI-F] Unified merge done: ' + total + ' listings, floor=' + (minRow?.p || 0) + ', total=' + (countRow?.c || 0));
+  } catch (err) {
+    console.error('[UNI-F] Error:', err.message);
+  }
+}
+
+setTimeout(pollUnified, 15000);
+setInterval(pollUnified, 305000);
+
+// ===== ENDPOINTS DE CACHE UNIFIED =====
+
+app.get('/api/v1/unified/cache/listings', (req, res) => {
+  if (!dbUnified) return sendSuccess(res, []);
+  try {
+    const sortBy = req.query.sort || 'listedAtDesc';
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 100;
+    let orderBy;
+    if (sortBy === 'priceDesc') orderBy = 'ul.listedPrice DESC, ul.listedAt DESC';
+    else if (sortBy === 'priceAsc') orderBy = 'ul.listedPrice ASC, ul.listedAt DESC';
+    else orderBy = 'ul.listedAt DESC, ul.insertionOrder DESC';
+
+    const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
+    try { dbUnified.prepare('ATTACH DATABASE ? AS maindb').run(mainDbPath); } catch (e) {}
+
+    let rows;
+    if (tableExists('blocks')) {
+      rows = dbUnified.prepare(`
+        SELECT ul.*, b.hash, b.etiquetas, b.totalTransacciones, b.totalBtc
+        FROM unified_listings ul
+        LEFT JOIN maindb.blocks b ON ul.bitmapNumber = b.bloque
+        ORDER BY ${orderBy}
+        LIMIT ? OFFSET ?
+      `).all(limit, offset);
+    } else {
+      rows = dbUnified.prepare("SELECT * FROM unified_listings ORDER BY " + orderBy.replace(/ul\./g, '') + " LIMIT ? OFFSET ?").all(limit, offset);
+    }
+
+    sendSuccess(res, rows);
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/unified/cache/stats', (req, res) => {
+  if (!dbUnified) return sendSuccess(res, { floorPrice: 0, totalListed: 0 });
+  try {
+    const floor = (dbUnified.prepare("SELECT value FROM unified_stats WHERE key='floor_price'").get() || {}).value || 0;
+    const listed = (dbUnified.prepare("SELECT value FROM unified_stats WHERE key='total_listed'").get() || {}).value || 0;
+    sendSuccess(res, { floorPrice: floor, totalListed: listed });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/unified/cache/last-update', (req, res) => {
+  if (!dbUnified) return sendSuccess(res, { lastUpdate: 0 });
+  try {
+    const row = dbUnified.prepare("SELECT value FROM unified_stats WHERE key='last_poll_time'").get();
+    sendSuccess(res, { lastUpdate: row ? row.value : 0 });
+  } catch (err) { sendError(res, err.message); }
+});
+
+app.get('/api/v1/unified/cache/count', (req, res) => {
+  if (!dbUnified) return sendSuccess(res, { count: 0 });
+  try {
+    const row = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_listings").get();
+    sendSuccess(res, { count: row ? row.c : 0 });
+  } catch (err) { sendError(res, err.message); }
+});
+
 
 // ===== ENDPOINTS DE CACHE ORDINALSWALLET =====
 
@@ -1101,6 +1247,7 @@ app.get('/api/v1/health', (req, res) => {
     database: db ? 'connected' : 'not connected',
     ordinalswalletCache: dbOw ? 'connected' : 'not connected',
     unisatCache: dbUnisat ? 'connected' : 'not connected',
+    unifiedCache: dbUnified ? 'connected' : 'not connected',
     tables: getTableNames(),
     owPollingActive: owPollingActive,
     owLastPollTime: owLastPollTime,
