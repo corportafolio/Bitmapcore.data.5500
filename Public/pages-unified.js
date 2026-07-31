@@ -199,12 +199,14 @@ function UnifiedPage(props) {
                               ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 })
                               : null
                           ),
-                          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr),
-                          React.createElement('img', {
-                            src: item.source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : 'unisat_logo.png',
-                            style: { width: 30, height: 30, marginLeft: 6, flexShrink: 0, alignSelf: 'center' },
-                            alt: ''
-                          })
+                          React.createElement('span', { className: 'flex items-center flex-shrink-0 ml-2 gap-1' },
+                            React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted truncate' }, addr),
+                            React.createElement('img', {
+                              src: item.source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : 'unisat_logo.png',
+                              style: { width: 16, height: 16, flexShrink: 0 },
+                              alt: ''
+                            })
+                          )
                         )
                       )
                     )

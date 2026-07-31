@@ -75,15 +75,20 @@ function Sidebar(props) {
   var navigate = props.navigate;
   var currentPath = props.currentPath;
 
-  var items = [
-    { id:'ordinalswallet', label:'Ordinalswallet', icon:'\uD83D\uDFE7', path:'/ordinalswallet' },
-    { id:'unisat', label:'Unisat', icon:'\uD83D\uDFE1', path:'/unisat' },
-    { id:'unified', label:'Todos', icon:'\uD83C\uDF10', path:'/unified' },
-    { id:'local', label:'BitmapCore', icon:'\uD83D\uDFE0', path:'/local' },
-    { id:'discounts', label:'Descuentos', icon:'\uD83D\uDFE2', path:'/discounts' },
-    { id:'tags', label:'Etiquetas', icon:'\uD83C\uDFF7\uFE0F', path:'/' },
-    { id:'sales', label:'Ventas', icon:'\uD83D\uDCB0', path:'/sales' }
-  ];
+  var vm = UnifiedViewModel;
+  var _a = React.useState(vm.getListings());
+  var listings = _a[0];
+  var setListings = _a[1];
+
+  React.useEffect(function() {
+    vm.loadFromCacheOnly();
+    var unsub = vm.subscribe('listings', function() { setListings(vm.getListings()); });
+    return function() { unsub(); };
+  }, []);
+
+  var sorted = listings.slice().sort(function(a, b) {
+    return (a.listedPrice || 0) - (b.listedPrice || 0);
+  });
 
   var overlay = isOpen ? React.createElement('div', {
     className:'fixed inset-0 bg-bitmap-black/50 z-40 lg:hidden',
@@ -91,20 +96,38 @@ function Sidebar(props) {
   }) : null;
 
   var sidebar = React.createElement('aside', {
-    className: 'fixed top-14 left-0 bottom-0 w-60 bg-bitmap-black border-r border-bitmap-border z-50 transform transition-transform duration-200 ' + (isOpen ? 'translate-x-0' : '-translate-x-full') + ' lg:translate-x-0 lg:relative lg:top-0 lg:z-0 overflow-y-auto'
+    className: 'fixed top-14 left-0 bottom-0 w-72 bg-bitmap-black border-r border-bitmap-border z-50 transform transition-transform duration-200 ' + (isOpen ? 'translate-x-0' : '-translate-x-full') + ' lg:translate-x-0 lg:relative lg:top-0 lg:z-0 overflow-y-auto'
   },
-    React.createElement('nav', { className:'py-2' },
-      items.map(function(item) {
-        var isActive = currentPath === item.path;
-        return React.createElement('button', {
-          key: item.id,
-          onClick: function() { navigate(item.path); onClose(); },
-          className: 'flex items-center gap-3 w-full px-4 py-3 text-left transition-all ' + (isActive ? 'border-l-4 border-bitmap-orange bg-bitmap-black/30' : 'border-l-4 border-transparent hover:bg-bitmap-black/20')
-        },
-          React.createElement('span', { className:'text-lg' }, item.icon),
-          React.createElement('span', { className:'font-alfaslab text-xs ' + (isActive ? 'text-bitmap-orange' : 'text-bitmap-text') }, item.label)
-        );
-      })
+    React.createElement('div', { className:'divide-y divide-bitmap-border' },
+      sorted.length === 0
+        ? React.createElement('div', { className:'text-center py-8 font-acme text-xs text-bitmap-muted' }, 'Cargando...')
+        : sorted.map(function(item, i) {
+            var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
+            return React.createElement('div', {
+              key: (item.source || '') + '_' + (item.bitmapId || i),
+              className: 'flex items-center gap-2 px-3 py-2 hover:bg-bitmap-surface transition-colors cursor-pointer',
+              onClick: function() { navigate('/blocks/' + (item.bitmapNumber || '')); onClose(); }
+            },
+              React.createElement('img', {
+                src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=false&punk=false',
+                style: { width: 56, height: 56, borderRadius: 4, background: '#1a1a1a', imageRendering: 'pixelated', flexShrink: 0 },
+                loading: 'lazy', alt: ''
+              }),
+              React.createElement('div', { className:'flex-1 min-w-0' },
+                React.createElement('div', { className:'font-alfaslab text-xs text-bitmap-orange truncate' },
+                  '#' + (item.bitmapNumber || '?') + '.bitmap'
+                ),
+                React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light' },
+                  btcPrice + ' BTC'
+                )
+              ),
+              React.createElement('img', {
+                src: item.source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : 'unisat_logo.png',
+                style: { width: 16, height: 16, flexShrink: 0 },
+                alt: ''
+              })
+            );
+          })
     )
   );
 
