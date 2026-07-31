@@ -8,6 +8,9 @@ function HeaderBar(props) {
   var title = props.title;
   var navigate = props.navigate;
   var walletState = StoreApp.get('wallet');
+  var _cw = React.useState(ConnectionWalletViewModel.isConnected() ? ConnectionWalletViewModel.getAddress() : null);
+  var cwAddress = _cw[0];
+  var setCwAddress = _cw[1];
   var _hc = React.useState(false);
   var showHamburgerMenu = _hc[0];
   var setShowHamburgerMenu = _hc[1];
@@ -21,6 +24,13 @@ function HeaderBar(props) {
     window.addEventListener('click', close);
     return function() { window.removeEventListener('click', close); };
   }, [showHamburgerMenu]);
+
+  React.useEffect(function() {
+    var unsub = ConnectionWalletViewModel.subscribe('wallet', function(w) {
+      setCwAddress(w.isConnected ? w.address : null);
+    });
+    return unsub;
+  }, []);
 
   React.useEffect(function() {
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
@@ -58,7 +68,7 @@ function HeaderBar(props) {
         className:'absolute right-0 top-full mt-1 w-56 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1',
         onClick: function(e) { e.stopPropagation(); }
       },
-        React.createElement('button', { onClick: function() { navigate('/wallet'); setShowHamburgerMenu(false); }, className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors' }, walletState.isConnected ? '\uD83D\uDC64 ' + BitmapUtils.truncateAddress(walletState.address, 4) : '\uD83D\uDC64 Cuentas'),
+        React.createElement('button', { onClick: function() { if (cwAddress) { navigate('/mis-activos'); } else { navigate('/wallet'); } setShowHamburgerMenu(false); }, className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors' }, cwAddress ? '\uD83D\uDCB0 ' + BitmapUtils.truncateAddress(cwAddress, 4) : '\uD83D\uDCB0 Conectar Wallet'),
         React.createElement('button', { onClick: function() { navigate('/settings'); setShowHamburgerMenu(false); }, className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors' }, 'Perfil'),
         React.createElement('div', { className:'border-t border-bitmap-border my-1' }),
         React.createElement('a', { href:'https://bitmapcore.net/whitepaper', target:'_blank', className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors block' }, 'Whitepaper'),
