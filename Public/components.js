@@ -29,7 +29,7 @@ function HeaderBar(props) {
       .catch(function() {});
   }, []);
 
-  return React.createElement('header', { className:'flex items-center justify-between h-14 bg-bitmap-black border-b border-bitmap-border px-4 sm:px-6 z-30 relative' },
+  return React.createElement('header', { className:'flex items-center justify-between h-14 bg-bitmap-black border-b border-bitmap-border pl-[3px] pr-4 sm:pr-6 z-30 relative' },
     showBackButton ? React.createElement('button', {
       onClick: function() { if (navigate) navigate(-1); },
       className:'font-alfaslab text-bitmap-orange text-sm hover:text-bitmap-orange-light transition-colors mr-2'
