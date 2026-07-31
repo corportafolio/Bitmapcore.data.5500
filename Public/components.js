@@ -36,7 +36,7 @@ function HeaderBar(props) {
     }, '\u2190 Volver') : null,
     !showBackButton && onToggleCollapse ? React.createElement('button', {
       onClick: onToggleCollapse,
-      className:'text-bitmap-orange text-lg mr-2 cursor-pointer hover:opacity-70 transition-opacity',
+      className:'text-bitmap-muted text-[9px] mr-[3px] cursor-pointer hover:opacity-70 transition-opacity',
       title: collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'
     }, collapsed ? '\u25B6' : '\u25C0') : null,
     !showBackButton ? React.createElement('div', { className:'flex items-center gap-2 cursor-pointer', onClick: function() { navigate('/'); } },
