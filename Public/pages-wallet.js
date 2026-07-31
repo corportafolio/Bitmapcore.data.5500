@@ -92,102 +92,42 @@ function WalletDashboardPage(props) {
 
 function MisActivosPage(props) {
   var navigate = props.navigate;
-  var vm = ConnectionWalletViewModel;
-  var _a = React.useState(vm.getAssets());
+  var wallet = StoreApp.get('wallet');
+  var _a = React.useState([]);
   var assets = _a[0];
   var setAssets = _a[1];
-  var _b = React.useState(vm.isConnected());
-  var isConnected = _b[0];
-  var setIsConnected = _b[1];
-  var _c = React.useState(false);
-  var isSyncing = _c[0];
-  var setIsSyncing = _c[1];
+  var _b = React.useState(true);
+  var isLoading = _b[0];
+  var setIsLoading = _b[1];
 
   React.useEffect(function() {
-    var unsubWallet = vm.subscribe('wallet', function(w) { setIsConnected(w.isConnected); });
-    var unsubAssets = vm.subscribe('assets', function(a) { setAssets(a || []); });
-    return function() { unsubWallet(); unsubAssets(); };
-  }, []);
+    if (!wallet.address) { setIsLoading(false); return; }
+    setIsLoading(true);
+    MisActivosApi.getByAddress(wallet.address).then(function(data) {
+      var items = (data && data.data && data.data.inscriptions) || data.inscriptions || data || [];
+      setAssets(Array.isArray(items) ? items : []);
+      setIsLoading(false);
+    }).catch(function() { setIsLoading(false); });
+  }, [wallet.address]);
 
-  var handleSync = function() {
-    setIsSyncing(true);
-    vm.syncAssetsFromServer().then(function() { setIsSyncing(false); }).catch(function() { setIsSyncing(false); });
-  };
-
-  var handleSell = function(asset) {
-    if (!vm.isConnected()) { return; }
-    navigate('/local/sell/' + asset.inscriptionId);
-  };
-
-  return React.createElement('div', { className: 'p-4 lg:p-6' },
-    React.createElement('div', { className: 'max-w-5xl mx-auto space-y-4' },
-      React.createElement('div', { className: 'flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4' },
-        React.createElement('h2', { className: 'font-alfaslab text-xl text-white' }, I18n.t('wallet.myAssets')),
-        React.createElement('div', { className: 'flex items-center gap-2' },
-          vm.getLastSync() && isConnected ? React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted hidden sm:block' }, BitmapUtils.timeAgo(vm.getLastSync())) : null,
-          React.createElement('button', {
-            onClick: handleSync,
-            disabled: isSyncing || !isConnected,
-            className: 'px-3 py-1.5 bg-bitmap-surface border border-bitmap-border text-white font-alfaslab text-xs rounded hover:border-bitmap-orange transition-colors disabled:opacity-50'
-          }, isSyncing ? 'Sincronizando...' : 'Sincronizar')
-        )
-      ),
-      !isConnected ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' },
-        React.createElement('p', null, 'Conecta tu wallet para ver tus activos'),
-        React.createElement('button', {
-          onClick: function() { navigate('/wallet'); },
-          className: 'mt-4 px-4 py-2 bg-bitmap-orange text-white rounded-lg font-alfaslab text-sm'
-        }, 'Conectar Wallet')
-      ) :
-      assets.length === 0 ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' },
-        React.createElement('p', null, 'No hay activos guardados localmente'),
-        React.createElement('button', {
-          onClick: handleSync,
-          disabled: isSyncing,
-          className: 'mt-4 px-4 py-2 bg-bitmap-surface border border-bitmap-border text-white font-alfaslab text-sm rounded hover:border-bitmap-orange transition-colors'
-        }, isSyncing ? 'Sincronizando...' : 'Sincronizar desde servidor')
-      ) :
-      React.createElement('div', { className: 'overflow-x-auto' },
-        React.createElement('table', { className: 'w-full text-sm font-acme' },
-          React.createElement('thead', null,
-            React.createElement('tr', { className: 'text-left text-bitmap-muted border-b border-bitmap-border' },
-              React.createElement('th', { className: 'py-2 px-3 w-10' }, '#'),
-              React.createElement('th', { className: 'py-2 px-3 w-16' }, 'Imagen'),
-              React.createElement('th', { className: 'py-2 px-3' }, 'Nombre'),
-              React.createElement('th', { className: 'py-2 px-3' }, 'Bloque'),
-              React.createElement('th', { className: 'py-2 px-3 hidden md:table-cell' }, 'Inscription ID'),
-              React.createElement('th', { className: 'py-2 px-3' }, 'Precio'),
-              React.createElement('th', { className: 'py-2 px-3 hidden sm:table-cell' }, 'Fecha'),
-              React.createElement('th', { className: 'py-2 px-3 w-24' }, 'Acciones')
-            )
-          ),
-          React.createElement('tbody', { className: 'divide-y divide-bitmap-border' },
-            assets.map(function(asset, i) {
-              return React.createElement('tr', { key: asset.inscriptionId || i, className: 'hover:bg-bitmap-surface' },
-                React.createElement('td', { className: 'py-2 px-3 text-bitmap-muted' }, i + 1),
-                React.createElement('td', { className: 'py-2 px-3' },
-                  asset.image ? React.createElement('img', { src: asset.image, alt: '', className: 'w-12 h-12 object-cover rounded bg-bitmap-black' }) :
-                  React.createElement('div', { className: 'w-12 h-12 rounded bg-bitmap-black overflow-hidden' },
-                    React.createElement(MondrianCanvas, { blockNumber: asset.blockNumber || i, transactions: [], size: 48 })
-                  )
-                ),
-                React.createElement('td', { className: 'py-2 px-3 font-alfaslab text-white truncate max-w-[120px]' }, asset.name || '#' + (asset.blockNumber || '?')),
-                React.createElement('td', { className: 'py-2 px-3 text-bitmap-orange' }, '#' + (asset.blockNumber || '?')),
-                React.createElement('td', { className: 'py-2 px-3 text-xs text-bitmap-text truncate max-w-[100px] hidden md:table-cell' }, asset.inscriptionId ? asset.inscriptionId.slice(0, 20) + '...' : '-'),
-                React.createElement('td', { className: 'py-2 px-3 text-bitmap-orange-light' }, asset.pricePaid ? (asset.pricePaid / 100000000).toFixed(5) + ' BTC' : '-'),
-                React.createElement('td', { className: 'py-2 px-3 text-bitmap-muted hidden sm:table-cell' }, asset.dateAdded ? BitmapUtils.timeAgo(asset.dateAdded) : '-'),
-                React.createElement('td', { className: 'py-2 px-3' },
-                  React.createElement('button', {
-                    onClick: function() { handleSell(asset); },
-                    className: 'px-2 py-1 bg-bitmap-orange text-white font-alfaslab text-xs rounded hover:bg-bitmap-orange/80 transition-colors'
-                  }, 'Vender')
-                )
-              );
-            })
-          )
+  return React.createElement('div', { className:'p-4 lg:p-6' },
+    React.createElement('div', { className:'max-w-4xl mx-auto space-y-4' },
+        React.createElement('h2', { className:'font-alfaslab text-xl text-white' }, I18n.t('wallet.myAssets')),
+        !wallet.isConnected ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('wallet.connectPrompt')) :
+        isLoading ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('app.loading')) :
+        assets.length === 0 ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, 'No se encontraron activos') :
+        React.createElement('div', { className:'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' },
+          assets.map(function(asset, i) {
+            return React.createElement('div', { key:i, className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3' },
+              React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black' },
+                asset.image ? React.createElement('img', { src:asset.image, alt:'', className:'w-full h-full object-cover' }) :
+                React.createElement(MondrianCanvas, { blockNumber:asset.blockNumber || i, transactions:[], size:150 })
+              ),
+              React.createElement('div', { className:'font-alfaslab text-xs text-white truncate' }, asset.name || '#' + (asset.blockNumber || i))
+            );
+          })
         )
       )
-    )
   );
 }
 
