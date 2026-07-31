@@ -958,7 +958,7 @@ setInterval(pollUnisat, 300000);
 async function pollUnified() {
   if (!dbUnified) return;
   if (!dbOw || !dbUnisat) return;
-  if (owPollingActive || uniPollingActive) return;
+  if (uniPollingActive) return;
   try {
     console.error('[UNI-F] Merging OW + Unisat into unified listings...');
     const now = Date.now();
