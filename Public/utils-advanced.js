@@ -1,3 +1,5 @@
+var BITMAP_YELLOW = '#FFD700';
+
 var MondrianGenerator = {
   BORDER: 3,
   MIN_PARCEL_PX: 0.2,
@@ -50,20 +52,20 @@ var MondrianGenerator = {
         this._drawPerfectGrid(ctx, totalTransactions, size, isPunk);
       }
     } else {
-      this._drawMondrianPacking(ctx, blockNumber, totalTransactions, hash, isPerfect, isPunk, size);
+      this._drawMondrianPacking(ctx, totalTransactions, hash, isPerfect, size);
     }
   },
 
   _drawSingleCell: function(ctx, size) {
     var a = size - this.BORDER * 2;
-    ctx.fillStyle = '#FE3E00';
+    ctx.fillStyle = BITMAP_YELLOW;
     ctx.fillRect(this.BORDER, this.BORDER, a, a);
   },
 
   _drawSpecial1Tx: function(ctx, size) {
     var m = 5;
     var a = size - m * 2;
-    ctx.fillStyle = '#FE3E00';
+    ctx.fillStyle = BITMAP_YELLOW;
     ctx.fillRect(m, m, a, a);
   },
 
@@ -74,7 +76,7 @@ var MondrianGenerator = {
     var totalH = 0.75 + 1.0;
     var h1 = ah * 0.75 / totalH;
     var h2 = ah * 1.0 / totalH;
-    ctx.fillStyle = '#FE3E00';
+    ctx.fillStyle = BITMAP_YELLOW;
     ctx.fillRect(m, m, aw, h1);
     ctx.fillRect(m, m + h1 + m, aw, h2);
   },
@@ -86,7 +88,7 @@ var MondrianGenerator = {
     var proportion = neckType === 1 ? 0.75 : neckType === 3 ? 0.25 : 0.50;
     var h1 = (ah - tbM) / (1 + proportion);
     var h2 = h1 * proportion;
-    ctx.fillStyle = '#FE3E00';
+    ctx.fillStyle = BITMAP_YELLOW;
     ctx.fillRect(sideM, tbM, aw, h1);
     var tx2Left = neckType === 4 ? size - sideM - aw * proportion : sideM;
     ctx.fillRect(tx2Left, tbM + h1 + tbM, aw * proportion, h2);
@@ -110,7 +112,7 @@ var MondrianGenerator = {
     var oX = B + mside + (aw - actualW) / 2;
     var oY = B + mtb + (ah - drawnH) / 2;
 
-    ctx.fillStyle = '#FE3E00';
+    ctx.fillStyle = BITMAP_YELLOW;
     var idx = 0;
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
@@ -179,6 +181,15 @@ var MondrianGenerator = {
     };
   },
 
+  _hashCode: function(str) {
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash;
+  },
+
   _getSizes: function(hash, txCount, isPerfect) {
     if (isPerfect) {
       var arr = [];
@@ -218,78 +229,157 @@ var MondrianGenerator = {
     return sizes;
   },
 
-  _hashCode: function(str) {
-    var hash = 0;
-    for (var i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i);
-      hash |= 0;
-    }
-    return hash;
-  },
-
-  _adjustSizes: function(sizes) {
-    if (sizes.length === 0) return sizes;
+  _adjustSizesAndArea: function(sizes) {
+    var limit = Math.ceil(Math.sqrt(sizes.length)) * 4;
     var result = sizes.slice();
-    var indexed = sizes.map(function(s, i) { return [i, s]; }).sort(function(a, b) { return b[1] - a[1]; });
-    var txCount = sizes.length;
-    var maxRatio = txCount >= 6000 ? 0.10 : txCount >= 5000 ? 0.20 : txCount >= 4000 ? 0.25 : txCount >= 3000 ? 0.30 : 0.40;
-    var target = Math.max(Math.floor(sizes.length * maxRatio), 1);
-    var reduceSet = {};
-    for (var i = 0; i < Math.min(target, indexed.length); i++) reduceSet[indexed[i][0]] = true;
-
-    for (var attempt = 0; attempt < 200; attempt++) {
-      var effectiveArea = 0;
-      for (var i = 0; i < sizes.length; i++) {
-        var s = reduceSet[i] ? result[i] : sizes[i];
-        effectiveArea += (s + 1) * (s + 1);
-      }
-      var gw = Math.ceil(Math.sqrt(effectiveArea));
-      if (effectiveArea <= gw * gw) break;
-      var candidates = [];
-      for (var k in reduceSet) candidates.push([parseInt(k), result[parseInt(k)]]);
-      candidates.sort(function(a, b) { return b[1] - a[1]; });
-      var reduceCount = Math.max(Math.floor(candidates.length * 0.5), 1);
-      for (var j = 0; j < reduceCount && j < candidates.length; j++) {
-        result[candidates[j][0]] = Math.max(candidates[j][1] * 0.7, 0.5);
-      }
+    var totalArea = 0;
+    for (var i = 0; i < sizes.length; i++) {
+      var s = Math.round(result[i]);
+      if (s > limit) result[i] = limit;
+      totalArea += result[i] * result[i];
     }
-    return result;
+    return { sizes: result, totalArea: totalArea };
   },
 
-  _drawMondrianPacking: function(ctx, blockNumber, totalTransactions, hash, isPerfect, isPunk, size) {
-    var B = this.BORDER;
-    var hv = this._hashCode(hash);
-    var sizes = this._getSizes(hash, totalTransactions, isPerfect);
-    var adjusted = this._adjustSizes(sizes);
+  _createMondrianLayout: function(width) {
+    var rows = [];
 
-    var totalArea = 0;
-    for (var i = 0; i < adjusted.length; i++) totalArea += adjusted[i] * adjusted[i];
-    var gridW = Math.max(Math.ceil(Math.sqrt(totalArea)), 1);
-    var grid = [];
-    for (var i = 0; i < gridW * gridW; i++) grid.push(false);
+    function getRow(pos) { return rows[pos.y]; }
 
-    var positions = [];
-    var seed = (hv + blockNumber) || blockNumber;
-    var rand = this._seededRandom(seed);
-
-    for (var i = 0; i < adjusted.length; i++) {
-      var sz = Math.max(Math.round(adjusted[i]), 1);
-      var placed = this._placeLowest(grid, gridW, sz, positions);
-      if (!placed) {
-        this._placeRandom(grid, gridW, sz, positions, rand);
-      }
+    function addRow() {
+      var newRow = { y: rows.length, slots: [], map: {} };
+      rows.push(newRow);
+      return newRow;
     }
-    this._applyGravity(grid, gridW, positions);
+
+    function addSlot(slot) {
+      if (slot.r <= 0) return;
+      var row = getRow(slot);
+      if (!row) return;
+      if (row.map[slot.x]) {
+        if (slot.r > row.map[slot.x].r) row.map[slot.x].r = slot.r;
+        return row.map[slot.x];
+      }
+      var insertAt = row.slots.length;
+      for (var i = 0; i < row.slots.length; i++) {
+        if (row.slots[i].x > slot.x) { insertAt = i; break; }
+      }
+      row.slots.splice(insertAt, 0, slot);
+      row.map[slot.x] = slot;
+      return slot;
+    }
+
+    function removeSlot(slot) {
+      var row = getRow(slot);
+      if (!row) return;
+      delete row.map[slot.x];
+      var idx = row.slots.indexOf(slot);
+      if (idx >= 0) row.slots.splice(idx, 1);
+    }
+
+    function fillSlot(slot, squareWidth) {
+      var left = slot.x;
+      var right = slot.x + squareWidth;
+      var bottom = slot.y;
+      var top = slot.y + squareWidth;
+
+      removeSlot(slot);
+
+      for (var rowIndex = bottom; rowIndex < top; rowIndex++) {
+        var row = getRow({ y: rowIndex });
+        if (row) {
+          var collisions = [];
+          var maxExcess = 0;
+          for (var i = 0; i < row.slots.length; i++) {
+            var ts = row.slots[i];
+            if (!(ts.x + ts.r <= left || ts.x >= right)) {
+              collisions.push(ts);
+              maxExcess = Math.max(maxExcess, Math.max(0, ts.x + ts.r - (left + slot.r)));
+            }
+          }
+          if (right < width && !row.map[right]) {
+            addSlot({ x: right, y: rowIndex, r: slot.r - squareWidth + maxExcess });
+          }
+          for (var j = 0; j < collisions.length; j++) {
+            collisions[j].r = left - collisions[j].x;
+            if (collisions[j].r <= 0) removeSlot(collisions[j]);
+          }
+        } else {
+          addRow();
+          if (left > 0) addSlot({ x: 0, y: rowIndex, r: left });
+          if (right < width) addSlot({ x: right, y: rowIndex, r: width - right });
+        }
+      }
+
+      for (var rowIndex = Math.max(0, bottom - squareWidth); rowIndex < bottom; rowIndex++) {
+        var row = getRow({ y: rowIndex });
+        if (!row) continue;
+        for (var i = 0; i < row.slots.length; ) {
+          var ts = row.slots[i];
+          if (ts.x < right && ts.x + ts.r > left && ts.y + ts.r >= bottom) {
+            var oldW = ts.r;
+            ts.r = bottom - ts.y;
+            var rem = { x: ts.x + ts.r, y: ts.y, w: oldW - ts.r, h: ts.r };
+            if (ts.r <= 0) { removeSlot(ts); }
+            while (rem.w > 0 && rem.h > 0) {
+              if (rem.w <= rem.h) {
+                addSlot({ x: rem.x, y: rem.y, r: rem.w });
+                rem.y += rem.w; rem.h -= rem.w;
+              } else {
+                addSlot({ x: rem.x, y: rem.y, r: rem.h });
+                rem.x += rem.h; rem.w -= rem.h;
+              }
+            }
+            i = 0;
+          } else {
+            i++;
+          }
+        }
+      }
+
+      return { x: left, y: bottom, r: squareWidth };
+    }
+
+    return {
+      place: function(size) {
+        for (var ri = 0; ri < rows.length; ri++) {
+          var row = rows[ri];
+          for (var si = 0; si < row.slots.length; si++) {
+            if (row.slots[si].r >= size) return fillSlot(row.slots[si], size);
+          }
+        }
+        var row = addRow();
+        var slot = addSlot({ x: 0, y: row.y, r: width });
+        return fillSlot(slot, size);
+      }
+    };
+  },
+
+  _drawMondrianPacking: function(ctx, totalTransactions, hash, isPerfect, size) {
+    var B = this.BORDER;
+    var sizes = this._getSizes(hash, totalTransactions, isPerfect);
+    var adj = this._adjustSizesAndArea(sizes);
+
+    var gridW = Math.max(Math.ceil(Math.sqrt(adj.totalArea)), 1);
+
+    var layout = this._createMondrianLayout(gridW);
+    var positions = [];
+
+    for (var i = 0; i < adj.sizes.length; i++) {
+      var sz = Math.max(Math.round(adj.sizes[i]), 1);
+      positions.push(layout.place(sz));
+    }
+
+    if (positions.length === 0) return;
 
     var minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity;
     for (var i = 0; i < positions.length; i++) {
       var p = positions[i];
-      if (p.col < minC) minC = p.col;
-      if (p.col + p.size - 1 > maxC) maxC = p.col + p.size - 1;
-      if (p.row < minR) minR = p.row;
-      if (p.row + p.size - 1 > maxR) maxR = p.row + p.size - 1;
+      if (p.x < minC) minC = p.x;
+      if (p.x + p.r - 1 > maxC) maxC = p.x + p.r - 1;
+      if (p.y < minR) minR = p.y;
+      if (p.y + p.r - 1 > maxR) maxR = p.y + p.r - 1;
     }
-    if (positions.length === 0) return;
 
     var usedW = Math.max(maxC - minC + 1, 1);
     var usedH = Math.max(maxR - minR + 1, 1);
@@ -297,93 +387,16 @@ var MondrianGenerator = {
     var cellH = (size - B * 2) / usedH;
     var padding = 0.5;
 
-    ctx.fillStyle = '#FE3E00';
+    ctx.fillStyle = BITMAP_YELLOW;
     for (var i = 0; i < positions.length; i++) {
       var p = positions[i];
-      var x = B + (p.col - minC) * cellW + padding;
-      var y = B + (p.row - minR) * cellH + padding;
-      var w = cellW * p.size - 2 * padding;
-      var h = cellH * p.size - 2 * padding;
+      var x = B + (p.x - minC) * cellW + padding;
+      var y = B + (p.y - minR) * cellH + padding;
+      var w = cellW * p.r - 2 * padding;
+      var h = cellH * p.r - 2 * padding;
       if (w < 1) w = 1;
       if (h < 1) h = 1;
       ctx.fillRect(x, y, w, h);
-    }
-  },
-
-  _placeLowest: function(grid, gw, sz, positions) {
-    var maxPos = gw - sz + 1;
-    if (maxPos <= 0) return false;
-    for (var row = 0; row < maxPos; row++) {
-      for (var col = 0; col < maxPos; col++) {
-        if (this._canPlace(grid, col, row, sz, gw)) {
-          for (var r = row; r < row + sz; r++) {
-            for (var c = col; c < col + sz; c++) {
-              grid[r * gw + c] = true;
-            }
-          }
-          positions.push({ col: col, row: row, size: sz });
-          return true;
-        }
-      }
-    }
-    return false;
-  },
-
-  _placeRandom: function(grid, gw, sz, positions, rand) {
-    var maxPos = gw - sz + 1;
-    if (maxPos <= 0) return;
-    var attempts = Math.min(200, gw * gw * 2);
-    for (var a = 0; a < attempts; a++) {
-      var col = Math.floor(rand() * maxPos);
-      var row = Math.floor(rand() * maxPos);
-      if (this._canPlace(grid, col, row, sz, gw)) {
-        for (var r = row; r < row + sz; r++) {
-          for (var c = col; c < col + sz; c++) {
-            grid[r * gw + c] = true;
-          }
-        }
-        positions.push({ col: col, row: row, size: sz });
-        return;
-      }
-    }
-    this._placeLowest(grid, gw, sz, positions);
-  },
-
-  _canPlace: function(grid, col, row, sz, gw) {
-    var endR = Math.min(row + sz, gw);
-    var endC = Math.min(col + sz, gw);
-    for (var r = row; r < endR; r++) {
-      for (var c = col; c < endC; c++) {
-        if (grid[r * gw + c]) return false;
-      }
-    }
-    return true;
-  },
-
-  _applyGravity: function(grid, gw, positions) {
-    positions.sort(function(a, b) { return a.row - b.row; });
-    for (var i = 0; i < positions.length; i++) {
-      var p = positions[i];
-      if (p.row + p.size >= gw) continue;
-      var targetRow = p.row + p.size;
-      var canFall = true;
-      for (var c = p.col; c < p.col + p.size; c++) {
-        if (grid[targetRow * gw + c]) { canFall = false; break; }
-      }
-      if (canFall) {
-        for (var r = p.row; r < p.row + p.size; r++) {
-          for (var c = p.col; c < p.col + p.size; c++) {
-            grid[r * gw + c] = false;
-          }
-        }
-        var newRow = p.row + 1;
-        for (var r = newRow; r < newRow + p.size; r++) {
-          for (var c = p.col; c < p.col + p.size; c++) {
-            grid[r * gw + c] = true;
-          }
-        }
-        p.row = newRow;
-      }
     }
   }
 };
