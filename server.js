@@ -858,6 +858,7 @@ async function pollOrdinalswallet() {
     console.error('[OW] Poll error:', err.message);
   }
   owPollingActive = false;
+  pollUnified();
 }
 
 // Start polling on server startup
@@ -946,6 +947,7 @@ async function pollUnisat() {
     console.error("[UNI] FATAL: " + err.message);
   }
   uniPollingActive = false;
+  pollUnified();
 }
 
 pollUnisat();
@@ -956,6 +958,7 @@ setInterval(pollUnisat, 300000);
 async function pollUnified() {
   if (!dbUnified) return;
   if (!dbOw || !dbUnisat) return;
+  if (owPollingActive || uniPollingActive) return;
   try {
     console.error('[UNI-F] Merging OW + Unisat into unified listings...');
     const now = Date.now();
@@ -998,7 +1001,6 @@ async function pollUnified() {
   }
 }
 
-setTimeout(pollUnified, 15000);
 setInterval(pollUnified, 305000);
 
 // ===== ENDPOINTS DE CACHE UNIFIED =====
