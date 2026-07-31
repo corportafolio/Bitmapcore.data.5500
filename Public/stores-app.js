@@ -19,34 +19,59 @@ var StoreApp = {
     var listeners = StoreApp._listeners[key] || [];
     for (var i = 0; i < listeners.length; i++) listeners[i](StoreApp._state[key]);
   },
-  connectWallet: function() {
+  connectWallet: function(type) {
+    var self = this;
     return new Promise(function(resolve) {
-      if (typeof window !== 'undefined' && window.unisat) {
+      if (type === 'unisat' && typeof window !== 'undefined' && window.unisat) {
         window.unisat.requestAccounts().then(function(accounts) {
-          StoreApp._state.wallet = { address:accounts[0], publicKey:accounts[0], balance:0, isConnected:true, network:'mainnet' };
+          StoreApp._state.wallet = { address:accounts[0], publicKey:accounts[0], balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
           StoreApp._emit('wallet');
           resolve(accounts[0]);
         }).catch(function() {
-          StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet' };
+          StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
         });
-      } else if (typeof window !== 'undefined' && window.satsConnect) {
+      } else if (type === 'xverse' && typeof window !== 'undefined' && window.satsConnect) {
         window.satsConnect.getAddress({
           purposes: ['ordinals','payment'],
           network: { type:'Mainnet' }
         }).then(function(result) {
           var addr = result.addresses && result.addresses[0] ? result.addresses[0].address : 'demo-address';
-          StoreApp._state.wallet = { address:addr, publicKey:addr, balance:0, isConnected:true, network:'mainnet' };
+          StoreApp._state.wallet = { address:addr, publicKey:addr, balance:0, isConnected:true, network:'mainnet', walletType:'xverse' };
           StoreApp._emit('wallet');
           resolve(addr);
         }).catch(function() {
-          StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet' };
+          StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
+          StoreApp._emit('wallet');
+          resolve(null);
+        });
+      } else if (!type && typeof window !== 'undefined' && window.unisat) {
+        window.unisat.requestAccounts().then(function(accounts) {
+          StoreApp._state.wallet = { address:accounts[0], publicKey:accounts[0], balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
+          StoreApp._emit('wallet');
+          resolve(accounts[0]);
+        }).catch(function() {
+          StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
+          StoreApp._emit('wallet');
+          resolve(null);
+        });
+      } else if (!type && typeof window !== 'undefined' && window.satsConnect) {
+        window.satsConnect.getAddress({
+          purposes: ['ordinals','payment'],
+          network: { type:'Mainnet' }
+        }).then(function(result) {
+          var addr = result.addresses && result.addresses[0] ? result.addresses[0].address : 'demo-address';
+          StoreApp._state.wallet = { address:addr, publicKey:addr, balance:0, isConnected:true, network:'mainnet', walletType:'xverse' };
+          StoreApp._emit('wallet');
+          resolve(addr);
+        }).catch(function() {
+          StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
         });
       } else {
-        StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet' };
+        StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
         StoreApp._emit('wallet');
         resolve(null);
       }

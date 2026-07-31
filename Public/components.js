@@ -8,19 +8,32 @@ function HeaderBar(props) {
   var title = props.title;
   var navigate = props.navigate;
   var walletState = StoreApp.get('wallet');
+  var _wa = React.useState(walletState.isConnected ? walletState.address : null);
+  var walletAddress = _wa[0];
+  var setWalletAddress = _wa[1];
   var _hc = React.useState(false);
   var showHamburgerMenu = _hc[0];
   var setShowHamburgerMenu = _hc[1];
   var _price = React.useState(null);
   var btcPrice = _price[0];
   var setBtcPrice = _price[1];
+  var _ws = React.useState(false);
+  var showWalletSubmenu = _ws[0];
+  var setShowWalletSubmenu = _ws[1];
 
   React.useEffect(function() {
-    if (!showHamburgerMenu) return;
-    var close = function() { setShowHamburgerMenu(false); };
+    if (!showHamburgerMenu && !showWalletSubmenu) return;
+    var close = function() { setShowHamburgerMenu(false); setShowWalletSubmenu(false); };
     window.addEventListener('click', close);
     return function() { window.removeEventListener('click', close); };
-  }, [showHamburgerMenu]);
+  }, [showHamburgerMenu, showWalletSubmenu]);
+
+  React.useEffect(function() {
+    var unsub = StoreApp.subscribe('wallet', function(w) {
+      setWalletAddress(w.isConnected ? w.address : null);
+    });
+    return unsub;
+  }, []);
 
   React.useEffect(function() {
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
@@ -58,14 +71,27 @@ function HeaderBar(props) {
         className:'absolute right-0 top-full mt-1 w-56 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1',
         onClick: function(e) { e.stopPropagation(); }
       },
-        React.createElement('button', { onClick: function() { navigate('/wallet'); setShowHamburgerMenu(false); }, className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors' }, walletState.isConnected ? '\uD83D\uDC64 ' + BitmapUtils.truncateAddress(walletState.address, 4) : '\uD83D\uDC64 Cuentas'),
+        walletAddress ? React.createElement('button', { onClick: function() { navigate('/mis-activos'); setShowHamburgerMenu(false); }, className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-orange-light hover:bg-bitmap-black/30 hover:text-white transition-colors' }, '\uD83D\uDCB0 ' + BitmapUtils.truncateAddress(walletAddress, 4)) :
+        React.createElement('button', { onClick: function(e) { e.stopPropagation(); setShowHamburgerMenu(false); setShowWalletSubmenu(true); }, className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors' }, '\uD83D\uDD17 Conectar Wallet'),
         React.createElement('button', { onClick: function() { navigate('/settings'); setShowHamburgerMenu(false); }, className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors' }, 'Perfil'),
         React.createElement('div', { className:'border-t border-bitmap-border my-1' }),
         React.createElement('a', { href:'https://bitmapcore.net/whitepaper', target:'_blank', className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors block' }, 'Whitepaper'),
         React.createElement('button', { onClick: function() { navigate('/tag-tables'); setShowHamburgerMenu(false); }, className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors' }, 'Actualizar Tablas'),
-        React.createElement('button', { onClick: function() { navigate('/wallet'); setShowHamburgerMenu(false); }, className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors' }, 'Historial Wallets'),
         React.createElement('div', { className:'border-t border-bitmap-border my-1' }),
         React.createElement('a', { href:'https://x.com/BitmapCorp', target:'_blank', rel:'noopener noreferrer', className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors block' }, '@BitmapCorp')
+      ) : null,
+      showWalletSubmenu ? React.createElement('div', {
+        className:'absolute right-0 top-full mt-1 w-48 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1',
+        onClick: function(e) { e.stopPropagation(); }
+      },
+        React.createElement('button', {
+          onClick: function() { setShowWalletSubmenu(false); StoreApp.connectWallet('unisat'); },
+          className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors'
+        }, 'Unisat'),
+        React.createElement('button', {
+          onClick: function() { setShowWalletSubmenu(false); StoreApp.connectWallet('xverse'); },
+          className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors'
+        }, 'Xverse')
       ) : null
     ),
     showBackButton && !title ? React.createElement('div', { className:'flex-1' }) : null
