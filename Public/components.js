@@ -78,6 +78,7 @@ function Sidebar(props) {
   var items = [
     { id:'ordinalswallet', label:'Ordinalswallet', icon:'\uD83D\uDFE7', path:'/ordinalswallet' },
     { id:'unisat', label:'Unisat', icon:'\uD83D\uDFE1', path:'/unisat' },
+    { id:'unified', label:'Todos', icon:'\uD83C\uDF10', path:'/unified' },
     { id:'local', label:'BitmapCore', icon:'\uD83D\uDFE0', path:'/local' },
     { id:'discounts', label:'Descuentos', icon:'\uD83D\uDFE2', path:'/discounts' },
     { id:'tags', label:'Etiquetas', icon:'\uD83C\uDFF7\uFE0F', path:'/' },
@@ -101,7 +102,7 @@ function Sidebar(props) {
           className: 'flex items-center gap-3 w-full px-4 py-3 text-left transition-all ' + (isActive ? 'border-l-4 border-bitmap-orange bg-bitmap-black/30' : 'border-l-4 border-transparent hover:bg-bitmap-black/20')
         },
           React.createElement('span', { className:'text-lg' }, item.icon),
-          React.createElement('span', { className:'font-alfaslab text-sm ' + (isActive ? 'text-bitmap-orange' : 'text-bitmap-text') }, item.label)
+          React.createElement('span', { className:'font-alfaslab text-xs ' + (isActive ? 'text-bitmap-orange' : 'text-bitmap-text') }, item.label)
         );
       })
     )
