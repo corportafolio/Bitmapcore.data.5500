@@ -28,10 +28,11 @@ var StoreApp = {
             StoreApp._state.wallet = { address:accounts[0], publicKey:pubKey, balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
             StoreApp._emit('wallet');
             resolve(accounts[0]);
-          }).catch(function() {
-            StoreApp._state.wallet = { address:accounts[0], publicKey:accounts[0], balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
+          }).catch(function(err) {
+            console.error('[Wallet] Error obteniendo public key:', err);
+            StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
             StoreApp._emit('wallet');
-            resolve(accounts[0]);
+            resolve(null);
           });
         }).catch(function() {
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
@@ -58,10 +59,11 @@ var StoreApp = {
             StoreApp._state.wallet = { address:accounts[0], publicKey:pubKey, balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
             StoreApp._emit('wallet');
             resolve(accounts[0]);
-          }).catch(function() {
-            StoreApp._state.wallet = { address:accounts[0], publicKey:accounts[0], balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
+          }).catch(function(err) {
+            console.error('[Wallet] Error obteniendo public key:', err);
+            StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
             StoreApp._emit('wallet');
-            resolve(accounts[0]);
+            resolve(null);
           });
         }).catch(function() {
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };

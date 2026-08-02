@@ -358,7 +358,12 @@ function DetallePage(props) {
     var errors = [];
 
     try {
-      var pubKey = wallet.publicKey || wallet.address;
+      var pubKey = wallet.publicKey;
+      if (!pubKey) {
+        console.error('[Listar] No hay public key disponible. Reconecta la wallet.');
+        setListingStatus({ toast:'Error: reconecta la wallet para obtener la public key' });
+        return;
+      }
 
       for (var j = 0; j < selected.length; j++) {
         var item = selected[j];
