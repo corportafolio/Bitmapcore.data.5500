@@ -24,9 +24,15 @@ var StoreApp = {
     return new Promise(function(resolve) {
       if (type === 'unisat' && typeof window !== 'undefined' && window.unisat) {
         window.unisat.requestAccounts().then(function(accounts) {
-          StoreApp._state.wallet = { address:accounts[0], publicKey:accounts[0], balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
-          StoreApp._emit('wallet');
-          resolve(accounts[0]);
+          window.unisat.getPublicKey().then(function(pubKey) {
+            StoreApp._state.wallet = { address:accounts[0], publicKey:pubKey, balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
+            StoreApp._emit('wallet');
+            resolve(accounts[0]);
+          }).catch(function() {
+            StoreApp._state.wallet = { address:accounts[0], publicKey:accounts[0], balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
+            StoreApp._emit('wallet');
+            resolve(accounts[0]);
+          });
         }).catch(function() {
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
@@ -48,9 +54,15 @@ var StoreApp = {
         });
       } else if (!type && typeof window !== 'undefined' && window.unisat) {
         window.unisat.requestAccounts().then(function(accounts) {
-          StoreApp._state.wallet = { address:accounts[0], publicKey:accounts[0], balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
-          StoreApp._emit('wallet');
-          resolve(accounts[0]);
+          window.unisat.getPublicKey().then(function(pubKey) {
+            StoreApp._state.wallet = { address:accounts[0], publicKey:pubKey, balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
+            StoreApp._emit('wallet');
+            resolve(accounts[0]);
+          }).catch(function() {
+            StoreApp._state.wallet = { address:accounts[0], publicKey:accounts[0], balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
+            StoreApp._emit('wallet');
+            resolve(accounts[0]);
+          });
         }).catch(function() {
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');

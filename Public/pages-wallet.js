@@ -358,10 +358,7 @@ function DetallePage(props) {
     var errors = [];
 
     try {
-      var pubKey = '';
-      if (window.unisat && window.unisat.getPublicKey) {
-        try { pubKey = await window.unisat.getPublicKey(); } catch(e) {}
-      }
+      var pubKey = wallet.publicKey || wallet.address;
 
       for (var j = 0; j < selected.length; j++) {
         var item = selected[j];
@@ -391,7 +388,11 @@ function DetallePage(props) {
           if (createJson.success && createJson.data && createJson.data.psbtToSign) {
             if (window.unisat && window.unisat.signPsbt) {
               try {
-                var signedPsbt = await window.unisat.signPsbt(createJson.data.psbtToSign);
+                var signPromise = window.unisat.signPsbt(createJson.data.psbtToSign);
+                var signTimeout = new Promise(function(_, reject) {
+                  setTimeout(function() { reject(new Error('timeout')); }, 15000);
+                });
+                var signedPsbt = await Promise.race([signPromise, signTimeout]);
                 var listingId = createJson.data.listing ? createJson.data.listing.id : '';
                 if (listingId && signedPsbt) {
                   var signRes = await fetch('/api/v1/bitmaps/' + listingId + '/sign', {
