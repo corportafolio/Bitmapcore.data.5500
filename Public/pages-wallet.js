@@ -379,7 +379,11 @@ function DetallePage(props) {
               name: item.name || ('Bitmap #' + item.inscriptionNumber),
               imageUrl: '',
               bitmapNumber: extractBlockNumber(item.name),
-              inscriptionNumber: item.inscriptionNumber
+              inscriptionNumber: item.inscriptionNumber,
+              inscriptionUtxo: item.output || '',
+              inscriptionValue: item.value || 0,
+              inscriptionContentType: item.contentType || '',
+              inscriptionHeight: item.height || 0
             })
           });
           var createJson = await createRes.json();
