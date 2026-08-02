@@ -287,7 +287,7 @@ function DetallePage(props) {
   React.useEffect(function() {
     if (col && col.items) {
       var sel = col.items.filter(function(it) { return it.isBitmap && !it.isParcel; }).map(function(it) {
-        return { id:it.id, isSelected:false, priceStr:'', priceSatoshis:0, name:it.name, inscriptionNumber:it.inscriptionNumber, output:it.output, value:it.value, contentType:it.contentType, height:it.height };
+        return { id:it.id, isSelected:false, priceStr:'', priceSatoshis:0, name:it.name, inscriptionNumber:it.inscriptionNumber };
       });
       setSelectionState(sel);
     }
@@ -368,8 +368,11 @@ function DetallePage(props) {
       for (var j = 0; j < selected.length; j++) {
         var item = selected[j];
         var price = item.priceSatoshis;
-        if (!item.output || !item.value) {
-          console.error('[Listar] Sin datos UTXO para', item.name, 'output:', item.output, 'value:', item.value);
+        var origItem = null;
+        for (var k = 0; k < col.items.length; k++) {
+          if (col.items[k].id === item.id) { origItem = col.items[k]; break; }
+        }
+        if (!origItem || !origItem.output || !origItem.value) {
           errors.push(item.name + ': sin datos UTXO');
           continue;
         }
@@ -387,10 +390,10 @@ function DetallePage(props) {
               imageUrl: '',
               bitmapNumber: extractBlockNumber(item.name),
               inscriptionNumber: item.inscriptionNumber,
-              inscriptionUtxo: item.output || '',
-              inscriptionValue: item.value || 0,
-              inscriptionContentType: item.contentType || '',
-              inscriptionHeight: item.height || 0
+              inscriptionUtxo: origItem.output,
+              inscriptionValue: origItem.value,
+              inscriptionContentType: origItem.contentType || '',
+              inscriptionHeight: origItem.height || 0
             })
           });
           var createJson = await createRes.json();
