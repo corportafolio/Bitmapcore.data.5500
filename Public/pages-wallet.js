@@ -287,7 +287,7 @@ function DetallePage(props) {
   React.useEffect(function() {
     if (col && col.items) {
       var sel = col.items.filter(function(it) { return it.isBitmap && !it.isParcel; }).map(function(it) {
-        return { id:it.id, isSelected:false, priceStr:'', priceSatoshis:0, name:it.name, inscriptionNumber:it.inscriptionNumber };
+        return { id:it.id, isSelected:false, priceStr:'', priceSatoshis:0, name:it.name, inscriptionNumber:it.inscriptionNumber, output:it.output, value:it.value, contentType:it.contentType, height:it.height };
       });
       setSelectionState(sel);
     }
@@ -368,6 +368,11 @@ function DetallePage(props) {
       for (var j = 0; j < selected.length; j++) {
         var item = selected[j];
         var price = item.priceSatoshis;
+        if (!item.output || !item.value) {
+          console.error('[Listar] Sin datos UTXO para', item.name, 'output:', item.output, 'value:', item.value);
+          errors.push(item.name + ': sin datos UTXO');
+          continue;
+        }
         try {
           var createRes = await fetch('/api/v1/bitmaps', {
             method: 'POST',
