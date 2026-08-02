@@ -51,6 +51,13 @@ var MisActivosApi = {
   getByAddress: function(address) { return ApiClient.get('/api/v1/bitmasowner/' + address, true); }
 };
 
+var AssetApi = {
+  getUserAssets: function(address) {
+    return fetch('/api/v1/assets/address/' + address)
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+};
+
 var MarketplaceApi = {
   getOrdinalswallet: function() { return ApiClient.get('/api/v1/proxy/ordinalswallet/listings', true); },
   getUnisat: function() { return ApiClient.post('/api/v1/proxy/unisat/actions', { collection:'bitmap', events:[], cursor:0, size:100 }, true); },

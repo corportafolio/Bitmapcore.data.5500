@@ -84,6 +84,7 @@
       React.createElement(Route, { path:'/wallet', element:wrapper(WalletConnectPage) }),
       React.createElement(Route, { path:'/wallet/dashboard', element:wrapper(WalletDashboardPage) }),
       React.createElement(Route, { path:'/mis-activos', element:wrapper(MisActivosPage) }),
+      React.createElement(Route, { path:'/mis-activos/detalle/:collectionName', element:wrapper(DetallePage) }),
       React.createElement(Route, { path:'/wallet/transaction/:id', element:wrapper(TransactionPage, { txId:p.id }) }),
       React.createElement(Route, { path:'/mondrian/:id', element:wrapper(MondrianPreviewPage, { blockId:p.id }) }),
       React.createElement(Route, { path:'/search', element:wrapper(BlockSearchPage) }),
