@@ -10,10 +10,15 @@ function LocalPage(props) {
   var searchQuery = _c[0];
   var setSearchQuery = _c[1];
   var scrollContainerRef = React.useRef(null);
+  var _d = React.useState('listedAtDesc');
+  var currentSort = _d[0];
+  var setCurrentSort = _d[1];
+  var _e = React.useState(false);
+  var showSortMenu = _e[0];
+  var setShowSortMenu = _e[1];
 
   var fetchListings = function() {
     setIsLoading(true);
-    // Usar unified cache filtrado por source='local' para obtener datos de bloques (hash, etiquetas, txs)
     ApiClient.get('/api/v1/unified/cache/listings?sort=listedAtDesc&limit=200', true)
       .then(function(res) {
         var items = (res.data || []).filter(function(item) {
@@ -27,12 +32,34 @@ function LocalPage(props) {
 
   React.useEffect(function() {
     fetchListings();
-    var interval = setInterval(fetchListings, 300000); // 5 min polling
+    var interval = setInterval(fetchListings, 300000);
     return function() { clearInterval(interval); };
   }, []);
 
+  var handleSort = function(sort) {
+    setCurrentSort(sort);
+    setShowSortMenu(false);
+  };
+
+  var handleRefresh = function() {
+    fetchListings();
+  };
+
+  var sortButtons = [
+    { key: 'listedAtDesc', label: 'Recientes' },
+    { key: 'priceDesc', label: '$ Alto' },
+    { key: 'priceAsc', label: '$ Bajo' }
+  ];
+  var sortLabel = { listedAtDesc: 'Recientes', priceDesc: '$ Alto', priceAsc: '$ Bajo' };
+
   var filtered = listings.filter(function(l) {
     return !searchQuery || String(l.bitmapNumber || l.name || '').indexOf(searchQuery) !== -1;
+  }).sort(function(a, b) {
+    var pa = a.listedPrice || a.price || 0;
+    var pb = b.listedPrice || b.price || 0;
+    if (currentSort === 'priceAsc') return pa - pb;
+    if (currentSort === 'priceDesc') return pb - pa;
+    return (b.listedAt || 0) - (a.listedAt || 0);
   });
 
   var floorPrice = listings.length > 0
@@ -43,20 +70,37 @@ function LocalPage(props) {
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2' },
       React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
-        React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'BitmapCorp Local Marketplace'),
+        React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Bitmapcore Marketplace'),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },
           'cargados: ',
+          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(filtered.length))
+        ),
+        React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
+          'listados: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length))
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
           'Piso: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
         ),
-        React.createElement('button', {
-          onClick: fetchListings,
-          disabled: isLoading,
-          className: 'ml-auto px-3 py-1 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
-        }, isLoading ? 'Actualizando...' : 'Actualizar')
+        React.createElement('div', { className: 'relative ml-auto md:ml-2' },
+          React.createElement('button', {
+            onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
+            className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
+          }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+          showSortMenu ? React.createElement('div', {
+            className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
+          },
+            sortButtons.map(function(btn) {
+              return React.createElement('button', {
+                key: btn.key,
+                onClick: function(e) { e.stopPropagation(); handleSort(btn.key); },
+                className: 'w-full px-3 py-1.5 text-left font-acme text-xs transition-colors ' +
+                  (currentSort === btn.key ? 'bg-bitmap-orange text-black font-bold' : 'text-bitmap-text hover:bg-bitmap-surface')
+              }, btn.label);
+            })
+          ) : null
+        )
       )
     ),
     React.createElement('div', { className: 'pl-14 pr-4 py-2 border-b border-bitmap-border' },
