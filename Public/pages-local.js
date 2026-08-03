@@ -13,11 +13,16 @@ function LocalPage(props) {
 
   var fetchListings = function() {
     setIsLoading(true);
-    MarketplaceApi.getLocal().then(function(data) {
-      var items = (data.data && data.data.items) || data.items || data.data || data || [];
-      setListings(Array.isArray(items) ? items : []);
-      setIsLoading(false);
-    }).catch(function() { setIsLoading(false); });
+    // Usar unified cache filtrado por source='local' para obtener datos de bloques (hash, etiquetas, txs)
+    ApiClient.get('/api/v1/unified/cache/listings?sort=listedAtDesc&limit=200', true)
+      .then(function(res) {
+        var items = (res.data || []).filter(function(item) {
+          return item.source === 'local';
+        });
+        setListings(items);
+        setIsLoading(false);
+      })
+      .catch(function() { setIsLoading(false); });
   };
 
   React.useEffect(function() {
@@ -31,7 +36,7 @@ function LocalPage(props) {
   });
 
   var floorPrice = listings.length > 0
-    ? Math.min.apply(null, listings.map(function(l) { return l.price || Infinity; }).filter(function(p) { return p < Infinity; }))
+    ? Math.min.apply(null, listings.map(function(l) { return (l.listedPrice || l.price) || Infinity; }).filter(function(p) { return p < Infinity; }))
     : 0;
   var floorBtc = floorPrice > 0 ? (floorPrice / 100000000).toFixed(5) : 'N/A';
 
@@ -72,20 +77,23 @@ function LocalPage(props) {
             ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
-                  var btcPrice = item.price ? (item.price / 100000000).toFixed(5) : '0';
-                  var addr = BitmapUtils.truncateAddress(item.sellerAddress || '', 6);
+                  var btcPrice = (item.listedPrice || item.price || 0) / 100000000;
+                  var btcPriceStr = btcPrice.toFixed(5);
+                  var addr = BitmapUtils.truncateAddress(item.sellerAddress || item.ownerAddress || '', 6);
                   var etiquetas = item.etiquetas || '';
                   var isPerfect = etiquetas.indexOf('Perfect') !== -1;
                   var isPunk = etiquetas.indexOf('Punk') !== -1;
                   var bn = item.bitmapNumber || 0;
+                  var hash = item.hash || '';
+                  var txs = item.totalTransacciones || 0;
                   return React.createElement('div', {
-                    key: item.id || i,
+                    key: (item.source || '') + '_' + (item.bitmapId || item.id || i),
                     className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
                   },
                     React.createElement('div', { className: 'flex items-center gap-3' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
                         React.createElement('img', {
-                          src: '/api/v1/block-image/' + bn + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                          src: '/api/v1/block-image/' + bn + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + txs + '&hash=' + encodeURIComponent(hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
                           width: 80,
                           height: 80,
                           loading: 'lazy',
@@ -102,7 +110,7 @@ function LocalPage(props) {
                             React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
                           ),
                           React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
-                            btcPrice + ' BTC'
+                            btcPriceStr + ' BTC'
                           )
                         ),
                         React.createElement('div', { className: 'flex items-center justify-between mt-0.5' },

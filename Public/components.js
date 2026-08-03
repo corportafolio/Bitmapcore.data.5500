@@ -205,11 +205,13 @@ function Sidebar(props) {
                     }, tag.trim());
                   })
                 ),
-                React.createElement('img', {
-                  src: item.source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : 'unisat_logo.png',
-                  style: { width: 10, height: 10, flexShrink: 0 },
-                  alt: ''
-                })
+React.createElement('img', {
+              src: item.source === 'ordinalswallet' 
+                ? 'ordinalswallet_logo.png' 
+                : (item.source === 'local' ? 'logo_bitmapcore_logo.png' : 'unisat_logo.png'),
+              style: { width: 10, height: 10, flexShrink: 0 },
+              alt: ''
+            })
               )
             )
               );
