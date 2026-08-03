@@ -485,14 +485,85 @@ function DetallePage(props) {
     if (!editingListing) return;
     var btcPrice = parseFloat(editPriceStr);
     if (isNaN(btcPrice) || btcPrice <= 0) {
-      setListingStatus({ toast:'Precio invalido' });
+      setListingStatus({ toast:'Precio inválido' });
       setEditingListing(null);
       return;
     }
     var sats = Math.round(btcPrice * 100000000);
     try {
-      await MarketplaceApi.updateListingPrice(editingListing.id, sats, wallet.address);
-      setListingStatus({ toast:'Precio actualizado' });
+      setListingStatus({ listing:true, count:1, toast:'Generando PSBT...' });
+      
+      // Buscar el asset item para obtener datos UTXO
+      var assetItem = null;
+      if (col && col.items) {
+        for (var i = 0; i < col.items.length; i++) {
+          if (col.items[i].id === editingListing.inscriptionId) {
+            assetItem = col.items[i];
+            break;
+          }
+        }
+      }
+      
+      if (!assetItem || !assetItem.output || !assetItem.value) {
+        setListingStatus({ toast:'No se encontraron datos UTXO para este bitmap' });
+        setEditingListing(null);
+        return;
+      }
+
+      var pubKey = wallet.publicKey;
+      if (!pubKey) {
+        setListingStatus({ toast:'Error: reconecta la wallet para obtener la public key' });
+        setEditingListing(null);
+        return;
+      }
+
+      // 1. Obtener PSBT sin firmar para el nuevo precio
+      var psbtRes = await MarketplaceApi.updateListingPrice(
+        editingListing.id, 
+        sats, 
+        wallet.address, 
+        assetItem.output, 
+        assetItem.value
+      );
+
+      if (!psbtRes.success || !psbtRes.data || !psbtRes.data.unsignedPsbt) {
+        throw new Error('Error generando PSBT: ' + (psbtRes.error?.message || 'desconocido'));
+      }
+
+      var unsignedPsbt = psbtRes.data.unsignedPsbt;
+
+      // 2. Abrir Unisat para firmar
+      if (window.unisat && window.unisat.signPsbt) {
+        try {
+          setListingStatus({ listing:true, count:1, toast:'Firmando en Unisat...' });
+          var signPromise = window.unisat.signPsbt(unsignedPsbt);
+          var signTimeout = new Promise(function(_, reject) {
+            setTimeout(function() { reject(new Error('timeout')); }, 30000);
+          });
+          var signedPsbt = await Promise.race([signPromise, signTimeout]);
+          
+          if (!signedPsbt) throw new Error('Firma cancelada o vacía');
+
+          // 3. Enviar PSBT firmado
+          var signRes = await MarketplaceApi.signPriceUpdate(
+            editingListing.id, 
+            signedPsbt, 
+            pubKey, 
+            sats
+          );
+
+          if (signRes.success) {
+            setListingStatus({ toast:'Precio actualizado y firmado correctamente' });
+          } else {
+            throw new Error(signRes.error?.message || 'Error firmando');
+          }
+        } catch(e) {
+          throw new Error('Error firmando: ' + e.message);
+        }
+      } else {
+        throw new Error('Unisat no disponible');
+      }
+
       setEditingListing(null);
       loadMyListings();
     } catch(e) {

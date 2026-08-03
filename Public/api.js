@@ -73,11 +73,17 @@ var MarketplaceApi = {
       return items.filter(function(l) { return l.sellerAddress === address && l.isActive; });
     });
   },
-  updateListingPrice: function(id, price, walletAddress) {
-    return fetch('/api/v1/bitmaps/' + id, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'wallet-address': walletAddress },
-      body: JSON.stringify({ price: price })
+  updateListingPrice: function(id, newPrice, walletAddress, clientUtxo, clientValue) {
+    return fetch('/api/v1/bitmaps/' + id + '/price-psbt?newPrice=' + newPrice + '&clientUtxo=' + encodeURIComponent(clientUtxo) + '&clientValue=' + clientValue, {
+      method: 'GET',
+      headers: { 'wallet-address': walletAddress }
+    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  signPriceUpdate: function(id, signedPsbt, sellerOrdinalPublicKey, newPrice) {
+    return fetch('/api/v1/bitmaps/' + id + '/price-sign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signedPsbt: signedPsbt, sellerOrdinalPublicKey: sellerOrdinalPublicKey, newPrice: newPrice })
     }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   },
   delistListing: function(id, walletAddress) {
