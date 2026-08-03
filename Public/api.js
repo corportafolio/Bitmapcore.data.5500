@@ -74,14 +74,14 @@ var MarketplaceApi = {
     });
   },
   updateListingPrice: function(id, price, walletAddress) {
-    return fetch('/api/v1/bitmas/' + id, {
+    return fetch('/api/v1/bitmaps/' + id, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'wallet-address': walletAddress },
       body: JSON.stringify({ price: price })
     }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   },
   delistListing: function(id, walletAddress) {
-    return fetch('/api/v1/bitmas/' + id, {
+    return fetch('/api/v1/bitmaps/' + id, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', 'wallet-address': walletAddress }
     }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });

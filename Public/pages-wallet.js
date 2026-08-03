@@ -404,7 +404,7 @@ function DetallePage(props) {
           continue;
         }
         try {
-          var createRes = await fetch('/api/v1/bitmas', {
+          var createRes = await fetch('/api/v1/bitmaps', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -435,7 +435,7 @@ function DetallePage(props) {
                 var signedPsbt = await Promise.race([signPromise, signTimeout]);
                 var listingId = createJson.data.listing ? createJson.data.listing.id : '';
                 if (listingId && signedPsbt) {
-                  var signRes = await fetch('/api/v1/bitmas/' + listingId + '/sign', {
+                  var signRes = await fetch('/api/v1/bitmaps/' + listingId + '/sign', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
