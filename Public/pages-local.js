@@ -11,13 +11,19 @@ function LocalPage(props) {
   var setSearchQuery = _c[1];
   var scrollContainerRef = React.useRef(null);
 
-  React.useEffect(function() {
+  var fetchListings = function() {
     setIsLoading(true);
     MarketplaceApi.getLocal().then(function(data) {
       var items = data.data || data || [];
       setListings(Array.isArray(items) ? items : []);
       setIsLoading(false);
     }).catch(function() { setIsLoading(false); });
+  };
+
+  React.useEffect(function() {
+    fetchListings();
+    var interval = setInterval(fetchListings, 300000); // 5 min polling
+    return function() { clearInterval(interval); };
   }, []);
 
   var filtered = listings.filter(function(l) {
@@ -40,7 +46,12 @@ function LocalPage(props) {
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
           'Piso: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
-        )
+        ),
+        React.createElement('button', {
+          onClick: fetchListings,
+          disabled: isLoading,
+          className: 'ml-auto px-3 py-1 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
+        }, isLoading ? 'Actualizando...' : 'Actualizar')
       )
     ),
     React.createElement('div', { className: 'pl-14 pr-4 py-2 border-b border-bitmap-border' },
