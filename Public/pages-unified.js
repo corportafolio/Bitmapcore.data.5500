@@ -202,7 +202,9 @@ function UnifiedPage(props) {
                           React.createElement('span', { className: 'flex items-center flex-shrink-0 ml-2 gap-1' },
                             React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted truncate' }, addr),
                             React.createElement('img', {
-                              src: item.source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : 'unisat_logo.png',
+                              src: item.source === 'ordinalswallet' 
+                                ? 'ordinalswallet_logo.png' 
+                                : (item.source === 'local' ? 'logo_bitmapcore_logo.png' : 'unisat_logo.png'),
                               style: { width: 16, height: 16, flexShrink: 0 },
                               alt: ''
                             })

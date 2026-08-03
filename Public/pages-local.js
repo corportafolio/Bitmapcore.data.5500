@@ -14,7 +14,7 @@ function LocalPage(props) {
   var fetchListings = function() {
     setIsLoading(true);
     MarketplaceApi.getLocal().then(function(data) {
-      var items = data.data || data || [];
+      var items = (data.data && data.data.items) || data.items || data.data || data || [];
       setListings(Array.isArray(items) ? items : []);
       setIsLoading(false);
     }).catch(function() { setIsLoading(false); });
