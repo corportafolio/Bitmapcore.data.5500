@@ -66,5 +66,24 @@ var MarketplaceApi = {
   getTags: function() { return ApiClient.get('/api/v1/tags', true); },
   getTagBlocks: function(tag) { return ApiClient.get('/api/v1/tags/' + encodeURIComponent(tag), true); },
   getSales: function() { return ApiClient.get('/api/v1/proxy/ordinalswallet/sold', true); },
-  getDescuentos: function() { return ApiClient.get('/api/v1/descuentos', true); }
+  getDescuentos: function() { return ApiClient.get('/api/v1/descuentos', true); },
+  getOwnerListings: function(address) {
+    return MarketplaceApi.getLocal().then(function(res) {
+      var items = (res && res.data && res.data.items) || [];
+      return items.filter(function(l) { return l.sellerAddress === address && l.isActive; });
+    });
+  },
+  updateListingPrice: function(id, price, walletAddress) {
+    return fetch('/api/v1/bitmas/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'wallet-address': walletAddress },
+      body: JSON.stringify({ price: price })
+    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  delistListing: function(id, walletAddress) {
+    return fetch('/api/v1/bitmas/' + id, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'wallet-address': walletAddress }
+    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
 };

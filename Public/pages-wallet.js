@@ -283,6 +283,21 @@ function DetallePage(props) {
   var _g = React.useState({});
   var blockDataMap = _g[0];
   var setBlockDataMap = _g[1];
+  var _h = React.useState({});
+  var myListings = _h[0];
+  var setMyListings = _h[1];
+  var _i = React.useState(null);
+  var editingListing = _i[0];
+  var setEditingListing = _i[1];
+  var _j = React.useState('');
+  var editPriceStr = _j[0];
+  var setEditPriceStr = _j[1];
+  var _k = React.useState(null);
+  var confirmAction = _k[0];
+  var setConfirmAction = _k[1];
+  var _l = React.useState(null);
+  var editMenuFor = _l[0];
+  var setEditMenuFor = _l[1];
 
   React.useEffect(function() {
     if (col && col.items) {
@@ -292,6 +307,19 @@ function DetallePage(props) {
       setSelectionState(sel);
     }
   }, [col]);
+
+  var loadMyListings = function() {
+    if (!wallet.address) return;
+    MarketplaceApi.getOwnerListings(wallet.address).then(function(listings) {
+      var map = {};
+      for (var i = 0; i < listings.length; i++) {
+        map[listings[i].inscriptionId] = listings[i];
+      }
+      setMyListings(map);
+    }).catch(function() {});
+  };
+
+  React.useEffect(function() { loadMyListings(); }, [wallet.address]);
 
   React.useEffect(function() {
     if (!col || !col.items || col.items.length === 0) return;
@@ -360,7 +388,6 @@ function DetallePage(props) {
     try {
       var pubKey = wallet.publicKey;
       if (!pubKey) {
-        console.error('[Listar] No hay public key disponible. Reconecta la wallet.');
         setListingStatus({ toast:'Error: reconecta la wallet para obtener la public key' });
         return;
       }
@@ -377,7 +404,7 @@ function DetallePage(props) {
           continue;
         }
         try {
-          var createRes = await fetch('/api/v1/bitmaps', {
+          var createRes = await fetch('/api/v1/bitmas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -408,7 +435,7 @@ function DetallePage(props) {
                 var signedPsbt = await Promise.race([signPromise, signTimeout]);
                 var listingId = createJson.data.listing ? createJson.data.listing.id : '';
                 if (listingId && signedPsbt) {
-                  var signRes = await fetch('/api/v1/bitmaps/' + listingId + '/sign', {
+                  var signRes = await fetch('/api/v1/bitmas/' + listingId + '/sign', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -442,10 +469,62 @@ function DetallePage(props) {
       var msg = successCount + ' bitmaps listados';
       if (errors.length > 0) msg += ' (' + errors.length + ' errores)';
       setListingStatus({ toast:msg });
+      loadMyListings();
     } catch(e) {
       setListingStatus({ toast:'Error: ' + e.message });
     }
   };
+
+  var handleEditPrice = function(listing) {
+    setEditingListing(listing);
+    setEditPriceStr((listing.price / 100000000).toFixed(8));
+    setEditMenuFor(null);
+  };
+
+  var handleSavePrice = async function() {
+    if (!editingListing) return;
+    var btcPrice = parseFloat(editPriceStr);
+    if (isNaN(btcPrice) || btcPrice <= 0) {
+      setListingStatus({ toast:'Precio invalido' });
+      setEditingListing(null);
+      return;
+    }
+    var sats = Math.round(btcPrice * 100000000);
+    try {
+      await MarketplaceApi.updateListingPrice(editingListing.id, sats, wallet.address);
+      setListingStatus({ toast:'Precio actualizado' });
+      setEditingListing(null);
+      loadMyListings();
+    } catch(e) {
+      setListingStatus({ toast:'Error: ' + e.message });
+      setEditingListing(null);
+    }
+  };
+
+  var handleDelist = function(listing) {
+    setConfirmAction({ type:'delist', listing:listing });
+    setEditMenuFor(null);
+  };
+
+  var handleConfirmDelist = async function() {
+    if (!confirmAction || confirmAction.type !== 'delist') return;
+    var listing = confirmAction.listing;
+    setConfirmAction(null);
+    try {
+      await MarketplaceApi.delistListing(listing.id, wallet.address);
+      setListingStatus({ toast:'Bitmap deslistado' });
+      loadMyListings();
+    } catch(e) {
+      setListingStatus({ toast:'Error: ' + e.message });
+    }
+  };
+
+  React.useEffect(function() {
+    if (!editMenuFor) return;
+    var close = function() { setEditMenuFor(null); };
+    window.addEventListener('click', close);
+    return function() { window.removeEventListener('click', close); };
+  }, [editMenuFor]);
 
   if (!wallet.address) {
     return React.createElement('div', { className:'flex items-center justify-center h-full' },
@@ -454,7 +533,7 @@ function DetallePage(props) {
   }
 
   return React.createElement('div', { className:'p-4 lg:p-6' },
-    React.createElement('div', { className:'max-w-5xl mx-auto space-y-4' },
+    React.createElement('div', { className:'max-w-6xl mx-auto space-y-4' },
       React.createElement('div', { className:'flex items-center justify-between' },
         React.createElement('div', { className:'flex items-center gap-3' },
           React.createElement('button', {
@@ -491,7 +570,7 @@ function DetallePage(props) {
         React.createElement('p', { className:'font-acme text-bitmap-muted' }, 'Coleccion no encontrada')
       ) :
 
-      isBitmapCollection ? React.createElement('div', { className:'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' },
+      isBitmapCollection ? React.createElement('div', { className:'grid grid-cols-2 sm:grid-cols-4 gap-3' },
         selectionState.map(function(item, idx) {
           var blockNum = extractBlockNumber(item.name);
           var blockData = blockDataMap[blockNum] || {};
@@ -501,6 +580,78 @@ function DetallePage(props) {
           var isPerfect = etiquetas.indexOf('Perfect') !== -1;
           var isPunk = etiquetas.indexOf('Punk') !== -1;
           var tags = etiquetas.split('|').filter(function(t) { return t.trim() !== ''; });
+          var listing = myListings[item.id] || null;
+          var isListed = !!listing;
+          var listedPriceBtc = isListed ? (listing.price / 100000000).toFixed(8) : '';
+          var menuOpen = editMenuFor === item.id;
+
+          if (isListed) {
+            return React.createElement('div', {
+              key:idx,
+              className:'bg-bitmap-surface border border-bitmap-border rounded-xl relative'
+            },
+              React.createElement('div', { className:'flex items-center justify-between px-3 py-2 border-b border-bitmap-border' },
+                React.createElement('div', { className:'flex items-center gap-2' },
+                  React.createElement('input', {
+                    type:'checkbox',
+                    checked:item.isSelected,
+                    onChange:function() { toggleSelection(idx); },
+                    style:{ width:'18px', height:'18px', accentColor:'#FE3E00' }
+                  })
+                ),
+                React.createElement('div', { className:'flex items-center gap-2' },
+                  React.createElement('img', {
+                    src:'/logo192.png',
+                    style:{ width:18, height:18, borderRadius:3 },
+                    alt:''
+                  }),
+                  React.createElement('span', { className:'font-acme text-xs font-bold text-bitmap-orange-light' }, listedPriceBtc + ' BTC'),
+                  React.createElement('div', { className:'relative' },
+                    React.createElement('button', {
+                      onClick:function(e) { e.stopPropagation(); setEditMenuFor(menuOpen ? null : item.id); },
+                      className:'p-1 rounded hover:bg-bitmap-border transition-colors'
+                    }, React.createElement('svg', { width:14, height:14, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:2, className:'text-bitmap-muted' },
+                      React.createElement('path', { d:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' }),
+                      React.createElement('path', { d:'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' })
+                    )),
+                    menuOpen ? React.createElement('div', {
+                      onClick:function(e) { e.stopPropagation(); },
+                      className:'absolute right-0 top-full mt-1 w-44 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
+                    },
+                      React.createElement('button', {
+                        onClick:function() { handleEditPrice(listing); },
+                        className:'w-full px-3 py-2 text-left font-acme text-xs text-bitmap-text hover:bg-bitmap-surface transition-colors'
+                      }, '\u270F Actualizar precio'),
+                      React.createElement('button', {
+                        onClick:function() { handleDelist(listing); },
+                        className:'w-full px-3 py-2 text-left font-acme text-xs text-bitmap-red hover:bg-bitmap-surface transition-colors'
+                      }, '\u2716 Deslistar')
+                    ) : null
+                  )
+                )
+              ),
+              React.createElement('div', { className:'p-2' },
+                tags.length > 0 ? React.createElement('div', { className:'w-full mb-1 px-0.5' },
+                  React.createElement(UniversalTagList, { etiquetas:etiquetas, fontSize:9 })
+                ) : null,
+                React.createElement('div', { className:'w-full aspect-square mb-1 rounded-lg overflow-hidden bg-bitmap-black' },
+                  blockNum ? React.createElement('img', {
+                    src: '/api/v1/block-image/' + blockNum + '?size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                    alt:'',
+                    className:'w-full h-full object-cover',
+                    onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?size=150'; }
+                  }) : null
+                ),
+                React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
+                  item.name || '#' + item.inscriptionNumber
+                ),
+                React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' },
+                  item.inscriptionNumber ? '#' + item.inscriptionNumber : ''
+                )
+              )
+            );
+          }
+
           return React.createElement('div', {
             key:idx,
             className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3 relative',
@@ -528,30 +679,30 @@ function DetallePage(props) {
                 onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?size=150'; }
               }) : null
             ),
-            React.createElement('div', { className:'font-alfaslab text-xs text-white truncate' },
+            React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
               item.name || '#' + item.inscriptionNumber
             ),
-            React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' },
+            React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' },
               item.inscriptionNumber ? '#' + item.inscriptionNumber : ''
             ),
             item.isSelected ? React.createElement('div', { className:'mt-2 relative z-20' },
               React.createElement('input', {
                 type:'text',
                 inputMode:'decimal',
-                placeholder:'',
+                placeholder:'Precio en BTC',
                 value:item.priceStr,
                 onChange:function(e) { updatePrice(idx, e.target.value); },
                 className:'w-full bg-bitmap-black border border-bitmap-border rounded px-2 py-1 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
               }),
               item.priceSatoshis > 0 ? React.createElement('div', { className:'font-acme text-[10px] text-bitmap-orange-light mt-1' },
-                item.priceSatoshis.toLocaleString() + ' sats'
+                (item.priceSatoshis / 100000000).toFixed(8) + ' BTC'
               ) : null
             ) : null
           );
         })
       ) :
 
-      React.createElement('div', { className:'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' },
+      React.createElement('div', { className:'grid grid-cols-2 sm:grid-cols-4 gap-3' },
         (col ? col.items : []).map(function(item, idx) {
           var blockNum = extractBlockNumber(item.name);
           var blockData = blockDataMap[blockNum] || {};
@@ -573,10 +724,10 @@ function DetallePage(props) {
                 onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?size=150'; }
               }) : null
             ),
-            React.createElement('div', { className:'font-alfaslab text-xs text-white truncate' },
+            React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
               item.name || '#' + item.inscriptionNumber
             ),
-            React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' },
+            React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' },
               item.inscriptionNumber ? '#' + item.inscriptionNumber : ''
             )
           );
@@ -590,7 +741,7 @@ function DetallePage(props) {
             selectionState.filter(function(it) { return it.isSelected && it.priceSatoshis > 0; }).map(function(item, idx) {
               return React.createElement('div', { key:idx, className:'flex justify-between text-sm' },
                 React.createElement('span', { className:'font-acme text-white' }, item.name || '#' + item.inscriptionNumber),
-                React.createElement('span', { className:'font-alfaslab text-bitmap-orange-light' }, item.priceSatoshis.toLocaleString() + ' sats')
+                React.createElement('span', { className:'font-alfaslab text-bitmap-orange-light' }, (item.priceSatoshis / 100000000).toFixed(8) + ' BTC')
               );
             })
           ),
@@ -603,6 +754,52 @@ function DetallePage(props) {
               onClick:confirmListar,
               className:'flex-1 py-2 bg-bitmap-orange text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-orange/80 transition-colors'
             }, 'Confirmar y Firmar')
+          )
+        )
+      ) : null,
+
+      editingListing ? React.createElement('div', { className:'fixed inset-0 z-50 flex items-center justify-center bg-black/50' },
+        React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-6 max-w-sm w-full mx-4' },
+          React.createElement('h3', { className:'font-alfaslab text-lg text-white mb-2' }, 'Actualizar precio'),
+          React.createElement('p', { className:'font-acme text-xs text-bitmap-muted mb-4' }, editingListing.name),
+          React.createElement('input', {
+            type:'text',
+            inputMode:'decimal',
+            value:editPriceStr,
+            onChange:function(e) { setEditPriceStr(e.target.value.replace(/[^0-9.]/g, '')); },
+            className:'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-4 py-3 font-acme text-sm text-white focus:outline-none focus:border-bitmap-orange mb-1'
+          }),
+          React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted mb-4' },
+            editPriceStr ? parseFloat(editPriceStr).toFixed(8) + ' BTC' : ''
+          ),
+          React.createElement('div', { className:'flex gap-3' },
+            React.createElement('button', {
+              onClick:function() { setEditingListing(null); },
+              className:'flex-1 py-2 bg-bitmap-border text-white font-alfaslab text-sm rounded-lg'
+            }, 'Cancelar'),
+            React.createElement('button', {
+              onClick:handleSavePrice,
+              className:'flex-1 py-2 bg-bitmap-orange text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-orange/80 transition-colors'
+            }, 'Guardar')
+          )
+        )
+      ) : null,
+
+      confirmAction && confirmAction.type === 'delist' ? React.createElement('div', { className:'fixed inset-0 z-50 flex items-center justify-center bg-black/50' },
+        React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-6 max-w-sm w-full mx-4' },
+          React.createElement('h3', { className:'font-alfaslab text-lg text-white mb-2' }, 'Deslistar bitmap'),
+          React.createElement('p', { className:'font-acme text-sm text-bitmap-text mb-1' }, 'Vas a deslistar:'),
+          React.createElement('p', { className:'font-acme text-sm text-bitmap-orange font-bold mb-4' }, confirmAction.listing.name),
+          React.createElement('p', { className:'font-acme text-xs text-bitmap-muted mb-4' }, 'El bitmap sera removido de tu marketplace.'),
+          React.createElement('div', { className:'flex gap-3' },
+            React.createElement('button', {
+              onClick:function() { setConfirmAction(null); },
+              className:'flex-1 py-2 bg-bitmap-border text-white font-alfaslab text-sm rounded-lg'
+            }, 'Cancelar'),
+            React.createElement('button', {
+              onClick:handleConfirmDelist,
+              className:'flex-1 py-2 bg-bitmap-red text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-red/80 transition-colors'
+            }, 'Deslistar')
           )
         )
       ) : null
