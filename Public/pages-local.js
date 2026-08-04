@@ -394,7 +394,7 @@ function LocalPage(props) {
                       onChange: function(e) { toggleListItemSelection(item.id, e.target.checked); },
                       onClick: function(e) { e.stopPropagation(); },
                       className: 'w-4 h-4',
-                      style: { accentColor: '#666666', color: '#666666' }
+                      style: { accentColor: item.isSelected ? '#00AA00' : '#666666', color: item.isSelected ? '#00AA00' : '#666666' }
                     }),
                     imgSrc ? React.createElement('img', {
                       src: imgSrc,
