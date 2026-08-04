@@ -28,11 +28,9 @@ function LocalPage(props) {
 
   var fetchListings = function() {
     setIsLoading(true);
-    ApiClient.get('/api/v1/unified/cache/listings?sort=listedAtDesc&limit=200', true)
+    ApiClient.get('/api/v1/unified/cache/listings?sort=listedAtDesc&limit=200&source=local', true)
       .then(function(res) {
-        var items = (res.data || []).filter(function(item) {
-          return item.source === 'local';
-        });
+        var items = res.data || [];
         setListings(items);
         setIsLoading(false);
       })
