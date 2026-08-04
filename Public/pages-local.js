@@ -280,9 +280,9 @@ function LocalPage(props) {
                         '#' + (item.blockNum || '?') + '.bitmap'
                       ),
                       item.isListed ? React.createElement('span', {
-                        className: 'px-1 py-0.5 bg-bitmap-orange/20 text-bitmap-orange font-acme text-[8px] rounded flex-shrink-0'
+                        className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
                       }, 'Actualizar') : React.createElement('span', {
-                        className: 'px-1 py-0.5 bg-green-500/20 text-green-400 font-acme text-[8px] rounded flex-shrink-0'
+                        className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
                       }, 'Nuevo')
                     ),
                     React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange flex-shrink-0 ml-2' },
