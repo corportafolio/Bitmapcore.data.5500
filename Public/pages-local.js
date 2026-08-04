@@ -254,15 +254,7 @@ function LocalPage(props) {
           'cargados: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(filtered.length))
         ),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
-          'listados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length))
-        ),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
-          'Piso: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
-        ),
-        React.createElement('div', { className: 'flex items-center gap-2 ml-auto md:ml-2' },
+        React.createElement('div', { className: 'relative' },
           React.createElement('button', {
             onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
             disabled: isLoadingDropdown,
@@ -312,25 +304,33 @@ function LocalPage(props) {
                 )
               )
             )
-          : null,
-          React.createElement('div', { className: 'relative' },
-            React.createElement('button', {
-              onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
-              className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
-            }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
-            showSortMenu ? React.createElement('div', {
-              className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
-            },
-              sortButtons.map(function(btn) {
-                return React.createElement('button', {
-                  key: btn.key,
-                  onClick: function(e) { e.stopPropagation(); handleSort(btn.key); setShowSortMenu(false); },
-                  className: 'w-full px-3 py-1.5 text-left font-acme text-xs transition-colors ' +
-                    (currentSort === btn.key ? 'bg-bitmap-orange text-black font-bold' : 'text-bitmap-text hover:bg-bitmap-surface')
-                }, btn.label);
-              })
-            ) : null
-          )
+          : null
+        ),
+        React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
+          'listados: ',
+          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length))
+        ),
+        React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
+          'Piso: ',
+          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
+        ),
+        React.createElement('div', { className: 'relative' },
+          React.createElement('button', {
+            onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
+            className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
+          }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+          showSortMenu ? React.createElement('div', {
+            className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
+          },
+            sortButtons.map(function(btn) {
+              return React.createElement('button', {
+                key: btn.key,
+                onClick: function(e) { e.stopPropagation(); handleSort(btn.key); setShowSortMenu(false); },
+                className: 'w-full px-3 py-1.5 text-left font-acme text-xs transition-colors ' +
+                  (currentSort === btn.key ? 'bg-bitmap-orange text-black font-bold' : 'text-bitmap-text hover:bg-bitmap-surface')
+              }, btn.label);
+            })
+          ) : null
         )
       )
     ),

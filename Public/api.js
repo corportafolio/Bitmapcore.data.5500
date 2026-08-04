@@ -53,7 +53,7 @@ var MisActivosApi = {
 
 var AssetApi = {
   getUserAssets: function(address) {
-    return fetch('/api/v1/assets/address/' + address)
+    return fetch('/api/v1/assets/address/' + address + '?t=' + Date.now())
       .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   }
 };
