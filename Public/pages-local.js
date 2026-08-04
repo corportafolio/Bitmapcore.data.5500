@@ -16,6 +16,15 @@ function LocalPage(props) {
   var _e = React.useState(false);
   var showSortMenu = _e[0];
   var setShowSortMenu = _e[1];
+  var _f = React.useState(false);
+  var showListDropdown = _f[0];
+  var setShowListDropdown = _f[1];
+  var _g = React.useState([]);
+  var listItems = _g[0];
+  var setListItems = _g[1];
+  var _h = React.useState(false);
+  var isLoadingDropdown = _h[0];
+  var setIsLoadingDropdown = _h[1];
 
   var fetchListings = function() {
     setIsLoading(true);
@@ -30,11 +39,172 @@ function LocalPage(props) {
       .catch(function() { setIsLoading(false); });
   };
 
+  var fetchUserBitmapsForListing = function() {
+    var wallet = StoreApp.get('wallet');
+    if (!wallet || !wallet.address) return;
+    setIsLoadingDropdown(true);
+    AssetApi.getUserAssets(wallet.address).then(function(res) {
+      if (res.success && res.data) {
+        var bitmapCollection = res.data.collections.find(function(c) { return c.name === 'Bitmaps'; });
+        if (bitmapCollection && bitmapCollection.items) {
+          var items = bitmapCollection.items
+            .filter(function(it) { return it.isBitmap && !it.isParcel; })
+            .map(function(it) {
+              var blockNum = extractBlockNumber(it.name);
+              return {
+                id: it.id,
+                name: it.name,
+                inscriptionNumber: it.inscriptionNumber,
+                output: it.output,
+                value: it.value,
+                blockNum: blockNum,
+                etiquetas: '',
+                hash: '',
+                totalTransacciones: 0,
+                isSelected: false,
+                priceStr: '',
+                priceSatoshis: 0
+              };
+            });
+          setListItems(items);
+        }
+      }
+      setIsLoadingDropdown(false);
+    }).catch(function() { setIsLoadingDropdown(false); });
+  };
+
+  var toggleListItemSelection = function(itemId, checked) {
+    var updated = listItems.map(function(item) {
+      if (item.id === itemId) return Object.assign({}, item, { isSelected: checked });
+      return item;
+    });
+    setListItems(updated);
+  };
+
+  var updateListItemPrice = function(itemId, val) {
+    var clean = val.replace(/[^0-9.]/g, '').replace(/\.(?=.*\.)/g, '');
+    var updated = listItems.map(function(item) {
+      if (item.id === itemId) {
+        var priceStr = clean;
+        var priceSatoshis = clean ? Math.round(parseFloat(clean) * 100000000) : 0;
+        return Object.assign({}, item, { priceStr: priceStr, priceSatoshis: priceSatoshis });
+      }
+      return item;
+    });
+    setListItems(updated);
+  };
+
+  var handleListFromDropdown = async function() {
+    var selected = listItems.filter(function(it) { return it.isSelected && it.priceSatoshis > 0; });
+    if (selected.length === 0) return;
+
+    var wallet = StoreApp.get('wallet');
+    if (!wallet || !wallet.address) return;
+
+    setShowListDropdown(false);
+
+    var successCount = 0;
+    var errors = [];
+
+    try {
+      var pubKey = wallet.publicKey;
+      if (!pubKey) {
+        setListingStatus({ toast:'Error: reconecta la wallet para obtener la public key' });
+        return;
+      }
+
+      for (var j = 0; j < selected.length; j++) {
+        var item = selected[j];
+        var price = item.priceSatoshis;
+        var assetItem = item;
+        if (!assetItem.output || !assetItem.value) {
+          errors.push(item.name + ': sin datos UTXO');
+          continue;
+        }
+        try {
+          var createRes = await fetch('/api/v1/bitmaps', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              inscriptionId: item.id,
+              price: price,
+              sellerAddress: wallet.address,
+              sellerOrdinalPublicKey: pubKey || wallet.address,
+              sellerPaymentAddress: wallet.address,
+              name: item.name || ('Bitmap #' + item.inscriptionNumber),
+              imageUrl: '',
+              bitmapNumber: item.blockNum || extractBlockNumber(item.name),
+              inscriptionNumber: item.inscriptionNumber,
+              inscriptionUtxo: assetItem.output,
+              inscriptionValue: assetItem.value,
+              inscriptionContentType: assetItem.contentType || '',
+              inscriptionHeight: assetItem.height || 0
+            })
+          });
+          var createJson = await createRes.json();
+
+          if (createJson.success && createJson.data && createJson.data.psbtToSign) {
+            if (window.unisat && window.unisat.signPsbt) {
+              try {
+                var signPromise = window.unisat.signPsbt(createJson.data.psbtToSign);
+                var signTimeout = new Promise(function(_, reject) {
+                  setTimeout(function() { reject(new Error('timeout')); }, 15000);
+                });
+                var signedPsbt = await Promise.race([signPromise, signTimeout]);
+                var listingId = createJson.data.listing ? createJson.data.listing.id : '';
+                if (listingId && signedPsbt) {
+                  var signRes = await fetch('/api/v1/bitmaps/' + listingId + '/sign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      signedPsbt: signedPsbt,
+                      sellerOrdinalPublicKey: pubKey || wallet.address
+                    })
+                  });
+                  var signJson = await signRes.json();
+                  if (signJson.success) {
+                    successCount++;
+                  } else {
+                    errors.push(item.name || item.id);
+                  }
+                } else {
+                  successCount++;
+                }
+              } catch(e) {
+                successCount++;
+              }
+            } else {
+              successCount++;
+            }
+          } else {
+            errors.push(item.name || item.id);
+          }
+        } catch(e) {
+          errors.push(item.name || item.id);
+        }
+      }
+
+      var msg = successCount + ' bitmaps listados';
+      if (errors.length > 0) msg += ' (' + errors.length + ' errores)';
+      setListingStatus({ toast:msg });
+      fetchListings();
+    } catch(e) {
+      setListingStatus({ toast:'Error: ' + e.message });
+    }
+  };
+
   React.useEffect(function() {
     fetchListings();
     var interval = setInterval(fetchListings, 300000);
     return function() { clearInterval(interval); };
   }, []);
+
+  React.useEffect(function() {
+    if (!showSortMenu && !showListDropdown) return;
+    var close = function() { setShowSortMenu(false); setShowListDropdown(false); };
+    window.addEventListener('click', close);
+    return function() { window.removeEventListener('click', close); };
+  }, [showSortMenu, showListDropdown]);
 
   var handleSort = function(sort) {
     setCurrentSort(sort);
@@ -83,22 +253,56 @@ function LocalPage(props) {
           'Piso: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
         ),
-        React.createElement('div', { className: 'relative ml-auto md:ml-2' },
+        React.createElement('div', { className: 'relative' },
           React.createElement('button', {
-            onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
-            className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
-          }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
-          showSortMenu ? React.createElement('div', {
-            className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
+            onClick: function() { fetchUserBitmapsForListing(); setShowListDropdown(true); },
+            disabled: isLoadingDropdown,
+            className: 'ml-2 px-3 py-1 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
+          }, isLoadingDropdown ? 'Cargando...' : 'Listar'),
+          showListDropdown ? React.createElement('div', {
+            className: 'absolute left-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-96 overflow-y-auto'
           },
-            sortButtons.map(function(btn) {
-              return React.createElement('button', {
-                key: btn.key,
-                onClick: function(e) { e.stopPropagation(); handleSort(btn.key); },
-                className: 'w-full px-3 py-1.5 text-left font-acme text-xs transition-colors ' +
-                  (currentSort === btn.key ? 'bg-bitmap-orange text-black font-bold' : 'text-bitmap-text hover:bg-bitmap-surface')
-              }, btn.label);
-            })
+            isLoadingDropdown ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'Cargando bitmaps...') :
+            listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay bitmaps disponibles') :
+            React.createElement(React.Fragment, null,
+              listItems.map(function(item, idx) {
+                return React.createElement('div', {
+                  key: item.id,
+                  className: 'px-3 py-2 hover:bg-bitmap-surface transition-colors border-b border-bitmap-border/50'
+                },
+                  React.createElement('div', { className: 'flex items-center gap-2' },
+                    React.createElement('input', {
+                      type: 'checkbox',
+                      checked: item.isSelected,
+                      onChange: function(e) { toggleListItemSelection(item.id, e.target.checked); },
+                      className: 'w-4 h-4 accent-bitmap-orange'
+                    }),
+                    React.createElement('div', { className: 'flex-1 min-w-0' },
+                      React.createElement('div', { className: 'font-acme text-xs text-white truncate' },
+                        '#' + (item.blockNum || '?') + '.bitmap'
+                      ),
+                      React.createElement('div', { className: 'font-acme text-[10px] text-bitmap-muted' },
+                        '#' + (item.inscriptionNumber || '')
+                      )
+                    ),
+                    React.createElement('input', {
+                      type: 'text',
+                      value: item.priceStr,
+                      onChange: function(e) { updateListItemPrice(item.id, e.target.value); },
+                      placeholder: 'BTC',
+                      className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
+                    })
+                  )
+                }),
+                React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
+                  React.createElement('button', {
+                    onClick: handleListFromDropdown,
+                    disabled: listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0; }).length === 0,
+                    className: 'w-full px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 disabled:opacity-50'
+                  }, 'Listar seleccionados')
+                )
+              )
+            )
           ) : null
         )
       )
