@@ -276,7 +276,7 @@ function LocalPage(props) {
                       checked: item.isSelected,
                       onChange: function(e) { toggleListItemSelection(item.id, e.target.checked); },
                       className: 'w-4 h-4 accent-bitmap-orange'
-                    }),
+                }),
                     React.createElement('div', { className: 'flex-1 min-w-0' },
                       React.createElement('div', { className: 'font-acme text-xs text-white truncate' },
                         '#' + (item.blockNum || '?') + '.bitmap'
@@ -293,7 +293,7 @@ function LocalPage(props) {
                       className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
                     })
                   )
-                }),
+                )}),
                 React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
                   React.createElement('button', {
                     onClick: handleListFromDropdown,
@@ -303,7 +303,7 @@ function LocalPage(props) {
                 )
               )
             )
-          ) : null
+          : null
         )
       )
     ),
