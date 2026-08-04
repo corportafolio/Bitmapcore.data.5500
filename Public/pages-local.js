@@ -103,10 +103,31 @@ function LocalPage(props) {
                 existingPrice: existing ? existing.listedPrice : 0
               };
             });
-          setListItems(items);
+
+          var uniqueBlockNums = [];
+          items.forEach(function(it) { if (it.blockNum && uniqueBlockNums.indexOf(it.blockNum) === -1) uniqueBlockNums.push(it.blockNum); });
+
+          Promise.all(uniqueBlockNums.map(function(bn) {
+            return fetch('/api/v1/blocks/' + bn).then(function(r) { return r.json(); }).catch(function() { return null; });
+          })).then(function(blocksRes) {
+            var blockMap = {};
+            blocksRes.forEach(function(r) { if (r && r.success && r.data) blockMap[r.data.blockNumber || r.data.bloque] = r.data; });
+            items = items.map(function(item) {
+              var bd = blockMap[item.blockNum] || {};
+              return Object.assign({}, item, {
+                etiquetas: bd.etiquetas || '',
+                hash: bd.hash || '',
+                totalTransacciones: parseInt(bd.totalTransacciones || bd.txCount) || 0
+              });
+            });
+            setListItems(items);
+            setIsLoadingDropdown(false);
+          }).catch(function() {
+            setListItems(items);
+            setIsLoadingDropdown(false);
+          });
         }
       }
-      setIsLoadingDropdown(false);
     }).catch(function() { setIsLoadingDropdown(false); });
   };
 
@@ -321,7 +342,7 @@ function LocalPage(props) {
                        (item.name && item.name.toLowerCase().indexOf(q) !== -1) ||
                        (item.inscriptionNumber && String(item.inscriptionNumber).indexOf(q) !== -1);
               }).map(function(item, idx) {
-                var imgSrc = item.blockNum ? '/api/v1/block-image/' + item.blockNum + '?size=80' : '';
+                var imgSrc = item.blockNum ? '/api/v1/block-image/' + item.blockNum + '?size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=false&punk=false' : '';
                 return React.createElement('div', {
                   key: item.id,
                   className: 'px-3 py-2 hover:bg-bitmap-surface transition-colors border-b border-bitmap-border/50'
@@ -344,9 +365,9 @@ function LocalPage(props) {
                           '#' + (item.blockNum || '?') + '.bitmap'
                         ),
                         item.isListed ? React.createElement('span', {
-                          className: 'px-1 py-0.5 bg-bitmap-orange/20 text-bitmap-orange font-acme text-[8px] rounded'
-                        }, 'Listado') : React.createElement('span', {
-                          className: 'px-1 py-0.5 bg-green-500/20 text-green-400 font-acme text-[8px] rounded'
+                          className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
+                        }, 'Actualizar') : React.createElement('span', {
+                          className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
                         }, 'Nuevo')
                       ),
                       React.createElement('div', { className: 'font-acme text-[10px] text-bitmap-muted' },
