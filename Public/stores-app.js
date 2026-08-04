@@ -7,6 +7,30 @@ var StoreApp = {
     notifications: { notifications:[], unreadCount:0 },
     polling: { interval:BitmapConstants.POLLING_INTERVAL, isActive:false, lastPoll:null }
   },
+  WALLET_STORAGE_KEY: 'bitmapcore_wallet',
+
+  initWallet: function() {
+    try {
+      var stored = localStorage.getItem(this.WALLET_STORAGE_KEY);
+      if (stored) {
+        var wallet = JSON.parse(stored);
+        if (wallet.address && wallet.publicKey) {
+          this._state.wallet = {
+            address: wallet.address,
+            publicKey: wallet.publicKey,
+            balance: 0,
+            isConnected: true,
+            network: wallet.network || 'mainnet',
+            walletType: wallet.walletType || 'unisat'
+          };
+          this._emit('wallet');
+        }
+      }
+    } catch(e) {
+      console.error('[Wallet] Error loading from storage:', e);
+    }
+  },
+
   get: function(store) { return StoreApp._state[store] || {}; },
   subscribe: function(key, callback) {
     if (!StoreApp._listeners[key]) StoreApp._listeners[key] = [];
@@ -26,6 +50,7 @@ var StoreApp = {
         window.unisat.requestAccounts().then(function(accounts) {
           window.unisat.getPublicKey().then(function(pubKey) {
             StoreApp._state.wallet = { address:accounts[0], publicKey:pubKey, balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
+            localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:accounts[0], publicKey:pubKey, network:'mainnet', walletType:'unisat' }));
             StoreApp._emit('wallet');
             resolve(accounts[0]);
           }).catch(function(err) {
@@ -46,6 +71,7 @@ var StoreApp = {
         }).then(function(result) {
           var addr = result.addresses && result.addresses[0] ? result.addresses[0].address : 'demo-address';
           StoreApp._state.wallet = { address:addr, publicKey:addr, balance:0, isConnected:true, network:'mainnet', walletType:'xverse' };
+          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:addr, publicKey:addr, network:'mainnet', walletType:'xverse' }));
           StoreApp._emit('wallet');
           resolve(addr);
         }).catch(function() {
@@ -57,6 +83,7 @@ var StoreApp = {
         window.unisat.requestAccounts().then(function(accounts) {
           window.unisat.getPublicKey().then(function(pubKey) {
             StoreApp._state.wallet = { address:accounts[0], publicKey:pubKey, balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
+            localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:accounts[0], publicKey:pubKey, network:'mainnet', walletType:'unisat' }));
             StoreApp._emit('wallet');
             resolve(accounts[0]);
           }).catch(function(err) {
@@ -77,6 +104,7 @@ var StoreApp = {
         }).then(function(result) {
           var addr = result.addresses && result.addresses[0] ? result.addresses[0].address : 'demo-address';
           StoreApp._state.wallet = { address:addr, publicKey:addr, balance:0, isConnected:true, network:'mainnet', walletType:'xverse' };
+          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:addr, publicKey:addr, network:'mainnet', walletType:'xverse' }));
           StoreApp._emit('wallet');
           resolve(addr);
         }).catch(function() {
@@ -92,7 +120,8 @@ var StoreApp = {
     });
   },
   disconnectWallet: function() {
-    StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet' };
+    StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
+    localStorage.removeItem('bitmapcore_wallet');
     StoreApp._emit('wallet');
   },
   getBlock: function(id) {

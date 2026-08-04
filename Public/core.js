@@ -101,5 +101,6 @@
   }
 
   var root = ReactDOM.createRoot(document.getElementById('root'));
+  StoreApp.initWallet();
   root.render(React.createElement(Root));
 })();
