@@ -366,7 +366,7 @@ function LocalPage(props) {
                         ),
                         item.isListed ? React.createElement('span', {
                           className: 'px-1 py-0.5 bg-bitmap-orange/20 text-bitmap-orange font-acme text-[8px] rounded flex-shrink-0'
-                        }, 'Actualizar') : React.createElement('span', {
+                        }, 'Listado') : React.createElement('span', {
                           className: 'px-1 py-0.5 bg-green-500/20 text-green-400 font-acme text-[8px] rounded flex-shrink-0'
                         }, 'Nuevo')
                       ),
