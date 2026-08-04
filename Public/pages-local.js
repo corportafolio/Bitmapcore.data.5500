@@ -254,7 +254,7 @@ function LocalPage(props) {
           'cargados: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(filtered.length))
         ),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
+        React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
           'listados: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length))
         ),
@@ -262,11 +262,11 @@ function LocalPage(props) {
           'Piso: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
         ),
-        React.createElement('div', { className: 'relative' },
+        React.createElement('div', { className: 'flex items-center gap-2 ml-auto md:ml-2' },
           React.createElement('button', {
             onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
             disabled: isLoadingDropdown,
-            className: 'ml-2 px-3 py-1 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
+            className: 'px-3 py-1 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
           }, isLoadingDropdown ? 'Cargando...' : 'Listar'),
           showListDropdown ? React.createElement('div', {
             className: 'absolute left-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-96 overflow-y-auto'
@@ -312,7 +312,25 @@ function LocalPage(props) {
                 )
               )
             )
-          : null
+          : null,
+          React.createElement('div', { className: 'relative' },
+            React.createElement('button', {
+              onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
+              className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
+            }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+            showSortMenu ? React.createElement('div', {
+              className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
+            },
+              sortButtons.map(function(btn) {
+                return React.createElement('button', {
+                  key: btn.key,
+                  onClick: function(e) { e.stopPropagation(); handleSort(btn.key); setShowSortMenu(false); },
+                  className: 'w-full px-3 py-1.5 text-left font-acme text-xs transition-colors ' +
+                    (currentSort === btn.key ? 'bg-bitmap-orange text-black font-bold' : 'text-bitmap-text hover:bg-bitmap-surface')
+                }, btn.label);
+              })
+            ) : null
+          )
         )
       )
     ),
