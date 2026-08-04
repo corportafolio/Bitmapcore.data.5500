@@ -141,6 +141,7 @@ function LocalPage(props) {
       }
 
       var batchItems = selected.map(function(item) {
+        var isPriceUpdate = item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice;
         return {
           inscriptionId: item.id,
           price: item.priceSatoshis,
@@ -154,7 +155,8 @@ function LocalPage(props) {
           inscriptionUtxo: item.output,
           inscriptionValue: item.value,
           inscriptionContentType: '',
-          inscriptionHeight: 0
+          inscriptionHeight: 0,
+          isPriceUpdate: isPriceUpdate
         };
       });
 
@@ -171,18 +173,9 @@ function LocalPage(props) {
             var signedPsbt = await Promise.race([signPromise, signTimeout]);
             var listingIds = createJson.data.listingIds || [];
             if (listingIds.length > 0 && signedPsbt) {
-              for (var k = 0; k < listingIds.length; k++) {
-                await fetch('/api/v1/bitmaps/' + listingIds[k] + '/sign', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    signedPsbt: signedPsbt,
-                    sellerOrdinalPublicKey: pubKey || wallet.address
-                  })
-                });
-              }
+              await MarketplaceApi.batchSign(listingIds, signedPsbt, pubKey || wallet.address);
             }
-            setListingStatus({ toast: listingIds.length + ' bitmaps listados con 1 firma' });
+            setListingStatus({ toast: listingIds.length + ' bitmaps listados/actualizados con 1 firma' });
           } catch(e) {
             setListingStatus({ toast:'Error al firmar: ' + e.message });
           }
