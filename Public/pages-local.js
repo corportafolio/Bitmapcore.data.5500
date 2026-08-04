@@ -264,7 +264,7 @@ function LocalPage(props) {
         ),
         React.createElement('div', { className: 'relative' },
           React.createElement('button', {
-            onClick: function() { fetchUserBitmapsForListing(); setShowListDropdown(true); },
+            onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
             disabled: isLoadingDropdown,
             className: 'ml-2 px-3 py-1 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
           }, isLoadingDropdown ? 'Cargando...' : 'Listar'),
