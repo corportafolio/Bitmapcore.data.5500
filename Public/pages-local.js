@@ -27,6 +27,9 @@ function LocalPage(props) {
   var setIsLoadingDropdown = _h[1];
   var _i = React.useState(null);
   var setListingStatus = _i[1];
+  var _j = React.useState('');
+  var dropdownSearch = _j[0];
+  var setDropdownSearch = _j[1];
 
   var extractBlockNumber = function(name) {
     if (!name) return null;
@@ -52,7 +55,21 @@ function LocalPage(props) {
     var wallet = StoreApp.get('wallet');
     if (!wallet || !wallet.address) return;
     setIsLoadingDropdown(true);
-    AssetApi.getUserAssets(wallet.address).then(function(res) {
+    setDropdownSearch('');
+
+    Promise.all([
+      AssetApi.getUserAssets(wallet.address),
+      ApiClient.get('/api/v1/unified/cache/listings?source=local&limit=500', true).catch(function() { return { data: [] }; })
+    ]).then(function(results) {
+      var res = results[0];
+      var listingsRes = results[1];
+      var localListings = (listingsRes && listingsRes.data) || [];
+      var listingMap = {};
+      localListings.forEach(function(l) {
+        if (l.bitmapNumber) listingMap[l.bitmapNumber] = l;
+        if (l.bitmapId) listingMap[l.bitmapId] = l;
+      });
+
       if (res.success && res.data) {
         var bitmapCollection = res.data.collections.find(function(c) { return c.name === 'Bitmaps'; });
         if (bitmapCollection && bitmapCollection.items) {
@@ -60,6 +77,7 @@ function LocalPage(props) {
             .filter(function(it) { return it.isBitmap && !it.isParcel; })
             .map(function(it) {
               var blockNum = extractBlockNumber(it.name);
+              var existing = listingMap[blockNum] || listingMap[it.id] || null;
               return {
                 id: it.id,
                 name: it.name,
@@ -71,8 +89,11 @@ function LocalPage(props) {
                 hash: '',
                 totalTransacciones: 0,
                 isSelected: false,
-                priceStr: '',
-                priceSatoshis: 0
+                priceStr: existing ? (existing.listedPrice / 100000000).toFixed(8) : '',
+                priceSatoshis: existing ? existing.listedPrice : 0,
+                isListed: !!existing,
+                listingId: existing ? (existing.bitmapId || '') : '',
+                existingPrice: existing ? existing.listedPrice : 0
               };
             });
           setListItems(items);
@@ -112,9 +133,6 @@ function LocalPage(props) {
 
     setShowListDropdown(false);
 
-    var successCount = 0;
-    var errors = [];
-
     try {
       var pubKey = wallet.publicKey;
       if (!pubKey) {
@@ -122,80 +140,58 @@ function LocalPage(props) {
         return;
       }
 
-      for (var j = 0; j < selected.length; j++) {
-        var item = selected[j];
-        var price = item.priceSatoshis;
-        var assetItem = item;
-        if (!assetItem.output || !assetItem.value) {
-          errors.push(item.name + ': sin datos UTXO');
-          continue;
-        }
-        try {
-          var createRes = await fetch('/api/v1/bitmaps', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              inscriptionId: item.id,
-              price: price,
-              sellerAddress: wallet.address,
-              sellerOrdinalPublicKey: pubKey || wallet.address,
-              sellerPaymentAddress: wallet.address,
-              name: item.name || ('Bitmap #' + item.inscriptionNumber),
-              imageUrl: '',
-              bitmapNumber: item.blockNum || extractBlockNumber(item.name),
-              inscriptionNumber: item.inscriptionNumber,
-              inscriptionUtxo: assetItem.output,
-              inscriptionValue: assetItem.value,
-              inscriptionContentType: assetItem.contentType || '',
-              inscriptionHeight: assetItem.height || 0
-            })
-          });
-          var createJson = await createRes.json();
+      var batchItems = selected.map(function(item) {
+        return {
+          inscriptionId: item.id,
+          price: item.priceSatoshis,
+          sellerAddress: wallet.address,
+          sellerOrdinalPublicKey: pubKey || wallet.address,
+          sellerPaymentAddress: wallet.address,
+          name: item.name || ('Bitmap #' + item.inscriptionNumber),
+          imageUrl: '',
+          bitmapNumber: item.blockNum || extractBlockNumber(item.name),
+          inscriptionNumber: item.inscriptionNumber,
+          inscriptionUtxo: item.output,
+          inscriptionValue: item.value,
+          inscriptionContentType: '',
+          inscriptionHeight: 0
+        };
+      });
 
-          if (createJson.success && createJson.data && createJson.data.psbtToSign) {
-            if (window.unisat && window.unisat.signPsbt) {
-              try {
-                var signPromise = window.unisat.signPsbt(createJson.data.psbtToSign);
-                var signTimeout = new Promise(function(_, reject) {
-                  setTimeout(function() { reject(new Error('timeout')); }, 15000);
+      var createRes = await MarketplaceApi.batchList(batchItems);
+      var createJson = await createRes;
+
+      if (createJson.success && createJson.data && createJson.data.psbtToSign) {
+        if (window.unisat && window.unisat.signPsbt) {
+          try {
+            var signPromise = window.unisat.signPsbt(createJson.data.psbtToSign);
+            var signTimeout = new Promise(function(_, reject) {
+              setTimeout(function() { reject(new Error('timeout')); }, 30000);
+            });
+            var signedPsbt = await Promise.race([signPromise, signTimeout]);
+            var listingIds = createJson.data.listingIds || [];
+            if (listingIds.length > 0 && signedPsbt) {
+              for (var k = 0; k < listingIds.length; k++) {
+                await fetch('/api/v1/bitmaps/' + listingIds[k] + '/sign', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    signedPsbt: signedPsbt,
+                    sellerOrdinalPublicKey: pubKey || wallet.address
+                  })
                 });
-                var signedPsbt = await Promise.race([signPromise, signTimeout]);
-                var listingId = createJson.data.listing ? createJson.data.listing.id : '';
-                if (listingId && signedPsbt) {
-                  var signRes = await fetch('/api/v1/bitmaps/' + listingId + '/sign', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      signedPsbt: signedPsbt,
-                      sellerOrdinalPublicKey: pubKey || wallet.address
-                    })
-                  });
-                  var signJson = await signRes.json();
-                  if (signJson.success) {
-                    successCount++;
-                  } else {
-                    errors.push(item.name || item.id);
-                  }
-                } else {
-                  successCount++;
-                }
-              } catch(e) {
-                successCount++;
               }
-            } else {
-              successCount++;
             }
-          } else {
-            errors.push(item.name || item.id);
+            setListingStatus({ toast: listingIds.length + ' bitmaps listados con 1 firma' });
+          } catch(e) {
+            setListingStatus({ toast:'Error al firmar: ' + e.message });
           }
-        } catch(e) {
-          errors.push(item.name || item.id);
+        } else {
+          setListingStatus({ toast:'Error: Unisat wallet no disponible' });
         }
+      } else {
+        setListingStatus({ toast:'Error al crear listings' });
       }
-
-      var msg = successCount + ' bitmaps listados';
-      if (errors.length > 0) msg += ' (' + errors.length + ' errores)';
-      setListingStatus({ toast:msg });
       fetchListings();
     } catch(e) {
       setListingStatus({ toast:'Error: ' + e.message });
@@ -266,7 +262,24 @@ function LocalPage(props) {
             isLoadingDropdown ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'Cargando bitmaps...') :
             listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay bitmaps disponibles') :
             React.createElement(React.Fragment, null,
-              listItems.map(function(item, idx) {
+              React.createElement('div', { className: 'px-3 pb-2 border-b border-bitmap-border/50' },
+                React.createElement('input', {
+                  type: 'text',
+                  value: dropdownSearch,
+                  onChange: function(e) { setDropdownSearch(e.target.value); },
+                  placeholder: 'Buscar por # de bloque...',
+                  className: 'w-full bg-bitmap-surface border border-bitmap-border rounded px-2 py-1 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange',
+                  onClick: function(e) { e.stopPropagation(); }
+                })
+              ),
+              listItems.filter(function(item) {
+                if (!dropdownSearch) return true;
+                var q = dropdownSearch.toLowerCase();
+                return (item.blockNum && String(item.blockNum).indexOf(q) !== -1) ||
+                       (item.name && item.name.toLowerCase().indexOf(q) !== -1) ||
+                       (item.inscriptionNumber && String(item.inscriptionNumber).indexOf(q) !== -1);
+              }).map(function(item, idx) {
+                var imgSrc = item.blockNum ? '/api/v1/block-image/' + item.blockNum + '?size=80' : '';
                 return React.createElement('div', {
                   key: item.id,
                   className: 'px-3 py-2 hover:bg-bitmap-surface transition-colors border-b border-bitmap-border/50'
@@ -277,10 +290,22 @@ function LocalPage(props) {
                       checked: item.isSelected,
                       onChange: function(e) { toggleListItemSelection(item.id, e.target.checked); },
                       className: 'w-4 h-4 accent-bitmap-orange'
-                }),
+                    }),
+                    imgSrc ? React.createElement('img', {
+                      src: imgSrc,
+                      className: 'w-[30px] h-[30px] rounded object-cover flex-shrink-0',
+                      onError: function(e) { e.target.style.display = 'none'; }
+                    }) : null,
                     React.createElement('div', { className: 'flex-1 min-w-0' },
-                      React.createElement('div', { className: 'font-acme text-xs text-white truncate' },
-                        '#' + (item.blockNum || '?') + '.bitmap'
+                      React.createElement('div', { className: 'flex items-center gap-1' },
+                        React.createElement('span', { className: 'font-acme text-xs text-white truncate' },
+                          '#' + (item.blockNum || '?') + '.bitmap'
+                        ),
+                        item.isListed ? React.createElement('span', {
+                          className: 'px-1 py-0.5 bg-bitmap-orange/20 text-bitmap-orange font-acme text-[8px] rounded'
+                        }, 'Listado') : React.createElement('span', {
+                          className: 'px-1 py-0.5 bg-green-500/20 text-green-400 font-acme text-[8px] rounded'
+                        }, 'Nuevo')
                       ),
                       React.createElement('div', { className: 'font-acme text-[10px] text-bitmap-muted' },
                         '#' + (item.inscriptionNumber || '')
@@ -294,15 +319,16 @@ function LocalPage(props) {
                       className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
                     })
                   )
-                )}),
-                React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
-                  React.createElement('button', {
-                    onClick: handleListFromDropdown,
-                    disabled: listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0; }).length === 0,
-                    className: 'w-full px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 disabled:opacity-50'
-                  }, 'Listar seleccionados')
-                )
+                );
+              }),
+              React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
+                React.createElement('button', {
+                  onClick: handleListFromDropdown,
+                  disabled: listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0; }).length === 0,
+                  className: 'w-full px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 disabled:opacity-50'
+                }, 'Listar seleccionados')
               )
+            )
             )
           : null
         ),

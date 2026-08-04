@@ -91,5 +91,12 @@ var MarketplaceApi = {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', 'wallet-address': walletAddress }
     }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  batchList: function(items) {
+    return fetch('/api/v1/bitmaps/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: items })
+    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   }
 };
