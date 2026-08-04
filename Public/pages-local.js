@@ -36,6 +36,12 @@ function LocalPage(props) {
   var _l = React.useState([]);
   var confirmItems = _l[0];
   var setConfirmItems = _l[1];
+  var _m = React.useState(false);
+  var showSuccessMenu = _m[0];
+  var setShowSuccessMenu = _m[1];
+  var _n = React.useState([]);
+  var successItems = _n[0];
+  var setSuccessItems = _n[1];
 
   var extractBlockNumber = function(name) {
     if (!name) return null;
@@ -203,7 +209,8 @@ function LocalPage(props) {
             if (listingIds.length > 0 && signedPsbt) {
               await MarketplaceApi.batchSign(listingIds, signedPsbt, pubKey || wallet.address);
             }
-            setListingStatus({ toast: listingIds.length + ' bitmaps listados/actualizados con 1 firma' });
+            setSuccessItems(selected);
+            setShowSuccessMenu(true);
           } catch(e) {
             setListingStatus({ toast:'Error al firmar: ' + e.message });
           }
@@ -321,6 +328,39 @@ function LocalPage(props) {
                   onClick: function(e) { e.stopPropagation(); handleListFromDropdown(); },
                   className: 'flex-1 px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 transition-colors'
                 }, 'Confirmar')
+              )
+            ) :
+            showSuccessMenu ? React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border flex items-center gap-2' },
+                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, '\u2713 \u00c9xito')
+              ),
+              React.createElement('div', { className: 'px-3 py-2 max-h-64 overflow-y-auto' },
+                successItems.map(function(item) {
+                  return React.createElement('div', {
+                    key: item.id,
+                    className: 'flex items-center justify-between py-1.5 border-b border-bitmap-border/30 last:border-0'
+                  },
+                    React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
+                      React.createElement('span', { className: 'font-acme text-xs text-white truncate' },
+                        '#' + (item.blockNum || '?') + '.bitmap'
+                      ),
+                      item.isListed ? React.createElement('span', {
+                        className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
+                      }, 'Listado') : React.createElement('span', {
+                        className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
+                      }, 'Nuevo')
+                    ),
+                    React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2', style: { color: '#666666' } },
+                      item.priceStr + ' BTC'
+                    )
+                  );
+                })
+              ),
+              React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
+                React.createElement('button', {
+                  onClick: function(e) { e.stopPropagation(); setShowSuccessMenu(false); setShowListDropdown(false); },
+                  className: 'w-full px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
+                }, 'Cerrar')
               )
             ) :
             listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay bitmaps disponibles') :
