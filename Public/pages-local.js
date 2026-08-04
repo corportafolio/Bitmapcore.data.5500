@@ -302,11 +302,11 @@ function LocalPage(props) {
                       ),
                       item.isListed ? React.createElement('span', {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'Actualizar') : React.createElement('span', {
+                      }, 'Listado') : React.createElement('span', {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
                       }, 'Nuevo')
                     ),
-                    React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange flex-shrink-0 ml-2' },
+                    React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2 ' + (item.isListed ? 'text-bitmap-muted' : 'text-bitmap-orange') },
                       item.priceStr + ' BTC'
                     )
                   );
@@ -352,7 +352,7 @@ function LocalPage(props) {
                       type: 'checkbox',
                       checked: item.isSelected,
                       onChange: function(e) { toggleListItemSelection(item.id, e.target.checked); },
-                      className: 'w-4 h-4 accent-bitmap-orange'
+                      className: 'w-4 h-4 accent-gray-500'
                     }),
                     imgSrc ? React.createElement('img', {
                       src: imgSrc,
@@ -378,6 +378,7 @@ function LocalPage(props) {
                       type: 'text',
                       value: item.priceStr,
                       onChange: function(e) { updateListItemPrice(item.id, e.target.value); },
+                      onClick: function(e) { e.stopPropagation(); },
                       placeholder: 'BTC',
                       className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
                     })
