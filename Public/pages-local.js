@@ -25,6 +25,17 @@ function LocalPage(props) {
   var _h = React.useState(false);
   var isLoadingDropdown = _h[0];
   var setIsLoadingDropdown = _h[1];
+  var _i = React.useState(null);
+  var setListingStatus = _i[1];
+
+  var extractBlockNumber = function(name) {
+    if (!name) return null;
+    var m = name.match(/^(\d+)\.bitmap$/);
+    if (m) return parseInt(m[1], 10);
+    var m2 = name.match(/^\d+\.(\d+)\.bitmap$/);
+    if (m2) return parseInt(m2[1], 10);
+    return null;
+  };
 
   var fetchListings = function() {
     setIsLoading(true);

@@ -279,15 +279,6 @@ function FloatingMarketplaceMenu(props) {
   var showConfirm = _confirm[0];
   var setShowConfirm = _confirm[1];
 
-  var wallet = StoreApp.get('wallet');
-
-  var handleDisconnect = function() {
-    if (confirm('¿Seguro que quieres desconectar la wallet?')) {
-      StoreApp.disconnectWallet();
-      navigate('/wallet');
-    }
-  };
-
   var items = [
     { id:'ordinalswallet', label:'Ordinalswallet', path:'/ordinalswallet', icon:'ordinalswallet_logo.png', isImage:true },
     { id:'unisat', label:'Unisat', path:'/unisat', icon:'unisat_logo.png', isImage:true },
@@ -311,16 +302,6 @@ function FloatingMarketplaceMenu(props) {
       )
     ),
     isOpen ? React.createElement(React.Fragment, null,
-      wallet.isConnected ? React.createElement('div', { className:'fm-section' },
-        React.createElement('div', { className:'fm-wallet-info' },
-          React.createElement('span', { className:'font-acme text-xs text-bitmap-muted' }, 'Conectado: '),
-          React.createElement('span', { className:'font-acme text-xs text-white truncate' }, wallet.address.slice(0, 6) + '...' + wallet.address.slice(-4))
-        ),
-        React.createElement('button', {
-          onClick: function() { StoreApp.disconnectWallet(); navigate('/wallet'); },
-          className: 'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-red hover:bg-bitmap-red/10 rounded transition-colors'
-        }, 'Desconectar wallet')
-      ) : null,
       items.map(function(item) {
         return React.createElement('button', {
           key:item.id,
