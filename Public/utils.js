@@ -73,6 +73,7 @@ var BitmapConstants = {
     { path: '/ordinalswallet', name: 'ordinalswallet' },
     { path: '/unisat', name: 'unisat' },
     { path: '/local', name: 'local' },
+    { path: '/satflow', name: 'satflow' },
     { path: '/discounts', name: 'discounts' },
     { path: '/unified', name: 'unified' },
     { path: '/tag-tables', name: 'tag-tables' },

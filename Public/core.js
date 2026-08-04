@@ -75,6 +75,7 @@
       React.createElement(Route, { path:'/selector', element:wrapper(SelectorScreenPage) }),
       React.createElement(Route, { path:'/ordinalswallet', element:wrapper(OrdinalswalletPage) }),
       React.createElement(Route, { path:'/unisat', element:wrapper(UnisatPage) }),
+      React.createElement(Route, { path:'/satflow', element:wrapper(SatflowPage) }),
       React.createElement(Route, { path:'/local', element:wrapper(LocalPage) }),
       React.createElement(Route, { path:'/discounts', element:wrapper(DescuentosPage) }),
       React.createElement(Route, { path:'/unified', element:wrapper(UnifiedPage) }),

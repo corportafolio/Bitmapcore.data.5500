@@ -4,6 +4,7 @@ var StoreMarketplaces = {
     ordinalswallet: { listings:[], floorPrice:0, soldCount:0, images:[], isLoading:false, error:null },
     unisat: { listings:[], floorPrice:0, soldCount:0, images:[], isLoading:false, error:null },
     local: { listings:[], floorPrice:0, soldCount:0, images:[], isLoading:false, error:null },
+    satflow: { listings:[], floorPrice:0, soldCount:0, images:[], isLoading:false, error:null },
     unified: { allListings:[], totalCount:0, isLoading:false },
     tags: { tags:[], isLoading:false },
     sales: { sales:[], totalSold:0, isLoading:false },
@@ -131,6 +132,28 @@ var StoreMarketplaces = {
     }).catch(function() {
       StoreMarketplaces._state.descuentos.isLoading = false;
       StoreMarketplaces._emit('descuentos');
+    });
+  },
+  fetchSatflow: function() {
+    StoreMarketplaces._state.satflow.isLoading = true;
+    StoreMarketplaces._emit('satflow');
+    SatflowViewModel.loadFromCacheOnly();
+    var checkData = function() {
+      var vm = SatflowViewModel;
+      StoreMarketplaces._state.satflow = {
+        listings: vm.getListings(),
+        floorPrice: vm.getFloorPrice(),
+        soldCount: vm.getTotalListings(),
+        images: [],
+        isLoading: false,
+        error: null
+      };
+      StoreMarketplaces._emit('satflow');
+    };
+    setTimeout(checkData, 800);
+    var unsub = SatflowViewModel.subscribe('stats', function() {
+      checkData();
+      unsub();
     });
   }
 };
