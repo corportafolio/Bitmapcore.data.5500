@@ -306,7 +306,7 @@ function LocalPage(props) {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
                       }, 'Nuevo')
                     ),
-                    React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2 ' + (item.isListed ? 'text-bitmap-muted' : 'text-bitmap-orange') },
+                    React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2 text-bitmap-muted' },
                       item.priceStr + ' BTC'
                     )
                   );
@@ -352,7 +352,8 @@ function LocalPage(props) {
                       type: 'checkbox',
                       checked: item.isSelected,
                       onChange: function(e) { toggleListItemSelection(item.id, e.target.checked); },
-                      className: 'w-4 h-4 accent-gray-500'
+                      className: 'w-4 h-4 accent-gray-500',
+                      style: { accentColor: '#6b7280' }
                     }),
                     imgSrc ? React.createElement('img', {
                       src: imgSrc,
