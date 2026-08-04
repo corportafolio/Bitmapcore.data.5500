@@ -30,6 +30,12 @@ function LocalPage(props) {
   var _j = React.useState('');
   var dropdownSearch = _j[0];
   var setDropdownSearch = _j[1];
+  var _k = React.useState(false);
+  var showConfirmMenu = _k[0];
+  var setShowConfirmMenu = _k[1];
+  var _l = React.useState([]);
+  var confirmItems = _l[0];
+  var setConfirmItems = _l[1];
 
   var extractBlockNumber = function(name) {
     if (!name) return null;
@@ -56,6 +62,7 @@ function LocalPage(props) {
     if (!wallet || !wallet.address) return;
     setIsLoadingDropdown(true);
     setDropdownSearch('');
+    setShowConfirmMenu(false);
 
     Promise.all([
       AssetApi.getUserAssets(wallet.address),
@@ -253,6 +260,48 @@ function LocalPage(props) {
             className: 'absolute left-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-96 overflow-y-auto'
           },
             isLoadingDropdown ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'Cargando bitmaps...') :
+            showConfirmMenu ? React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border flex items-center gap-2' },
+                React.createElement('button', {
+                  onClick: function(e) { e.stopPropagation(); setShowConfirmMenu(false); },
+                  className: 'text-bitmap-muted hover:text-white transition-colors'
+                }, '\u2190'),
+                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Confirmar listado')
+              ),
+              React.createElement('div', { className: 'px-3 py-2 max-h-64 overflow-y-auto' },
+                confirmItems.map(function(item) {
+                  var isIncomplete = !item.priceStr || item.priceSatoshis <= 0;
+                  return React.createElement('div', {
+                    key: item.id,
+                    className: 'flex items-center justify-between py-1.5 border-b border-bitmap-border/30 last:border-0'
+                  },
+                    React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
+                      React.createElement('span', { className: 'font-acme text-xs text-white truncate' },
+                        '#' + (item.blockNum || '?') + '.bitmap'
+                      ),
+                      item.isListed ? React.createElement('span', {
+                        className: 'px-1 py-0.5 bg-bitmap-orange/20 text-bitmap-orange font-acme text-[8px] rounded flex-shrink-0'
+                      }, 'Precio actualizado') : React.createElement('span', {
+                        className: 'px-1 py-0.5 bg-green-500/20 text-green-400 font-acme text-[8px] rounded flex-shrink-0'
+                      }, 'Nuevo')
+                    ),
+                    React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange flex-shrink-0 ml-2' },
+                      item.priceStr + ' BTC'
+                    )
+                  );
+                })
+              ),
+              React.createElement('div', { className: 'p-2 border-t border-bitmap-border flex gap-2' },
+                React.createElement('button', {
+                  onClick: function(e) { e.stopPropagation(); setShowConfirmMenu(false); },
+                  className: 'flex-1 px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
+                }, 'Atr\u00e1s'),
+                React.createElement('button', {
+                  onClick: function(e) { e.stopPropagation(); handleListFromDropdown(); },
+                  className: 'flex-1 px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 transition-colors'
+                }, 'Confirmar')
+              )
+            ) :
             listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay bitmaps disponibles') :
             React.createElement(React.Fragment, null,
               React.createElement('div', { className: 'px-3 pb-2 border-b border-bitmap-border/50' },
@@ -316,7 +365,13 @@ function LocalPage(props) {
               }),
               React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
                 React.createElement('button', {
-                  onClick: handleListFromDropdown,
+                  onClick: function(e) {
+                    e.stopPropagation();
+                    var selected = listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0; });
+                    if (selected.length === 0) return;
+                    setConfirmItems(selected);
+                    setShowConfirmMenu(true);
+                  },
                   disabled: listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0; }).length === 0,
                   className: 'w-full px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 disabled:opacity-50'
                 }, 'Listar seleccionados')
