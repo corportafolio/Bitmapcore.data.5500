@@ -27,7 +27,7 @@ var StoreApp = {
         }
       }
     } catch(e) {
-      console.error('[Wallet] Error loading from storage:', e);
+      localStorage.removeItem(this.WALLET_STORAGE_KEY);
     }
   },
 
@@ -48,6 +48,11 @@ var StoreApp = {
     if (window.XverseProviders && window.XverseProviders.BitcoinProvider) return window.XverseProviders.BitcoinProvider;
     if (window.BitcoinProvider) return window.BitcoinProvider;
     return null;
+  },
+  _showWalletError: function(msg) {
+    StoreApp.addNotification(msg, 'error');
+    var ev = new CustomEvent('wallet-error', { detail: { message: msg } });
+    if (typeof window !== 'undefined') window.dispatchEvent(ev);
   },
   _xverseSignPsbt: async function(psbtBase64, ordinalsAddress) {
     var provider = StoreApp._getXverseProvider();
@@ -70,13 +75,14 @@ var StoreApp = {
             localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:accounts[0], publicKey:pubKey, network:'mainnet', walletType:'unisat' }));
             StoreApp._emit('wallet');
             resolve(accounts[0]);
-          }).catch(function(err) {
-            console.error('[Wallet] Error obteniendo public key:', err);
+          }).catch(function() {
+            StoreApp._showWalletError('Unisat: no se pudo obtener la clave publica');
             StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
             StoreApp._emit('wallet');
             resolve(null);
           });
         }).catch(function() {
+          StoreApp._showWalletError('Unisat: conexion cancelada');
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
@@ -90,7 +96,11 @@ var StoreApp = {
         }).then(function(response) {
           var addrs = (response && response.result) ? response.result : (Array.isArray(response) ? response : []);
           if (!Array.isArray(addrs) || addrs.length === 0) {
-            throw new Error('No se obtuvieron direcciones');
+            StoreApp._showWalletError('Xverse: no se obtuvieron direcciones');
+            StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
+            StoreApp._emit('wallet');
+            resolve(null);
+            return;
           }
           var ordinalsAddr = null;
           var paymentAddr = null;
@@ -116,8 +126,8 @@ var StoreApp = {
           localStorage.setItem('bitmapcore_wallet', JSON.stringify(walletData));
           StoreApp._emit('wallet');
           resolve(ordinalsAddr.address);
-        }).catch(function(err) {
-          console.error('[Xverse] Error connecting:', err);
+        }).catch(function() {
+          StoreApp._showWalletError('Xverse: conexion cancelada o fallida');
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
@@ -129,13 +139,14 @@ var StoreApp = {
             localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:accounts[0], publicKey:pubKey, network:'mainnet', walletType:'unisat' }));
             StoreApp._emit('wallet');
             resolve(accounts[0]);
-          }).catch(function(err) {
-            console.error('[Wallet] Error obteniendo public key:', err);
+          }).catch(function() {
+            StoreApp._showWalletError('Unisat: no se pudo obtener la clave publica');
             StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
             StoreApp._emit('wallet');
             resolve(null);
           });
         }).catch(function() {
+          StoreApp._showWalletError('Unisat: conexion cancelada');
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
@@ -149,7 +160,11 @@ var StoreApp = {
         }).then(function(response) {
           var addrs2 = (response && response.result) ? response.result : (Array.isArray(response) ? response : []);
           if (!Array.isArray(addrs2) || addrs2.length === 0) {
-            throw new Error('No se obtuvieron direcciones');
+            StoreApp._showWalletError('Xverse: no se obtuvieron direcciones');
+            StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
+            StoreApp._emit('wallet');
+            resolve(null);
+            return;
           }
           var ordAddr2 = null;
           var payAddr2 = null;
@@ -175,13 +190,14 @@ var StoreApp = {
           localStorage.setItem('bitmapcore_wallet', JSON.stringify(walletData2));
           StoreApp._emit('wallet');
           resolve(ordAddr2.address);
-        }).catch(function(err) {
-          console.error('[Xverse] Error connecting (auto-detect):', err);
+        }).catch(function() {
+          StoreApp._showWalletError('Xverse: conexion cancelada o fallida');
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
         });
       } else {
+        StoreApp._showWalletError('No se detecto ninguna wallet. Instala Unisat o Xverse.');
         StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
         StoreApp._emit('wallet');
         resolve(null);
