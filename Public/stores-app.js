@@ -89,12 +89,17 @@ var StoreApp = {
         });
       } else if (type === 'xverse' && typeof window !== 'undefined' && StoreApp._getXverseProvider()) {
         var xProvider = StoreApp._getXverseProvider();
-        xProvider.request('getAddress', {
-          purposes: ['ordinals', 'payment'],
+        xProvider.request('wallet_connect', {
+          addresses: ['ordinals', 'payment'],
           message: 'Conectar a BitmapCore',
           network: 'Mainnet'
         }).then(function(response) {
-          var addrs = (response && response.result) ? response.result : (Array.isArray(response) ? response : []);
+          var addrs = [];
+          if (response && response.status === 'success' && response.result && response.result.addresses) {
+            addrs = response.result.addresses;
+          } else if (response && response.addresses) {
+            addrs = response.addresses;
+          }
           if (!Array.isArray(addrs) || addrs.length === 0) {
             StoreApp._showWalletError('Xverse: no se obtuvieron direcciones');
             StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
@@ -153,12 +158,17 @@ var StoreApp = {
         });
       } else if (!type && typeof window !== 'undefined' && StoreApp._getXverseProvider()) {
         var xProvider2 = StoreApp._getXverseProvider();
-        xProvider2.request('getAddress', {
-          purposes: ['ordinals', 'payment'],
+        xProvider2.request('wallet_connect', {
+          addresses: ['ordinals', 'payment'],
           message: 'Conectar a BitmapCore',
           network: 'Mainnet'
         }).then(function(response) {
-          var addrs2 = (response && response.result) ? response.result : (Array.isArray(response) ? response : []);
+          var addrs2 = [];
+          if (response && response.status === 'success' && response.result && response.result.addresses) {
+            addrs2 = response.result.addresses;
+          } else if (response && response.addresses) {
+            addrs2 = response.addresses;
+          }
           if (!Array.isArray(addrs2) || addrs2.length === 0) {
             StoreApp._showWalletError('Xverse: no se obtuvieron direcciones');
             StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };

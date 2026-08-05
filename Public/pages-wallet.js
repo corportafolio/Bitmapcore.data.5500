@@ -435,7 +435,7 @@ function DetallePage(props) {
                 setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Xverse...' });
                 signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address);
               } catch(xe) {
-                console.error('[Xverse] Error firmando PSBT:', xe);
+                StoreApp._showWalletError('Xverse: error al firmar PSBT');
               }
             } else if (window.unisat && window.unisat.signPsbt) {
               try {

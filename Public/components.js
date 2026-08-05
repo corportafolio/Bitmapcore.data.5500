@@ -87,12 +87,18 @@ function HeaderBar(props) {
       },
         React.createElement('button', {
           onClick: function() { setShowWalletSubmenu(false); StoreApp.connectWallet('unisat'); },
-          className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors'
-        }, 'Unisat'),
+          className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors flex items-center gap-2'
+        },
+          React.createElement('img', { src:'unisat_logo.png', alt:'Unisat', style:{ width:'20px', height:'20px', borderRadius:'3px', objectFit:'contain' } }),
+          'Unisat'
+        ),
         React.createElement('button', {
           onClick: function() { setShowWalletSubmenu(false); StoreApp.connectWallet('xverse'); },
-          className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors'
-        }, 'Xverse')
+          className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors flex items-center gap-2'
+        },
+          React.createElement('img', { src:'xverse-logo.png', alt:'Xverse', style:{ width:'20px', height:'20px', borderRadius:'3px', objectFit:'contain' } }),
+          'Xverse'
+        )
       ) : null
     ),
     showBackButton && !title ? React.createElement('div', { className:'flex-1' }) : null
