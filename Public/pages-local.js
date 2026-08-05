@@ -54,9 +54,9 @@ function LocalPage(props) {
 
   var fetchListings = function() {
     setIsLoading(true);
-    ApiClient.get('/api/v1/unified/cache/listings?sort=listedAtDesc&limit=200&source=local', true)
+    MarketplaceApi.getLocal()
       .then(function(res) {
-        var items = res.data || [];
+        var items = res.data || res || [];
         setListings(items);
         setIsLoading(false);
       })
@@ -72,7 +72,7 @@ function LocalPage(props) {
 
     Promise.all([
       AssetApi.getUserAssets(wallet.address),
-      ApiClient.get('/api/v1/unified/cache/listings?source=local&limit=500', true).catch(function() { return { data: [] }; })
+      MarketplaceApi.getLocal().catch(function() { return { data: [] }; })
     ]).then(function(results) {
       var res = results[0];
       var listingsRes = results[1];
