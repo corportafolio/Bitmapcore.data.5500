@@ -227,24 +227,38 @@ function LocalPage(props) {
       var createJson = await createRes;
 
       if (createJson.success && createJson.data && createJson.data.psbtToSign) {
-        if (window.unisat && window.unisat.signPsbt) {
+        var psbtToSign = createJson.data.psbtToSign;
+        var signedPsbt = null;
+
+        if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
           try {
-            var signPromise = window.unisat.signPsbt(createJson.data.psbtToSign);
+            setListingStatus({ toast:'Firmando en Xverse...' });
+            signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address);
+          } catch(xe) {
+            setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
+          }
+        } else if (window.unisat && window.unisat.signPsbt) {
+          try {
+            setListingStatus({ toast:'Firmando en Unisat...' });
+            var signPromise = window.unisat.signPsbt(psbtToSign);
             var signTimeout = new Promise(function(_, reject) {
               setTimeout(function() { reject(new Error('timeout')); }, 30000);
             });
-            var signedPsbt = await Promise.race([signPromise, signTimeout]);
-            var listingIds = createJson.data.listingIds || [];
-            if (listingIds.length > 0 && signedPsbt) {
-              await MarketplaceApi.batchSign(listingIds, signedPsbt, pubKey || wallet.address);
-            }
-            setSuccessItems(selected);
-            setShowSuccessMenu(true);
-          } catch(e) {
-            setListingStatus({ toast:'Error al firmar: ' + e.message });
+            signedPsbt = await Promise.race([signPromise, signTimeout]);
+          } catch(ue) {
+            setListingStatus({ toast:'Unisat: firma cancelada o fallida' });
           }
         } else {
-          setListingStatus({ toast:'Error: Unisat wallet no disponible' });
+          setListingStatus({ toast:'Wallet no disponible para firmar' });
+        }
+
+        if (signedPsbt) {
+          var listingIds = createJson.data.listingIds || [];
+          if (listingIds.length > 0) {
+            await MarketplaceApi.batchSign(listingIds, signedPsbt, pubKey || wallet.address);
+          }
+          setSuccessItems(selected);
+          setShowSuccessMenu(true);
         }
       } else {
         setListingStatus({ toast:'Error al crear listings' });
