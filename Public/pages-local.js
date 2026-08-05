@@ -56,7 +56,7 @@ function LocalPage(props) {
     setIsLoading(true);
     MarketplaceApi.getLocal()
       .then(function(res) {
-        var items = res.data || res || [];
+        var items = (res.data && res.data.items) || [];
         setListings(items);
         setIsLoading(false);
       })
@@ -72,11 +72,11 @@ function LocalPage(props) {
 
     Promise.all([
       AssetApi.getUserAssets(wallet.address),
-      MarketplaceApi.getLocal().catch(function() { return { data: [] }; })
+      MarketplaceApi.getLocal().catch(function() { return { data: { items: [] } }; })
     ]).then(function(results) {
       var res = results[0];
       var listingsRes = results[1];
-      var localListings = (listingsRes && listingsRes.data) || [];
+      var localListings = (listingsRes && listingsRes.data && listingsRes.data.items) || [];
       var listingMap = {};
       localListings.forEach(function(l) {
         if (l.bitmapNumber) listingMap[l.bitmapNumber] = l;
