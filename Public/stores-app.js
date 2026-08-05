@@ -14,10 +14,10 @@ var StoreApp = {
       var stored = localStorage.getItem(this.WALLET_STORAGE_KEY);
       if (stored) {
         var wallet = JSON.parse(stored);
-        if (wallet.address && wallet.publicKey) {
+        if (wallet.address) {
           this._state.wallet = {
             address: wallet.address,
-            publicKey: wallet.publicKey,
+            publicKey: null,
             balance: 0,
             isConnected: true,
             network: wallet.network || 'mainnet',
@@ -65,6 +65,29 @@ var StoreApp = {
     if (result && result.result) return result.result;
     return result;
   },
+  getPublicKeyFresh: async function() {
+    var wallet = StoreApp._state.wallet;
+    if (!wallet || !wallet.address) throw new Error('Wallet no conectada');
+    if (wallet.walletType === 'unisat' && window.unisat) {
+      return await window.unisat.getPublicKey();
+    } else if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
+      var provider = StoreApp._getXverseProvider();
+      var response = await provider.request('wallet_connect', {
+        addresses: ['ordinals'],
+        message: 'BitmapCore necesita tu clave publica',
+        network: 'Mainnet'
+      });
+      var addrs = [];
+      if (response && response.addresses) addrs = response.addresses;
+      else if (response && response.result && response.result.addresses) addrs = response.result.addresses;
+      for (var i = 0; i < addrs.length; i++) {
+        if (addrs[i].purpose === 'ordinals' && addrs[i].publicKey) return addrs[i].publicKey;
+      }
+      if (addrs.length > 0 && addrs[0].publicKey) return addrs[0].publicKey;
+      throw new Error('Xverse: no se obtuvo la clave publica');
+    }
+    throw new Error('Wallet no disponible para obtener clave publica');
+  },
   connectWallet: function(type) {
     var self = this;
     return new Promise(function(resolve) {
@@ -72,7 +95,7 @@ var StoreApp = {
         window.unisat.requestAccounts().then(function(accounts) {
           window.unisat.getPublicKey().then(function(pubKey) {
             StoreApp._state.wallet = { address:accounts[0], publicKey:pubKey, balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
-            localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:accounts[0], publicKey:pubKey, network:'mainnet', walletType:'unisat' }));
+            localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:accounts[0], network:'mainnet', walletType:'unisat' }));
             StoreApp._emit('wallet');
             resolve(accounts[0]);
           }).catch(function() {
@@ -135,7 +158,7 @@ var StoreApp = {
             walletType: 'xverse'
           };
           StoreApp._state.wallet = walletData;
-          localStorage.setItem('bitmapcore_wallet', JSON.stringify(walletData));
+          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address: ordinalsAddr.address, network: 'mainnet', walletType: 'xverse' }));
           StoreApp._emit('wallet');
           resolve(ordinalsAddr.address);
         }).catch(function() {
@@ -148,7 +171,7 @@ var StoreApp = {
         window.unisat.requestAccounts().then(function(accounts) {
           window.unisat.getPublicKey().then(function(pubKey) {
             StoreApp._state.wallet = { address:accounts[0], publicKey:pubKey, balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
-            localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:accounts[0], publicKey:pubKey, network:'mainnet', walletType:'unisat' }));
+            localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:accounts[0], network:'mainnet', walletType:'unisat' }));
             StoreApp._emit('wallet');
             resolve(accounts[0]);
           }).catch(function() {
@@ -211,7 +234,7 @@ var StoreApp = {
             walletType: 'xverse'
           };
           StoreApp._state.wallet = walletData2;
-          localStorage.setItem('bitmapcore_wallet', JSON.stringify(walletData2));
+          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address: ordAddr2.address, network: 'mainnet', walletType: 'xverse' }));
           StoreApp._emit('wallet');
           resolve(ordAddr2.address);
         }).catch(function() {

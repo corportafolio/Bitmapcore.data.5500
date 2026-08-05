@@ -386,9 +386,16 @@ function DetallePage(props) {
     var errors = [];
 
     try {
-      var pubKey = wallet.publicKey;
+      setListingStatus({ listing:true, count:selected.length, toast:'Obteniendo clave publica...' });
+      var pubKey;
+      try {
+        pubKey = await StoreApp.getPublicKeyFresh();
+      } catch(pke) {
+        setListingStatus({ toast:'Error: no se pudo obtener la clave publica de la wallet' });
+        return;
+      }
       if (!pubKey) {
-        setListingStatus({ toast:'Error: reconecta la wallet para obtener la public key' });
+        setListingStatus({ toast:'Error: reconecta la wallet para obtener la clave publica' });
         return;
       }
 
@@ -411,7 +418,7 @@ function DetallePage(props) {
               inscriptionId: item.id,
               price: price,
               sellerAddress: wallet.address,
-              sellerOrdinalPublicKey: pubKey || wallet.address,
+              sellerOrdinalPublicKey: pubKey,
               sellerPaymentAddress: wallet.address,
               name: item.name || ('Bitmap #' + item.inscriptionNumber),
               imageUrl: '',
@@ -435,18 +442,18 @@ function DetallePage(props) {
                 setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Xverse...' });
                 signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address);
               } catch(xe) {
-                StoreApp._showWalletError('Xverse: error al firmar PSBT');
+                StoreApp._showWalletError('Xverse: firma cancelada o fallida');
               }
             } else if (window.unisat && window.unisat.signPsbt) {
               try {
                 setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Unisat...' });
                 var signPromise = window.unisat.signPsbt(psbtToSign);
                 var signTimeout = new Promise(function(_, reject) {
-                  setTimeout(function() { reject(new Error('timeout')); }, 15000);
+                  setTimeout(function() { reject(new Error('timeout')); }, 30000);
                 });
                 signedPsbt = await Promise.race([signPromise, signTimeout]);
               } catch(ue) {
-                console.error('[Unisat] Error firmando PSBT:', ue);
+                StoreApp._showWalletError('Unisat: firma cancelada o fallida');
               }
             }
 
@@ -456,7 +463,7 @@ function DetallePage(props) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   signedPsbt: signedPsbt,
-                  sellerOrdinalPublicKey: pubKey || wallet.address
+                  sellerOrdinalPublicKey: pubKey
                 })
               });
               var signJson = await signRes.json();
@@ -465,8 +472,6 @@ function DetallePage(props) {
               } else {
                 errors.push(item.name || item.id);
               }
-            } else if (signedPsbt) {
-              successCount++;
             } else {
               errors.push(item.name || item.id);
             }
@@ -522,9 +527,16 @@ function DetallePage(props) {
         return;
       }
 
-      var pubKey = wallet.publicKey;
+      var pubKey;
+      try {
+        pubKey = await StoreApp.getPublicKeyFresh();
+      } catch(pke) {
+        setListingStatus({ toast:'Error: no se pudo obtener la clave publica de la wallet' });
+        setEditingListing(null);
+        return;
+      }
       if (!pubKey) {
-        setListingStatus({ toast:'Error: reconecta la wallet para obtener la public key' });
+        setListingStatus({ toast:'Error: reconecta la wallet para obtener la clave publica' });
         setEditingListing(null);
         return;
       }

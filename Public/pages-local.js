@@ -197,9 +197,16 @@ function LocalPage(props) {
     setShowListDropdown(false);
 
     try {
-      var pubKey = wallet.publicKey;
+      setListingStatus({ toast:'Obteniendo clave publica...' });
+      var pubKey;
+      try {
+        pubKey = await StoreApp.getPublicKeyFresh();
+      } catch(pke) {
+        setListingStatus({ toast:'Error: no se pudo obtener la clave publica de la wallet' });
+        return;
+      }
       if (!pubKey) {
-        setListingStatus({ toast:'Error: reconecta la wallet para obtener la public key' });
+        setListingStatus({ toast:'Error: reconecta la wallet para obtener la clave publica' });
         return;
       }
 
@@ -209,7 +216,7 @@ function LocalPage(props) {
           inscriptionId: item.id,
           price: item.priceSatoshis,
           sellerAddress: wallet.address,
-          sellerOrdinalPublicKey: pubKey || wallet.address,
+          sellerOrdinalPublicKey: pubKey,
           sellerPaymentAddress: wallet.address,
           name: item.name || ('Bitmap #' + item.inscriptionNumber),
           imageUrl: '',
@@ -223,6 +230,7 @@ function LocalPage(props) {
         };
       });
 
+      setListingStatus({ toast:'Creando listings...' });
       var createRes = await MarketplaceApi.batchList(batchItems);
       var createJson = await createRes;
 
@@ -255,10 +263,14 @@ function LocalPage(props) {
         if (signedPsbt) {
           var listingIds = createJson.data.listingIds || [];
           if (listingIds.length > 0) {
-            await MarketplaceApi.batchSign(listingIds, signedPsbt, pubKey || wallet.address);
+            setListingStatus({ toast:'Activando listings...' });
+            await MarketplaceApi.batchSign(listingIds, signedPsbt, pubKey);
           }
           setSuccessItems(selected);
           setShowSuccessMenu(true);
+          setListingStatus({ toast:selected.length + ' bitmaps listados correctamente' });
+        } else {
+          setListingStatus({ toast:'Firma cancelada. Los listings permanecen inactivos.' });
         }
       } else {
         setListingStatus({ toast:'Error al crear listings' });
