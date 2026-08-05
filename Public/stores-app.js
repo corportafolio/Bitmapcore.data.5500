@@ -95,10 +95,10 @@ var StoreApp = {
           network: 'Mainnet'
         }).then(function(response) {
           var addrs = [];
-          if (response && response.status === 'success' && response.result && response.result.addresses) {
-            addrs = response.result.addresses;
-          } else if (response && response.addresses) {
+          if (response && response.addresses) {
             addrs = response.addresses;
+          } else if (response && response.result && response.result.addresses) {
+            addrs = response.result.addresses;
           }
           if (!Array.isArray(addrs) || addrs.length === 0) {
             StoreApp._showWalletError('Xverse: no se obtuvieron direcciones');
@@ -116,6 +116,13 @@ var StoreApp = {
           if (!ordinalsAddr) {
             ordinalsAddr = addrs[0];
             if (addrs.length > 1) paymentAddr = addrs[1];
+          }
+          if (!ordinalsAddr.publicKey) {
+            StoreApp._showWalletError('Xverse: no se obtuvo la clave publica');
+            StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
+            StoreApp._emit('wallet');
+            resolve(null);
+            return;
           }
           var walletData = {
             address: ordinalsAddr.address,
@@ -164,10 +171,10 @@ var StoreApp = {
           network: 'Mainnet'
         }).then(function(response) {
           var addrs2 = [];
-          if (response && response.status === 'success' && response.result && response.result.addresses) {
-            addrs2 = response.result.addresses;
-          } else if (response && response.addresses) {
+          if (response && response.addresses) {
             addrs2 = response.addresses;
+          } else if (response && response.result && response.result.addresses) {
+            addrs2 = response.result.addresses;
           }
           if (!Array.isArray(addrs2) || addrs2.length === 0) {
             StoreApp._showWalletError('Xverse: no se obtuvieron direcciones');
@@ -185,6 +192,13 @@ var StoreApp = {
           if (!ordAddr2) {
             ordAddr2 = addrs2[0];
             if (addrs2.length > 1) payAddr2 = addrs2[1];
+          }
+          if (!ordAddr2.publicKey) {
+            StoreApp._showWalletError('Xverse: no se obtuvo la clave publica');
+            StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
+            StoreApp._emit('wallet');
+            resolve(null);
+            return;
           }
           var walletData2 = {
             address: ordAddr2.address,
