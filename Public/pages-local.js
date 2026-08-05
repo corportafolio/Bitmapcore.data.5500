@@ -30,6 +30,9 @@ function LocalPage(props) {
   var _j = React.useState('');
   var dropdownSearch = _j[0];
   var setDropdownSearch = _j[1];
+  var _jb = React.useState('');
+  var bulkPrice = _jb[0];
+  var setBulkPrice = _jb[1];
   var _k = React.useState(false);
   var showConfirmMenu = _k[0];
   var setShowConfirmMenu = _k[1];
@@ -68,6 +71,7 @@ function LocalPage(props) {
     if (!wallet || !wallet.address) return;
     setIsLoadingDropdown(true);
     setDropdownSearch('');
+    setBulkPrice('');
     setShowConfirmMenu(false);
 
     Promise.all([
@@ -139,11 +143,36 @@ function LocalPage(props) {
 
   var toggleListItemSelection = function(itemId, checked) {
     var updated = listItems.map(function(item) {
-      if (item.id === itemId) return Object.assign({}, item, { isSelected: checked });
+      if (item.id === itemId) {
+        var newItem = Object.assign({}, item, { isSelected: checked });
+        if (checked && bulkPrice && parseFloat(bulkPrice) > 0) {
+          newItem.priceStr = bulkPrice;
+          newItem.priceSatoshis = Math.round(parseFloat(bulkPrice) * 100000000);
+        }
+        return newItem;
+      }
       return item;
     });
     setListItems(updated);
   };
+
+  var applyBulkPrice = function(val) {
+    setBulkPrice(val);
+    if (val && parseFloat(val) > 0) {
+      var updated = listItems.map(function(item) {
+        if (item.isSelected) {
+          return Object.assign({}, item, {
+            priceStr: val,
+            priceSatoshis: Math.round(parseFloat(val) * 100000000)
+          });
+        }
+        return item;
+      });
+      setListItems(updated);
+    }
+  };
+
+  var selectedCount = listItems.filter(function(i) { return i.isSelected; }).length;
 
   var updateListItemPrice = function(itemId, val) {
     var clean = val.replace(/[^0-9.]/g, '').replace(/\.(?=.*\.)/g, '');
@@ -373,6 +402,19 @@ function LocalPage(props) {
                   placeholder: 'Buscar por # de bloque...',
                   className: 'w-full bg-bitmap-surface border border-bitmap-border rounded px-2 py-1 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange',
                   onClick: function(e) { e.stopPropagation(); }
+                })
+              ),
+              React.createElement('div', { className: 'flex items-center justify-between px-3 py-2 border-b border-bitmap-border/50' },
+                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' },
+                  selectedCount > 0 ? selectedCount + ' seleccionado' + (selectedCount > 1 ? 's' : '') : 'Sin seleccionar'
+                ),
+                React.createElement('input', {
+                  type: 'text',
+                  value: bulkPrice,
+                  onChange: function(e) { applyBulkPrice(e.target.value); },
+                  onClick: function(e) { e.stopPropagation(); },
+                  placeholder: 'Precio BTC',
+                  className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white text-right placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
                 })
               ),
               listItems.filter(function(item) {
