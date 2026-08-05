@@ -43,6 +43,23 @@ var StoreApp = {
     var listeners = StoreApp._listeners[key] || [];
     for (var i = 0; i < listeners.length; i++) listeners[i](StoreApp._state[key]);
   },
+  _getXverseProvider: function() {
+    if (typeof window === 'undefined') return null;
+    if (window.XverseProviders && window.XverseProviders.BitcoinProvider) return window.XverseProviders.BitcoinProvider;
+    if (window.BitcoinProvider) return window.BitcoinProvider;
+    return null;
+  },
+  _xverseSignPsbt: async function(psbtBase64, ordinalsAddress) {
+    var provider = StoreApp._getXverseProvider();
+    if (!provider) throw new Error('Xverse wallet no disponible');
+    var result = await provider.request('signPsbt', {
+      psbt: psbtBase64,
+      signInputs: ordinalsAddress ? { [ordinalsAddress]: [0] } : undefined,
+      broadcast: false
+    });
+    if (result && result.result) return result.result;
+    return result;
+  },
   connectWallet: function(type) {
     var self = this;
     return new Promise(function(resolve) {
@@ -64,17 +81,43 @@ var StoreApp = {
           StoreApp._emit('wallet');
           resolve(null);
         });
-      } else if (type === 'xverse' && typeof window !== 'undefined' && window.satsConnect) {
-        window.satsConnect.getAddress({
-          purposes: ['ordinals','payment'],
-          network: { type:'Mainnet' }
-        }).then(function(result) {
-          var addr = result.addresses && result.addresses[0] ? result.addresses[0].address : 'demo-address';
-          StoreApp._state.wallet = { address:addr, publicKey:addr, balance:0, isConnected:true, network:'mainnet', walletType:'xverse' };
-          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:addr, publicKey:addr, network:'mainnet', walletType:'xverse' }));
+      } else if (type === 'xverse' && typeof window !== 'undefined' && StoreApp._getXverseProvider()) {
+        var xProvider = StoreApp._getXverseProvider();
+        xProvider.request('getAddress', {
+          purposes: ['ordinals', 'payment'],
+          message: 'Conectar a BitmapCore',
+          network: 'Mainnet'
+        }).then(function(response) {
+          var addrs = (response && response.result) ? response.result : (Array.isArray(response) ? response : []);
+          if (!Array.isArray(addrs) || addrs.length === 0) {
+            throw new Error('No se obtuvieron direcciones');
+          }
+          var ordinalsAddr = null;
+          var paymentAddr = null;
+          for (var ai = 0; ai < addrs.length; ai++) {
+            if (addrs[ai].purpose === 'ordinals') ordinalsAddr = addrs[ai];
+            else if (addrs[ai].purpose === 'payment') paymentAddr = addrs[ai];
+          }
+          if (!ordinalsAddr) {
+            ordinalsAddr = addrs[0];
+            if (addrs.length > 1) paymentAddr = addrs[1];
+          }
+          var walletData = {
+            address: ordinalsAddr.address,
+            publicKey: ordinalsAddr.publicKey,
+            paymentAddress: paymentAddr ? paymentAddr.address : null,
+            paymentPublicKey: paymentAddr ? paymentAddr.publicKey : null,
+            balance: 0,
+            isConnected: true,
+            network: 'mainnet',
+            walletType: 'xverse'
+          };
+          StoreApp._state.wallet = walletData;
+          localStorage.setItem('bitmapcore_wallet', JSON.stringify(walletData));
           StoreApp._emit('wallet');
-          resolve(addr);
-        }).catch(function() {
+          resolve(ordinalsAddr.address);
+        }).catch(function(err) {
+          console.error('[Xverse] Error connecting:', err);
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
@@ -97,17 +140,43 @@ var StoreApp = {
           StoreApp._emit('wallet');
           resolve(null);
         });
-      } else if (!type && typeof window !== 'undefined' && window.satsConnect) {
-        window.satsConnect.getAddress({
-          purposes: ['ordinals','payment'],
-          network: { type:'Mainnet' }
-        }).then(function(result) {
-          var addr = result.addresses && result.addresses[0] ? result.addresses[0].address : 'demo-address';
-          StoreApp._state.wallet = { address:addr, publicKey:addr, balance:0, isConnected:true, network:'mainnet', walletType:'xverse' };
-          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:addr, publicKey:addr, network:'mainnet', walletType:'xverse' }));
+      } else if (!type && typeof window !== 'undefined' && StoreApp._getXverseProvider()) {
+        var xProvider2 = StoreApp._getXverseProvider();
+        xProvider2.request('getAddress', {
+          purposes: ['ordinals', 'payment'],
+          message: 'Conectar a BitmapCore',
+          network: 'Mainnet'
+        }).then(function(response) {
+          var addrs2 = (response && response.result) ? response.result : (Array.isArray(response) ? response : []);
+          if (!Array.isArray(addrs2) || addrs2.length === 0) {
+            throw new Error('No se obtuvieron direcciones');
+          }
+          var ordAddr2 = null;
+          var payAddr2 = null;
+          for (var ai2 = 0; ai2 < addrs2.length; ai2++) {
+            if (addrs2[ai2].purpose === 'ordinals') ordAddr2 = addrs2[ai2];
+            else if (addrs2[ai2].purpose === 'payment') payAddr2 = addrs2[ai2];
+          }
+          if (!ordAddr2) {
+            ordAddr2 = addrs2[0];
+            if (addrs2.length > 1) payAddr2 = addrs2[1];
+          }
+          var walletData2 = {
+            address: ordAddr2.address,
+            publicKey: ordAddr2.publicKey,
+            paymentAddress: payAddr2 ? payAddr2.address : null,
+            paymentPublicKey: payAddr2 ? payAddr2.publicKey : null,
+            balance: 0,
+            isConnected: true,
+            network: 'mainnet',
+            walletType: 'xverse'
+          };
+          StoreApp._state.wallet = walletData2;
+          localStorage.setItem('bitmapcore_wallet', JSON.stringify(walletData2));
           StoreApp._emit('wallet');
-          resolve(addr);
-        }).catch(function() {
+          resolve(ordAddr2.address);
+        }).catch(function(err) {
+          console.error('[Xverse] Error connecting (auto-detect):', err);
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
