@@ -114,7 +114,7 @@ function LocalPage(props) {
                 hash: '',
                 totalTransacciones: 0,
                 isSelected: false,
-                priceStr: existing ? (existing.listedPrice / 100000000).toFixed(8) : '',
+                priceStr: (existing && existing.listedPrice) ? (existing.listedPrice / 100000000).toFixed(8) : '',
                 priceSatoshis: existing ? existing.listedPrice : 0,
                 isListed: !!existing,
                 listingId: existing ? (existing.bitmapId || '') : '',
@@ -384,7 +384,7 @@ function LocalPage(props) {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
                       }, 'Listado') : React.createElement('span', {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'Nuevo')
+                      }, 'No Listado')
                     ),
                     React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2', style: { color: '#666666' } },
                       item.priceStr + ' BTC'
@@ -421,7 +421,7 @@ function LocalPage(props) {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
                       }, 'Listado') : React.createElement('span', {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'Nuevo')
+                      }, 'No Listado')
                     ),
                     React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2', style: { color: '#666666' } },
                       item.priceStr + ' BTC'
@@ -496,7 +496,7 @@ function LocalPage(props) {
                           className: 'px-1 py-0.5 bg-bitmap-orange/20 text-bitmap-orange font-acme text-[8px] rounded flex-shrink-0'
                         }, 'Listado') : React.createElement('span', {
                           className: 'px-1 py-0.5 bg-green-500/20 text-green-400 font-acme text-[8px] rounded flex-shrink-0'
-                        }, 'Nuevo')
+                        }, 'No Listado')
                       ),
                       React.createElement('div', { className: 'font-acme text-[10px] text-bitmap-muted' },
                         '#' + (item.inscriptionNumber || '')
