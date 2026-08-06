@@ -4,6 +4,8 @@
 
 Este documento describe el **polling incremental** para el web server BitmapCore (`/root/bitmapcore-web/server.js`). El polling incremental busca únicamente los listings **nuevos desde el último timestamp conocido**, en lugar de descargar todos los datos cada 5 minutos.
 
+**Unified = Ordinalswallet + Unisat + Local Marketplace** (los 3 marketplaces).
+
 **Problema resuelto**: El código anterior hacía ~260 llamadas API por poll, agotando las 2,000 diarias en horas. Con polling incremental, se hacen **4-8 llamadas por poll**, alcanzando para todo el mes.
 
 ---
@@ -27,20 +29,31 @@ Este documento describe el **polling incremental** para el web server BitmapCore
 | Llamadas diarias | ~1,440 | ~29-58 |
 | Datos | Re-trae mismos 300 items | Solo items nuevos |
 
-### 2.3 pollUnified()
+### 2.3 Local Marketplace
+
+| Aspecto | Comportamiento |
+|---------|----------------|
+| Fuente | `bitmapcorp.db` (puerto 3000) |
+| API calls | 0 (lectura SQLite directa) |
+| Actualización | Tiempo real + sync en unified |
+| Timestamp | `listed_at` |
+
+### 2.4 Unified — Merge de las 3 Fuentes
 
 | Aspecto | Antes | Después |
 |---------|-------|---------|
-| Operaciones SQLite | DELETE 33,076 + INSERT 33,076 | Solo INSERT nuevos (1-100) |
+| Fuentes | Solo OW + Unisat | OW + Unisat + Local |
+| Operaciones SQLite | DELETE 33,076 + INSERT 33,076 | Solo INSERT nuevos |
 | Tiempo ejecución | Segundos | Milisegundos |
 
-### 2.4 Presupuesto Total de Llamadas API
+### 2.5 Presupuesto Total de Llamadas API
 
-| Marketplace | Antes (diario) | Después (diario) | Ahorro |
+| Marketplace | Tipo | Llamadas/poll | Llamadas/día |
 |---|---|---|---|
-| Unisat | ~7,344 | ~86-173 | 97-98% |
-| OrdinalsWallet | ~1,440 | ~29-58 | 96-98% |
-| **Total** | **~8,784** | **~115-231** | **97%** |
+| Unisat | API externa | ~3-6 | ~86-173 |
+| OrdinalsWallet | API externa | ~1-2 | ~29-58 |
+| Local | SQLite local | 0 | 0 |
+| **Total** | | **~4-8** | **~115-231** |
 
 **Conclusión**: 2,000 llamadas/día alcanzan para TODO el mes sobrado.
 
@@ -48,7 +61,15 @@ Este documento describe el **polling incremental** para el web server BitmapCore
 
 ## 3. Mecanismo de Polling Incremental
 
-### 3.1 Principio General
+### 3.1 Las 3 Fuentes de Unified
+
+| # | Fuente | Tipo | Timestamp | API Calls |
+|---|--------|------|-----------|-----------|
+| 1 | OrdinalsWallet | API externa | `created` | 1-2/poll |
+| 2 | Unisat | API externa | `timestamp` | 3-6/poll |
+| 3 | Local Marketplace | SQLite local | `listed_at` | 0 |
+
+### 3.2 Principio General (OW + Unisat)
 
 El mecanismo se adapta del Android (Documento 41: Polling-Incremental.md):
 
@@ -60,7 +81,43 @@ El mecanismo se adapta del Android (Documento 41: Polling-Incremental.md):
 5. Si hay N listings nuevos → se copian los N a la tabla
 ```
 
-### 3.2 Detección de Primera Vez (isFirstSync)
+### 3.3 Local Marketplace — Lectura Directa
+
+Local marketplace NO necesita polling incremental porque:
+- Es una base de datos **local** (no API externa)
+- Se actualiza en **tiempo real** cuando el usuario lista
+- Solo se **lee** durante el merge de unified
+
+```javascript
+// Lectura directa de bitmapcorp.db
+const dbLocal = new Database('/root/bitmapcore-server/data/bitmapcorp.db', { readonly: true });
+const localRows = dbLocal.prepare("SELECT * FROM listings WHERE is_active=1").all();
+// ... procesar rows
+dbLocal.close();
+```
+
+### 3.4 Unified — Merge de las 3 Fuentes
+
+Unified **NO hace polling incremental**. Solo **merge** las 3 fuentes:
+
+```
+┌─────────────────────────────────────────┐
+│ 1. Leer lastPollTimestamp               │
+├─────────────────────────────────────────┤
+│ 2. ¿Es primera vez?                     │
+│    SÍ → DELETE + re-INSERT todo         │
+│    NO → Solo INSERT nuevos              │
+├─────────────────────────────────────────┤
+│ 3. LEER DE 3 FUENTES:                   │
+│    a. ordinalswallet_cache (OW)         │
+│    b. unisat_cache (Unisat)             │
+│    c. bitmapcorp.db (Local)             │
+├─────────────────────────────────────────┤
+│ 4. Guardar stats + timestamp            │
+└─────────────────────────────────────────┘
+```
+
+### 3.5 Detección de Primera Vez (isFirstSync)
 
 ```javascript
 // En cada marketplace, verificar si es la primera sincronización
@@ -422,7 +479,7 @@ async function pollUnisat() {
 
 ---
 
-## 6. Unified — Flujo Incremental
+## 6. Unified — Merge de las 3 Fuentes
 
 ### 6.1 Flujo Completo
 
@@ -433,11 +490,14 @@ async function pollUnisat() {
 ├─────────────────────────────────────────┤
 │ 2. ¿Es primera vez?                     │
 │    SÍ → DELETE todo + re-INSERT todo    │
-│    NO → Solo INSERT nuevos de OW + Uni  │
+│    NO → Solo INSERT nuevos              │
 ├─────────────────────────────────────────┤
-│ 3. Guardar nuevo lastPollTimestamp      │
+│ 3. LEER DE 3 FUENTES:                   │
+│    a. ordinalswallet_cache (OW)         │
+│    b. unisat_cache (Unisat)             │
+│    c. bitmapcorp.db (Local) ← NUEVO     │
 ├─────────────────────────────────────────┤
-│ 4. Finally: Stats + Cleanup            │
+│ 4. Guardar stats + timestamp            │
 └─────────────────────────────────────────┘
 ```
 
@@ -474,6 +534,7 @@ async function pollUnified() {
       console.error('[UNIFIED] First sync - re-building entire table...');
       dbUnified.prepare("DELETE FROM unified_listings").run();
       
+      // ORDINALSWALLET
       const owRows = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != ''").all();
       for (const row of owRows) {
         insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
@@ -481,6 +542,7 @@ async function pollUnified() {
         total++;
       }
       
+      // UNISAT
       const uniRows = dbUnisat.prepare("SELECT * FROM unisat_cache WHERE bitmapId != ''").all();
       for (const row of uniRows) {
         insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
@@ -488,10 +550,29 @@ async function pollUnified() {
         total++;
       }
       
+      // LOCAL MARKETPLACE (directo de bitmapcorp.db)
+      try {
+        const Database = require('better-sqlite3');
+        const dbLocal = new Database('/root/bitmapcore-server/data/bitmapcorp.db', { readonly: true });
+        const localRows = dbLocal.prepare("SELECT * FROM listings WHERE is_active=1").all();
+        for (const row of localRows) {
+          insertStmt.run(
+            row.bitmap_number || 0, row.inscription_id, row.price, row.listed_at,
+            row.seller_address, row.name, null, now, insertionOrder++, 'local'
+          );
+          total++;
+        }
+        dbLocal.close();
+        console.error('[UNIFIED] Local marketplace: ' + localRows.length + ' listings');
+      } catch (e) {
+        console.error('[UNIFIED] Error reading local: ' + e.message);
+      }
+      
     } else {
       // 2B. INCREMENTAL: Solo INSERT nuevos
       console.error('[UNIFIED] Incremental sync - adding new items only...');
       
+      // ORDINALSWALLET
       const owNew = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != '' AND listedAt > ?").all(lastTs);
       for (const row of owNew) {
         insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
@@ -499,11 +580,29 @@ async function pollUnified() {
         total++;
       }
       
+      // UNISAT
       const uniNew = dbUnisat.prepare("SELECT * FROM unisat_cache WHERE bitmapId != '' AND listedAt > ?").all(lastTs);
       for (const row of uniNew) {
         insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
           row.ownerAddress, row.extraData, row.extraData2, row.timestamp, insertionOrder++, 'unisat');
         total++;
+      }
+      
+      // LOCAL MARKETPLACE (siempre incluir activos, ya que es lectura local)
+      try {
+        const Database = require('better-sqlite3');
+        const dbLocal = new Database('/root/bitmapcore-server/data/bitmapcorp.db', { readonly: true });
+        const localRows = dbLocal.prepare("SELECT * FROM listings WHERE is_active=1").all();
+        for (const row of localRows) {
+          insertStmt.run(
+            row.bitmap_number || 0, row.inscription_id, row.price, row.listed_at,
+            row.seller_address, row.name, null, now, insertionOrder++, 'local'
+          );
+          total++;
+        }
+        dbLocal.close();
+      } catch (e) {
+        console.error('[UNIFIED] Error reading local: ' + e.message);
       }
     }
     
@@ -554,12 +653,25 @@ async function pollUnified() {
 | `last_poll_time` | Timestamp del último poll | 1785980161752 |
 | `lastPollTimestamp` | **NUEVO**: Último timestamp incremental | 1785964412463 |
 
-### 7.3 unified_stats
+### 7.3 bitmapcorp.db (Local Marketplace)
+
+| Columna | Descripción | Ejemplo |
+|---------|-------------|---------|
+| `inscription_id` | ID de inscripción | 8d011333-... |
+| `name` | Nombre del bitmap | 714171.bitmap |
+| `price` | Precio en satoshis | 10000 |
+| `listed_at` | Timestamp de listado | 1785977410020 |
+| `is_active` | 1=activo, 0=inactivo | 1 |
+| `seller_address` | Dirección del vendedor | bc1q... |
+
+**Nota**: Solo se leen listings con `is_active=1`. No necesita polling incremental porque es SQLite local.
+
+### 7.4 unified_stats
 
 | Key | Descripción | Ejemplo |
 |-----|-------------|---------|
 | `floor_price` | Precio mínimo | 5000 |
-| `total_listed` | Total listados | 33076 |
+| `total_listed` | Total listados | 33086 |
 | `last_poll_time` | Timestamp del último poll | 1785980161752 |
 | `lastPollTimestamp` | **NUEVO**: Último timestamp incremental | 1786007736829 |
 
