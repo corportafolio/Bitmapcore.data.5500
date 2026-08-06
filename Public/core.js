@@ -17,6 +17,9 @@
     var _collapsed = React.useState(false);
     var collapsed = _collapsed[0];
     var setCollapsed = _collapsed[1];
+    var _tagInfo = React.useState(false);
+    var showTagInfo = _tagInfo[0];
+    var setShowTagInfo = _tagInfo[1];
 
     React.useEffect(function() {
       if (collapsed) { document.body.classList.add('sidebar-collapsed'); }
@@ -33,7 +36,8 @@
         onMenuToggle: function() { setSidebarOpen(!sidebarOpen); },
         collapsed: collapsed,
         onToggleCollapse: handleToggleCollapse,
-        navigate: navigate
+        navigate: navigate,
+        onInfoClick: function() { setShowTagInfo(!showTagInfo); }
       }),
       React.createElement('div', { className:'flex flex-1 overflow-hidden' },
         React.createElement(Sidebar, {
@@ -45,7 +49,12 @@
         }),
         React.createElement('main', { className:'flex-1 overflow-y-auto' },
           children
-        )
+        ),
+        React.createElement(RightSidebar, {
+          isOpen: showTagInfo,
+          onClose: function() { setShowTagInfo(false); },
+          content: React.createElement(TagInfoScreen, { onBack: function() { setShowTagInfo(false); } })
+        })
       )
     );
   }

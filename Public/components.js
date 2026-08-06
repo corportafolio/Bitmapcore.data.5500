@@ -7,6 +7,7 @@ function HeaderBar(props) {
   var showBackButton = props.showBackButton;
   var title = props.title;
   var navigate = props.navigate;
+  var onInfoClick = props.onInfoClick;
   var walletState = StoreApp.get('wallet');
   var _wa = React.useState(walletState.isConnected ? walletState.address : null);
   var walletAddress = _wa[0];
@@ -58,6 +59,11 @@ function HeaderBar(props) {
       btcPrice ? React.createElement('span', { className:'font-acme text-xs text-bitmap-text ml-2' }, 'BTC $' + Number(btcPrice).toLocaleString()) : null
     ) : null,
     title ? React.createElement('span', { className: showBackButton ? 'font-alfaslab text-white text-lg flex-1 text-center' : 'font-alfaslab text-white text-lg flex-1' }, title) : React.createElement('div', { className:'flex-1' }),
+    !showBackButton && onInfoClick ? React.createElement('button', {
+      onClick: onInfoClick,
+      className:'text-bitmap-orange hover:text-bitmap-orange-light transition-colors mr-2 text-lg cursor-pointer',
+      title:'Informacion de Etiquetas'
+    }, '\u2139\uFE0F') : null,
     !showBackButton ? React.createElement('button', {
       onClick: function() { navigate('/selector'); },
       className:'font-alfaslab text-bitmap-orange text-xs px-2 py-1 border border-bitmap-orange rounded hover:bg-bitmap-orange hover:text-black transition-colors mr-2 whitespace-nowrap'
@@ -344,4 +350,121 @@ function ErrorBoundary(props) {
     );
   }
   return props.children;
+}
+var TAG_NAMES = [
+  "txS millonarias", "TXs MULTIMILLONARIAS", "100k out", "250k out", "500k out",
+  "1M out", "2M out", "3M out", "5M out", "21e8",
+  "2 tx PERFECT", "3 tx PERFECT", "4 tx PERFECT", "6 tx PERFECT", "Grid Punk",
+  "Grid PERFECT", "Punk PERFECT", "5 tx Punk PERFECT", "Punk PERFECT 10 tx", "Giga Punk PERFECT",
+  "Palindrome", "Palindrome PERFECT", "Wide Neck Punk", "Standar Punk", "Pristine Punk",
+  "Punk 2tx", "8000 tx", "7000 tx", "6000 tx", "5000 tx",
+  "4000 tx", "3000 tx", "2000 tx", "1000 tx", "1 tx",
+  "2 tx", "sub 100k", "sub 50k", "sub 25k", "sub 10k",
+  "sub 1k", "power of 10", "mythic", "epic", "rare",
+  "first transaction", "pizza transaction", "block 9", "block 78", "66 dao",
+  "prime number", "fibonacci", "binary", "chinese lucky number", "pizza day"
+];
+
+var TAG_DESCRIPTIONS = [
+  "Bloques que contienen transacciones individuales con salida de 10,000 BTC a 99,999 BTC",
+  "Bloques que contienen transacciones individuales con salida de 100,000 BTC o mas",
+  "Bloques cuya suma total de salidas esta entre 100,000 y 249,999 BTC",
+  "Bloques cuya suma total de salidas esta entre 250,000 y 499,999 BTC",
+  "Bloques cuya suma total de salidas esta entre 500,000 y 999,999 BTC",
+  "Bloques cuya suma total de salidas esta entre 1,000,000 y 1,999,999 BTC",
+  "Bloques cuya suma total de salidas esta entre 2,000,000 y 2,999,999 BTC",
+  "Bloques cuya suma total de salidas esta entre 3,000,000 y 4,999,999 BTC",
+  "Bloques cuya suma total de salidas es de 5,000,000 BTC o mas",
+  "Bloques cuyo hash contiene la cadena \"21e8\"",
+  "Bloques con exactamente 2 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques con exactamente 3 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques con exactamente 4 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques con exactamente 6 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques con patron Grid Punk (cuadricula) en su representacion visual",
+  "Bloques con patron Grid donde todas las transacciones tienen exactamente la misma cantidad de BTC",
+  "Bloques con patron Punk donde todas las transacciones tienen exactamente la misma cantidad de BTC",
+  "Bloques Punk PERFECT con 5 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques Punk PERFECT con 10 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques Punk PERFECT con mas de 100 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques cuyo numero de bloque se lee igual al derecho y al reves",
+  "Bloques cuyo numero de bloque tiene todos sus digitos iguales (ej: 11, 22, 111, 222, 9999)",
+  "Bloques con 2 transacciones: la coinbase es la cabeza (25% mas grande que la segunda tx, cuello ancho)",
+  "Bloques con 2 transacciones: la coinbase es la cabeza (50% mas grande que la segunda tx, estandar)",
+  "Bloques con 2 transacciones: la coinbase es la cabeza (75% mas grande que la segunda tx, pristino)",
+  "Bloques con 2 transacciones: la coinbase es mas pequena (hasta 2 veces menor que la segunda tx, va abajo como cuello)",
+  "Bloques con 8000 o mas transacciones",
+  "Bloques con 7000 a 7999 transacciones",
+  "Bloques con 6000 a 6999 transacciones",
+  "Bloques con 5000 a 5999 transacciones",
+  "Bloques con 4000 a 4999 transacciones",
+  "Bloques con 3000 a 3999 transacciones",
+  "Bloques con 2000 a 2999 transacciones",
+  "Bloques con 1000 a 1999 transacciones",
+  "Bloques con exactamente 1 transaccion",
+  "Bloques con exactamente 2 transacciones, excluyendo Punks y 2 tx PERFECT",
+  "Bloques desde el 50,001 hasta el 100,000",
+  "Bloques desde el 25,001 hasta el 50,000",
+  "Bloques desde el 10,001 hasta el 25,000",
+  "Bloques desde el 1,001 hasta el 10,000",
+  "Bloques desde el 1 hasta el 1,000",
+  "Bloques 10, 100, 1000, 10000 y 100000 (potencias exactas de 10)",
+  "El bloque genesis (bloque 0), minado por Satoshi Nakamoto el 3 de enero de 2009",
+  "Bloques en cada era de halving (multiplos de 210,000)",
+  "Bloques en cada ajuste de dificultad (multiplos de 2,016, ~2 semanas)",
+  "Bloque 170: la primera transaccion P2P de la historia (Satoshi a Hal Finney, 12 enero 2009)",
+  "Bloque 57,043: 10,000 BTC por 2 pizzas (22 de mayo de 2010)",
+  "Bloque 9: minado por Satoshi Nakamoto. No contiene transacciones entre usuarios, solo la coinbase. Sus 50 BTC se usaron como entrada de la primera transaccion P2P (bloque 170, Satoshi -> Hal Finney)",
+  "Bloque 78: primer bloque minado por Hal Finney (primer minero tras Satoshi)",
+  "Bloques entre 660,000 y 669,999 reconocidos por el 66 DAO. Un club/comunidad de Bitmap en X (@66DAOBITMAP) con 10,000 miembros. Solo acepta Bitmaps entre los bloques 660,000 y 669,999. Tienen su propio token ($66DAO) que reparten a los miembros",
+  "Bloques cuyo numero de bloque es primo (divisible solo por 1 y si mismo)",
+  "Bloques cuyo numero pertenece a la secuencia de Fibonacci",
+  "Bloques cuyo numero de bloque solo tiene digitos 0 y 1, como si fuera un numero binario (ej: 10, 100, 101, 1010, 11001, 111111)",
+  "Bloques cuyo numero de bloque contiene \"168\" (numero de la suerte chino)",
+  "Bloques 56,899 a 57,093: rango completo del dia de la pizza (22 mayo 2010)"
+];
+
+function TagInfoScreen(props) {
+  var onBack = props.onBack;
+  return React.createElement('div', { className:'flex flex-col h-full bg-bitmap-black' },
+    React.createElement('div', { className:'flex items-center h-12 px-3 border-b border-bitmap-border bg-bitmap-surface' },
+      React.createElement('button', {
+        onClick: onBack,
+        className:'text-bitmap-orange hover:text-bitmap-orange-light transition-colors mr-3 text-lg'
+      }, '\u2190'),
+      React.createElement('span', { className:'font-alfaslab text-white text-sm' }, 'Informacion de Etiquetas')
+    ),
+    React.createElement('div', { className:'flex-1 overflow-y-auto p-3 space-y-2' },
+      TAG_NAMES.map(function(name, i) {
+        var desc = TAG_DESCRIPTIONS[i] || '';
+        return React.createElement('div', { key:i, className:'bg-bitmap-surface border border-bitmap-border rounded-lg p-3' },
+          React.createElement('div', { className:'flex items-center gap-2 mb-1' },
+            React.createElement('span', { className:'text-bitmap-muted text-xs font-bold' }, (i + 1) + '.'),
+            React.createElement('span', { className:'inline-block px-2 py-0.5 bg-bitmap-orange/10 border border-bitmap-orange/30 rounded text-bitmap-orange text-xs font-alfaslab' }, name)
+          ),
+          desc ? React.createElement('p', { className:'text-bitmap-text text-xs leading-relaxed pl-5' }, desc) : null
+        );
+      })
+    )
+  );
+}
+
+function RightSidebar(props) {
+  var isOpen = props.isOpen;
+  var onClose = props.onClose;
+  var content = props.content;
+
+  if (!isOpen) return null;
+
+  var overlay = React.createElement('div', {
+    className:'fixed inset-0 bg-bitmap-black/50 z-40 lg:hidden',
+    onClick: onClose
+  });
+
+  var sidebar = React.createElement('div', {
+    className:'fixed top-14 right-0 bottom-0 w-80 bg-bitmap-black border-l border-bitmap-border z-50 transform transition-all duration-200 translate-x-0 overflow-hidden'
+  },
+    content
+  );
+
+  return React.createElement(React.Fragment, null, overlay, sidebar);
 }
