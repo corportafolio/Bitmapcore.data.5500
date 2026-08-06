@@ -62,8 +62,10 @@ var StoreApp = {
       signInputs: ordinalsAddress ? { [ordinalsAddress]: [0] } : undefined,
       broadcast: false
     });
-    if (result && result.result) return result.result;
-    return result;
+    var signed = result && result.result ? result.result : result;
+    if (signed && typeof signed === 'object' && signed.psbt) return signed.psbt;
+    if (typeof signed === 'string') return signed;
+    throw new Error('Xverse: respuesta invalida al firmar PSBT');
   },
   getPublicKeyFresh: async function() {
     var wallet = StoreApp._state.wallet;
