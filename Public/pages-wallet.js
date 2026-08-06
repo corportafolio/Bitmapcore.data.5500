@@ -382,8 +382,8 @@ function DetallePage(props) {
     setShowListModal(false);
     setListingStatus({ listing:true, count:selected.length });
 
-    var successCount = 0;
-    var errors = [];
+    var signedPsbt = null;
+    var listingActivated = false;
 
     try {
       setListingStatus({ listing:true, count:selected.length, toast:'Obteniendo clave publica...' });
@@ -399,96 +399,79 @@ function DetallePage(props) {
         return;
       }
 
-      for (var j = 0; j < selected.length; j++) {
-        var item = selected[j];
-        var price = item.priceSatoshis;
+      var batchItems = selected.map(function(item) {
         var origItem = null;
         for (var k = 0; k < col.items.length; k++) {
           if (col.items[k].id === item.id) { origItem = col.items[k]; break; }
         }
-        if (!origItem || !origItem.output || !origItem.value) {
-          errors.push(item.name + ': sin datos UTXO');
-          continue;
-        }
-        try {
-          var createRes = await fetch('/api/v1/bitmaps', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              inscriptionId: item.id,
-              price: price,
-              sellerAddress: wallet.address,
-              sellerOrdinalPublicKey: pubKey,
-              sellerPaymentAddress: wallet.address,
-              name: item.name || ('Bitmap #' + item.inscriptionNumber),
-              imageUrl: '',
-              bitmapNumber: extractBlockNumber(item.name),
-              inscriptionNumber: item.inscriptionNumber,
-              inscriptionUtxo: origItem.output,
-              inscriptionValue: origItem.value,
-              inscriptionContentType: origItem.contentType || '',
-              inscriptionHeight: origItem.height || 0
-            })
-          });
-          var createJson = await createRes.json();
+        var isPriceUpdate = item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice;
+        return {
+          inscriptionId: item.id,
+          price: item.priceSatoshis,
+          sellerAddress: wallet.address,
+          sellerOrdinalPublicKey: pubKey,
+          sellerPaymentAddress: wallet.address,
+          name: item.name || ('Bitmap #' + item.inscriptionNumber),
+          imageUrl: '',
+          bitmapNumber: extractBlockNumber(item.name),
+          inscriptionNumber: item.inscriptionNumber,
+          inscriptionUtxo: origItem ? origItem.output : '',
+          inscriptionValue: origItem ? origItem.value : 0,
+          inscriptionContentType: origItem ? (origItem.contentType || '') : '',
+          inscriptionHeight: origItem ? (origItem.height || 0) : 0,
+          isPriceUpdate: isPriceUpdate
+        };
+      });
 
-          if (createJson.success && createJson.data && createJson.data.psbtToSign) {
-            var psbtToSign = createJson.data.psbtToSign;
-            var listingId = createJson.data.listing ? createJson.data.listing.id : '';
-            var signedPsbt = null;
+      setListingStatus({ listing:true, count:selected.length, toast:'Creando listings...' });
+      var createRes = await MarketplaceApi.batchList(batchItems);
+      var createJson = await createRes;
 
-            if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
-              try {
-                setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Xverse...' });
-                signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address);
-              } catch(xe) {
-                StoreApp._showWalletError('Xverse: firma cancelada o fallida');
-              }
-            } else if (window.unisat && window.unisat.signPsbt) {
-              try {
-                setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Unisat...' });
-                var signPromise = window.unisat.signPsbt(psbtToSign);
-                var signTimeout = new Promise(function(_, reject) {
-                  setTimeout(function() { reject(new Error('timeout')); }, 30000);
-                });
-                signedPsbt = await Promise.race([signPromise, signTimeout]);
-              } catch(ue) {
-                StoreApp._showWalletError('Unisat: firma cancelada o fallida');
-              }
-            }
+      if (createJson.success && createJson.data && createJson.data.psbtToSign) {
+        var psbtToSign = createJson.data.psbtToSign;
 
-            if (listingId && signedPsbt) {
-              var signRes = await fetch('/api/v1/bitmaps/' + listingId + '/sign', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  signedPsbt: signedPsbt,
-                  sellerOrdinalPublicKey: pubKey
-                })
-              });
-              var signJson = await signRes.json();
-              if (signJson.success) {
-                successCount++;
-              } else {
-                errors.push(item.name || item.id);
-              }
-            } else {
-              errors.push(item.name || item.id);
-            }
-          } else {
-            errors.push(item.name || item.id);
+        if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
+          try {
+            setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Xverse...' });
+            signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address);
+          } catch(xe) {
+            setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
           }
-        } catch(e) {
-          errors.push(item.name || item.id);
+        } else if (window.unisat && window.unisat.signPsbt) {
+          try {
+            setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Unisat...' });
+            var signPromise = window.unisat.signPsbt(psbtToSign);
+            var signTimeout = new Promise(function(_, reject) {
+              setTimeout(function() { reject(new Error('timeout')); }, 30000);
+            });
+            signedPsbt = await Promise.race([signPromise, signTimeout]);
+          } catch(ue) {
+            setListingStatus({ toast:'Unisat: firma cancelada o fallida' });
+          }
+        } else {
+          setListingStatus({ toast:'Wallet no disponible para firmar' });
         }
-      }
 
-      var msg = successCount + ' bitmaps listados';
-      if (errors.length > 0) msg += ' (' + errors.length + ' errores)';
-      setListingStatus({ toast:msg });
-      loadMyListings();
+        if (signedPsbt) {
+          var listingIds = createJson.data.listingIds || [];
+          if (listingIds.length > 0) {
+            setListingStatus({ listing:true, count:selected.length, toast:'Activando listings...' });
+            await MarketplaceApi.batchSign(listingIds, signedPsbt, pubKey);
+            listingActivated = true;
+          }
+        } else {
+          setListingStatus({ toast:'Firma cancelada. Los listings permanecen inactivos.' });
+        }
+      } else {
+        setListingStatus({ toast:'Error al crear listings' });
+      }
     } catch(e) {
       setListingStatus({ toast:'Error: ' + e.message });
+    } finally {
+      if (listingActivated) {
+        setListingStatus({ toast: selected.length + ' bitmaps listados correctamente' });
+        loadMyListings();
+      }
     }
   };
 
