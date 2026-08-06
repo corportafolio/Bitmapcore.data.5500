@@ -48,6 +48,9 @@ function LocalPage(props) {
   var _o = React.useState(null);
   var successToast = _o[0];
   var setSuccessToast = _o[1];
+  var _p = React.useState(0);
+  var totalListings = _p[0];
+  var setTotalListings = _p[1];
 
   var extractBlockNumber = function(name) {
     if (!name) return null;
@@ -63,7 +66,9 @@ function LocalPage(props) {
     MarketplaceApi.getLocal()
       .then(function(res) {
         var items = (res.data && res.data.items) || [];
+        var total = (res.data && res.data.total) || (res.data && res.data.items ? res.data.items.length : 0);
         setListings(items);
+        setTotalListings(total);
         setIsLoading(false);
       })
       .catch(function() { setIsLoading(false); });
@@ -344,7 +349,7 @@ function LocalPage(props) {
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Bitmapcore Marketplace'),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },
           'cargados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(filtered.length))
+          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
         ),
         React.createElement('div', { className: 'relative' },
           React.createElement('button', {
@@ -527,7 +532,7 @@ function LocalPage(props) {
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
           'listados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length))
+          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
           'Piso: ',

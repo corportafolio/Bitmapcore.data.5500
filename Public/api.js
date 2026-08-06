@@ -61,7 +61,7 @@ var AssetApi = {
 var MarketplaceApi = {
   getOrdinalswallet: function() { return ApiClient.get('/api/v1/proxy/ordinalswallet/listings', true); },
   getUnisat: function() { return ApiClient.post('/api/v1/proxy/unisat/actions', { collection:'bitmap', events:[], cursor:0, size:100 }, true); },
-  getLocal: function() { return ApiClient.get('/api/v1/bitmaps/', false); },
+  getLocal: function() { return ApiClient.get('/api/v1/bitmaps/?limit=100', false); },
   getUnified: function() { return ApiClient.get('/api/v1/unified', true); },
   getTags: function() { return ApiClient.get('/api/v1/tags', true); },
   getTagBlocks: function(tag) { return ApiClient.get('/api/v1/tags/' + encodeURIComponent(tag), true); },
