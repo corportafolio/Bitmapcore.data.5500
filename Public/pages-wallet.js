@@ -481,6 +481,11 @@ function DetallePage(props) {
       if (listingActivated) {
         setListingStatus({ toast: selected.length + ' bitmaps listados correctamente' });
         loadMyListings();
+        fetch('/api/v1/internal/refresh-local', { method: 'POST' }).then(function() {
+          if (typeof UnifiedViewModel !== 'undefined') {
+            UnifiedViewModel.loadFromCacheOnly();
+          }
+        }).catch(function() {});
       }
     }
   };
