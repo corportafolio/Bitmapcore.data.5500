@@ -240,9 +240,10 @@ function Toast(props) {
   var message = props.message;
   var type = props.type;
   var onDone = props.onDone;
+  var duration = props.duration || 3000;
 
   React.useEffect(function() {
-    var timer = setTimeout(onDone, 3000);
+    var timer = setTimeout(onDone, duration);
     return function() { clearTimeout(timer); };
   }, []);
 

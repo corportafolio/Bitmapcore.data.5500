@@ -45,6 +45,9 @@ function LocalPage(props) {
   var _n = React.useState([]);
   var successItems = _n[0];
   var setSuccessItems = _n[1];
+  var _o = React.useState(null);
+  var successToast = _o[0];
+  var setSuccessToast = _o[1];
 
   var extractBlockNumber = function(name) {
     if (!name) return null;
@@ -196,6 +199,9 @@ function LocalPage(props) {
 
     setShowListDropdown(false);
 
+    var signedPsbt = null;
+    var listingActivated = false;
+
     try {
       setListingStatus({ toast:'Obteniendo clave publica...' });
       var pubKey;
@@ -236,7 +242,6 @@ function LocalPage(props) {
 
       if (createJson.success && createJson.data && createJson.data.psbtToSign) {
         var psbtToSign = createJson.data.psbtToSign;
-        var signedPsbt = null;
 
         if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
           try {
@@ -265,19 +270,27 @@ function LocalPage(props) {
           if (listingIds.length > 0) {
             setListingStatus({ toast:'Activando listings...' });
             await MarketplaceApi.batchSign(listingIds, signedPsbt, pubKey);
+            listingActivated = true;
           }
           setSuccessItems(selected);
           setShowSuccessMenu(true);
-          setListingStatus({ toast:selected.length + ' bitmaps listados correctamente' });
         } else {
           setListingStatus({ toast:'Firma cancelada. Los listings permanecen inactivos.' });
         }
       } else {
         setListingStatus({ toast:'Error al crear listings' });
       }
-      fetchListings();
     } catch(e) {
       setListingStatus({ toast:'Error: ' + e.message });
+    } finally {
+      await fetchListings();
+      if (listingActivated) {
+        setSuccessToast({ message: selected.length + ' bitmaps listados correctamente', type: 'success' });
+        setTimeout(function() { setSuccessToast(null); }, 20000);
+      } else if (signedPsbt) {
+        setSuccessToast({ message: 'No se pudo completar el listado', type: 'error' });
+        setTimeout(function() { setSuccessToast(null); }, 20000);
+      }
     }
   };
 
@@ -607,7 +620,8 @@ function LocalPage(props) {
                   );
                 })
               )
-        )
+        ),
+    successToast ? React.createElement(Toast, { message: successToast.message, type: successToast.type, duration: 20000, onDone: function() { setSuccessToast(null); } }) : null
   );
 }
 
