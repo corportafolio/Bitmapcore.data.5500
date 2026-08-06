@@ -399,13 +399,19 @@ function DetallePage(props) {
         return;
       }
 
-      var batchItems = selected.map(function(item) {
+      var batchItems = [];
+      for (var j = 0; j < selected.length; j++) {
+        var item = selected[j];
         var origItem = null;
         for (var k = 0; k < col.items.length; k++) {
           if (col.items[k].id === item.id) { origItem = col.items[k]; break; }
         }
+        if (!origItem || !origItem.output || !origItem.value) {
+          setListingStatus({ toast: item.name + ': sin datos UTXO, saltado' });
+          continue;
+        }
         var isPriceUpdate = item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice;
-        return {
+        batchItems.push({
           inscriptionId: item.id,
           price: item.priceSatoshis,
           sellerAddress: wallet.address,
@@ -415,13 +421,17 @@ function DetallePage(props) {
           imageUrl: '',
           bitmapNumber: extractBlockNumber(item.name),
           inscriptionNumber: item.inscriptionNumber,
-          inscriptionUtxo: origItem ? origItem.output : '',
-          inscriptionValue: origItem ? origItem.value : 0,
-          inscriptionContentType: origItem ? (origItem.contentType || '') : '',
-          inscriptionHeight: origItem ? (origItem.height || 0) : 0,
+          inscriptionUtxo: origItem.output,
+          inscriptionValue: origItem.value,
+          inscriptionContentType: origItem.contentType || '',
+          inscriptionHeight: origItem.height || 0,
           isPriceUpdate: isPriceUpdate
-        };
-      });
+        });
+      }
+      if (batchItems.length === 0) {
+        setListingStatus({ toast:'Ningun bitmap tiene datos UTXO validos' });
+        return;
+      }
 
       setListingStatus({ listing:true, count:selected.length, toast:'Creando listings...' });
       var createRes = await MarketplaceApi.batchList(batchItems);
