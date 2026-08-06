@@ -3,3 +3,7 @@ docs/
 *.md
 DISENO-VISUAL-PANTALLA-PRINCIPAL.md
 PLAN-PANTALLA-PRINCIPAL-WEB.md
+.env
+.env.*
+*.db
+data/
