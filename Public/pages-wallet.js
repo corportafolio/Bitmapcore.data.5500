@@ -410,7 +410,7 @@ function DetallePage(props) {
           setListingStatus({ toast: item.name + ': sin datos UTXO, saltado' });
           continue;
         }
-        var isPriceUpdate = item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice;
+        var isPriceUpdate = !!(item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice);
         batchItems.push({
           inscriptionId: item.id,
           price: item.priceSatoshis,
