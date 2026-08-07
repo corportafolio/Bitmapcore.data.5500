@@ -794,7 +794,7 @@ showListDropdown ? React.createElement('div', {
                         src: '/api/v1/block-image/' + bn + '?size=200&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + txs + '&hash=' + encodeURIComponent(hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
                         width: '100%',
                         loading: 'lazy',
-                        style: { background: '#1a1a1a', display: 'block' },
+                        style: { imageRendering: 'pixelated', background: '#1a1a1a', display: 'block' },
                         alt: ''
                       })
                     );
