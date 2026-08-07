@@ -3,7 +3,7 @@ const { createCanvas } = require('canvas');
 const BITMAP_YELLOW = '#FFD700';
 
 const MondrianGenerator = {
-  BORDER: 3,
+  BORDER: 1,
   MIN_PARCEL_PX: 0.2,
 
   generate: function(canvas, blockNumber, options, size) {
