@@ -407,15 +407,18 @@ function LocalPage(props) {
   var renderMarketplaceTags = function(etiquetas) {
     var tags = etiquetas ? etiquetas.split('|').filter(function(t) { return t.trim() !== ''; }) : [];
     var count = tags.length;
-    if (count === 0) {
-      return React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, '0 tags');
-    }
     return React.createElement('div', { className: 'flex items-center gap-1 min-w-0 overflow-hidden whitespace-nowrap' },
       React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted flex-shrink-0' },
         count + ' tags'
       ),
-      React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted truncate' },
-        tags.map(function(t) { return t.trim(); }).join(' | ')
+      React.createElement('div', { className: 'flex items-center gap-1 min-w-0 overflow-hidden' },
+        tags.map(function(tag, i) {
+          return React.createElement(UniversalTag, {
+            key: i,
+            text: tag.trim(),
+            fontSize: 9
+          });
+        })
       )
     );
   };
@@ -681,7 +684,7 @@ showListDropdown ? React.createElement('div', {
           filtered.length === 0
             ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
             : viewMode === 'list'
-              ? React.createElement('div', { className: 'divide-y divide-bitmap-border' },
+              ? React.createElement('div', null,
                   filtered.map(function(item, i) {
                     var btcPrice = (item.listedPrice || item.price || 0) / 100000000;
                     var btcPriceStr = btcPrice.toFixed(5);
@@ -694,7 +697,7 @@ showListDropdown ? React.createElement('div', {
                     var txs = item.totalTransacciones || 0;
                     return React.createElement('div', {
                       key: (item.source || '') + '_' + (item.bitmapId || item.id || i),
-                      className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
+                      className: 'px-4 py-0.5 hover:bg-bitmap-surface transition-colors cursor-pointer border-b border-bitmap-border/30'
                     },
                       React.createElement('div', { className: 'flex items-center gap-3' },
                         React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
