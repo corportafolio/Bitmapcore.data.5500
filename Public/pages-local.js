@@ -404,6 +404,22 @@ function LocalPage(props) {
   var volumeUsd = volumen > 0 ? '$' + ((volumen / 100000000) * (btcPrice || 0)).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-';
   var volume24hUsd = volumen24h > 0 ? '$' + ((volumen24h / 100000000) * (btcPrice || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-';
 
+  var renderMarketplaceTags = function(etiquetas) {
+    var tags = etiquetas ? etiquetas.split('|').filter(function(t) { return t.trim() !== ''; }) : [];
+    var count = tags.length;
+    if (count === 0) {
+      return React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, '0 tags');
+    }
+    return React.createElement('div', { className: 'flex items-center gap-1 min-w-0 overflow-hidden whitespace-nowrap' },
+      React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted flex-shrink-0' },
+        count + ' tags'
+      ),
+      React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted truncate' },
+        tags.map(function(t) { return t.trim(); }).join(' | ')
+      )
+    );
+  };
+
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-stretch justify-between' },
@@ -681,11 +697,11 @@ showListDropdown ? React.createElement('div', {
                       className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
                     },
                       React.createElement('div', { className: 'flex items-center gap-3' },
-                        React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
+                        React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                           React.createElement('img', {
-                            src: '/api/v1/block-image/' + bn + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + txs + '&hash=' + encodeURIComponent(hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
-                            width: 80,
-                            height: 80,
+                            src: '/api/v1/block-image/' + bn + '?size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + txs + '&hash=' + encodeURIComponent(hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                            width: 55,
+                            height: 55,
                             loading: 'lazy',
                             style: { imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: 4 },
                             alt: ''
@@ -705,9 +721,7 @@ showListDropdown ? React.createElement('div', {
                           ),
                           React.createElement('div', { className: 'flex items-center justify-between mt-0.5' },
                             React.createElement('div', { className: 'flex-1 min-w-0' },
-                              etiquetas
-                                ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 })
-                                : null
+                              renderMarketplaceTags(etiquetas)
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr)
                           )
