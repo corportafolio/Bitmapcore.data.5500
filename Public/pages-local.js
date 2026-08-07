@@ -434,7 +434,7 @@ function LocalPage(props) {
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-stretch justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
-          React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[45px] w-[45px] object-contain rounded' }),
+          React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[45px] w-[45px] object-contain rounded my-[2px]' }),
           React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Bitmapcore Marketplace')
         ),
         React.createElement('div', { className: 'flex items-stretch' },
