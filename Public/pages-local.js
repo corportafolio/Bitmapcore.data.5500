@@ -48,6 +48,9 @@ function LocalPage(props) {
   var _o = React.useState(null);
   var successToast = _o[0];
   var setSuccessToast = _o[1];
+  var _buySel = React.useState([]);
+  var selectedBuyItems = _buySel[0];
+  var setSelectedBuyItems = _buySel[1];
   var _p = React.useState(0);
   var totalListings = _p[0];
   var setTotalListings = _p[1];
@@ -194,6 +197,15 @@ function LocalPage(props) {
       return item;
     });
     setListItems(updated);
+  };
+
+  var toggleBuySelection = function(itemId) {
+    var idx = selectedBuyItems.indexOf(itemId);
+    if (idx === -1) {
+      setSelectedBuyItems(selectedBuyItems.concat([itemId]));
+    } else {
+      setSelectedBuyItems(selectedBuyItems.filter(function(id) { return id !== itemId; }));
+    }
   };
 
   var applyBulkPrice = function(val) {
@@ -430,6 +442,9 @@ function LocalPage(props) {
         placeholder: 'Buscar por numero de bitmap...',
         className: 'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
       }),
+      selectedBuyItems.length > 0 ? React.createElement('button', {
+        className: 'px-3 py-2 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors flex-shrink-0 font-bold'
+      }, 'Comprar ' + selectedBuyItems.length + ' seleccionados') : null,
       React.createElement('div', { className: 'relative flex-shrink-0' },
         React.createElement('button', {
           onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
@@ -682,7 +697,14 @@ showListDropdown ? React.createElement('div', {
                           ),
                           React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr)
                         )
-                      )
+                      ),
+                      React.createElement('input', {
+                        type: 'checkbox',
+                        checked: selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1,
+                        onChange: function() { toggleBuySelection(item.bitmapId || item.id); },
+                        className: 'w-5 h-5 flex-shrink-0 cursor-pointer',
+                        style: { accentColor: '#FE3E00' }
+                      })
                     )
                   );
                 })
