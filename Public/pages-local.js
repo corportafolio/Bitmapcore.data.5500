@@ -51,6 +51,37 @@ function LocalPage(props) {
   var _p = React.useState(0);
   var totalListings = _p[0];
   var setTotalListings = _p[1];
+  var _q = React.useState(0);
+  var ventas = _q[0];
+  var setVentas = _q[1];
+  var _r = React.useState(0);
+  var volumen = _r[0];
+  var setVolumen = _r[1];
+  var _s = React.useState(0);
+  var volumen24h = _s[0];
+  var setVolumen24h = _s[1];
+  var _t = React.useState(null);
+  var btcPrice = _t[0];
+  var setBtcPrice = _t[1];
+
+  var fetchStats = function() {
+    fetch('/api/v1/local/stats')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success && d.data) {
+          setVentas(d.data.ventas || 0);
+          setVolumen(d.data.volumen || 0);
+          setVolumen24h(d.data.volumen24h || 0);
+        }
+      }).catch(function() {});
+  };
+
+  React.useEffect(function() {
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { setBtcPrice(d.bitcoin.usd); })
+      .catch(function() {});
+  }, []);
 
   var extractBlockNumber = function(name) {
     if (!name) return null;
@@ -70,6 +101,7 @@ function LocalPage(props) {
         setListings(items);
         setTotalListings(total);
         setIsLoading(false);
+        fetchStats();
       })
       .catch(function() { setIsLoading(false); });
   };
@@ -348,21 +380,67 @@ function LocalPage(props) {
     : 0;
   var floorBtc = floorPrice > 0 ? (floorPrice / 100000000).toFixed(5) : 'N/A';
 
+  var volumeBtc = volumen > 0 ? (volumen / 100000000).toFixed(4) + ' BTC' : '0 BTC';
+  var volume24hBtc = volumen24h > 0 ? (volumen24h / 100000000).toFixed(4) + ' BTC' : '0 BTC';
+  var pisoBtc = floorPrice > 0 ? (floorPrice / 100000000).toFixed(8) : '0';
+
+  var usd = function(sats) { return btcPrice ? '$' + ((sats / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'; };
+  var pisoUsd = floorPrice > 0 ? usd(floorPrice) : '-';
+  var volumeUsd = volumen > 0 ? '$' + ((volumen / 100000000) * (btcPrice || 0)).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-';
+  var volume24hUsd = volumen24h > 0 ? '$' + ((volumen24h / 100000000) * (btcPrice || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-';
+
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2' },
-      React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
+      React.createElement('div', { className: 'flex items-center justify-between' },
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Bitmapcore Marketplace'),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },
-          'cargados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
-        ),
-        React.createElement('div', { className: 'relative' },
-          React.createElement('button', {
-            onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
-            disabled: isLoadingDropdown,
-            className: 'px-3 py-1 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
-          }, isLoadingDropdown ? 'Cargando...' : 'Listar'),
-          showListDropdown ? React.createElement('div', {
+        React.createElement('div', { className: 'flex items-center font-acme text-[10px] text-bitmap-muted gap-0' },
+          React.createElement('span', null, 'Piso Global'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
+          React.createElement('span', null, 'Volumen'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
+          React.createElement('span', null, 'Vol 24H'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
+          React.createElement('span', null, 'Listados'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
+          React.createElement('span', null, 'Ventas')
+        )
+      )
+    ),
+    React.createElement('div', { className: 'pl-14 pr-4 py-1 border-b border-bitmap-border' },
+      React.createElement('div', { className: 'flex justify-between items-center' },
+        React.createElement('span', null),
+        React.createElement('div', { className: 'flex items-center font-acme text-[10px] text-bitmap-orange font-bold gap-0' },
+          React.createElement('span', null, pisoBtc + ' BTC'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
+          React.createElement('span', null, volumeBtc), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
+          React.createElement('span', null, volume24hBtc), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
+          React.createElement('span', null, BitmapUtils.formatNumber(totalListings)), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
+          React.createElement('span', null, BitmapUtils.formatNumber(ventas))
+        )
+      )
+    ),
+    React.createElement('div', { className: 'pl-14 pr-4 py-1 border-b border-bitmap-border' },
+      React.createElement('div', { className: 'flex justify-between items-center' },
+        React.createElement('span', null),
+        React.createElement('div', { className: 'flex items-center font-acme text-[10px] text-bitmap-muted gap-0' },
+          React.createElement('span', null, pisoUsd), React.createElement('span', { className: 'mx-2 text-bitmap-border/50' }, '|'),
+          React.createElement('span', null, volumeUsd), React.createElement('span', { className: 'mx-2 text-bitmap-border/50' }, '|'),
+          React.createElement('span', null, volume24hUsd), React.createElement('span', { className: 'mx-2 text-bitmap-border/50' }, '|'),
+          React.createElement('span', null), React.createElement('span', { className: 'mx-2 text-bitmap-border/50' }, '|'),
+          React.createElement('span', null)
+        )
+      )
+    ),
+    React.createElement('div', { className: 'pl-14 pr-4 py-2 border-b border-bitmap-border flex items-center gap-2' },
+      React.createElement('input', {
+        type: 'text',
+        value: searchQuery,
+        onChange: function(e) { setSearchQuery(e.target.value); },
+        placeholder: 'Buscar por numero de bitmap...',
+        className: 'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
+      }),
+      React.createElement('div', { className: 'relative flex-shrink-0' },
+        React.createElement('button', {
+          onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
+          disabled: isLoadingDropdown,
+          className: 'px-3 py-2 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
+        }, isLoadingDropdown ? 'Cargando...' : 'Listar'),
+showListDropdown ? React.createElement('div', {
             className: 'absolute left-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-96 overflow-y-auto'
           },
             isLoadingDropdown ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'Cargando bitmaps...') :
@@ -560,18 +638,9 @@ function LocalPage(props) {
               }, btn.label);
             })
           ) : null
-        )
       )
     ),
-    React.createElement('div', { className: 'pl-14 pr-4 py-2 border-b border-bitmap-border' },
-      React.createElement('input', {
-        type: 'text',
-        value: searchQuery,
-        onChange: function(e) { setSearchQuery(e.target.value); },
-        placeholder: 'Buscar por numero de bitmap...',
-        className: 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
-      })
-    ),
+
     isLoading
       ? React.createElement('div', { className: 'flex items-center justify-center py-16' },
           React.createElement('div', { className: 'font-acme text-bitmap-muted' }, 'Cargando datos...')
