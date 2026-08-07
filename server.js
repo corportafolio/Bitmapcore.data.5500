@@ -724,6 +724,29 @@ app.post('/api/v1/internal/refresh-local', async (req, res) => {
   }
 });
 
+// ===== LOCAL MARKETPLACE STATS =====
+app.get('/api/v1/local/stats', (req, res) => {
+  try {
+    const localDb = new Database(path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db'), { readonly: true });
+    
+    const ventasTotal = localDb.prepare("SELECT COUNT(*) as c, SUM(price) as v FROM ventas_historial").get();
+    const ventas24h = localDb.prepare("SELECT SUM(price) as v FROM ventas_historial WHERE sold_at > ?").get(Date.now() - 86400000);
+    const listingsStats = localDb.prepare("SELECT COUNT(*) as c, COALESCE(MIN(price), 0) as floor FROM listings WHERE is_active = 1 AND price > 0").get();
+    
+    localDb.close();
+    
+    sendSuccess(res, {
+      ventas: ventasTotal.c || 0,
+      volumen: ventasTotal.v || 0,
+      volumen24h: ventas24h.v || 0,
+      listados: listingsStats.c || 0,
+      piso: listingsStats.floor || 0
+    });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
 // ===== PROXY ORDINALSWALLET (URLs correctas: turbo.ordinalswallet.com) =====
 app.get('/api/v1/proxy/ordinalswallet/listings', async (req, res) => {
   try {
