@@ -444,7 +444,10 @@ function LocalPage(props) {
       }),
       selectedBuyItems.length > 0 ? React.createElement('button', {
         className: 'px-3 py-2 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors flex-shrink-0 font-bold'
-      }, 'Comprar ' + selectedBuyItems.length + ' seleccionados') : null,
+      }, 'Comprar ' + selectedBuyItems.length + ' seleccionados') : React.createElement('button', {
+        disabled: true,
+        className: 'px-3 py-2 bg-bitmap-orange text-black font-acme text-xs rounded-lg flex-shrink-0 font-bold opacity-50'
+      }, 'Comprar seleccionados'),
       React.createElement('div', { className: 'relative flex-shrink-0' },
         React.createElement('button', {
           onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
@@ -702,8 +705,8 @@ showListDropdown ? React.createElement('div', {
                         type: 'checkbox',
                         checked: selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1,
                         onChange: function() { toggleBuySelection(item.bitmapId || item.id); },
-                        className: 'w-5 h-5 flex-shrink-0 cursor-pointer',
-                        style: { accentColor: '#FE3E00' }
+                        className: 'w-5 h-5 flex-shrink-0 cursor-pointer rounded border-gray-500',
+                        style: { accentColor: '#00AA00', backgroundColor: '#444', borderColor: '#666' }
                       })
                     )
                   );
