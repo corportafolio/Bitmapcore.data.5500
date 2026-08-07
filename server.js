@@ -714,6 +714,16 @@ app.get('/api/v1/unified', (req, res) => {
   }
 });
 
+// ===== INTERNAL ENDPOINTS =====
+app.post('/api/v1/internal/refresh-local', async (req, res) => {
+  try {
+    await pollUnified();
+    res.json({ success: true, message: 'Unified cache refreshed with local marketplace listings' });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // ===== PROXY ORDINALSWALLET (URLs correctas: turbo.ordinalswallet.com) =====
 app.get('/api/v1/proxy/ordinalswallet/listings', async (req, res) => {
   try {
