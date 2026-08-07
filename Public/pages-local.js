@@ -51,6 +51,9 @@ function LocalPage(props) {
   var _buySel = React.useState([]);
   var selectedBuyItems = _buySel[0];
   var setSelectedBuyItems = _buySel[1];
+  var _vm = React.useState('list');
+  var viewMode = _vm[0];
+  var setViewMode = _vm[1];
   var _p = React.useState(0);
   var totalListings = _p[0];
   var setTotalListings = _p[1];
@@ -627,11 +630,17 @@ showListDropdown ? React.createElement('div', {
             )
           : null
         ),
-        React.createElement('div', { className: 'relative' },
+        React.createElement('div', { className: 'flex items-center gap-1 flex-shrink-0' },
           React.createElement('button', {
-            onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
-            className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
-          }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+            onClick: function(e) { e.stopPropagation(); setViewMode(viewMode === 'list' ? 'grid' : 'list'); },
+            className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors',
+            title: viewMode === 'list' ? 'Vista cuadros' : 'Vista lista'
+          }, viewMode === 'list' ? '\u25A6' : '\u2261'),
+          React.createElement('div', { className: 'relative' },
+            React.createElement('button', {
+              onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
+              className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
+            }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
           showSortMenu ? React.createElement('div', {
             className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
           },
@@ -644,6 +653,7 @@ showListDropdown ? React.createElement('div', {
               }, btn.label);
             })
           ) : null
+          )
       )
     ),
 
@@ -654,64 +664,111 @@ showListDropdown ? React.createElement('div', {
       : React.createElement('div', { ref: scrollContainerRef, className: 'flex-1 overflow-y-auto pl-14 pr-4' },
           filtered.length === 0
             ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
-            : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
-                filtered.map(function(item, i) {
-                  var btcPrice = (item.listedPrice || item.price || 0) / 100000000;
-                  var btcPriceStr = btcPrice.toFixed(5);
-                  var addr = BitmapUtils.truncateAddress(item.sellerAddress || item.ownerAddress || '', 6);
-                  var etiquetas = item.etiquetas || '';
-                  var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-                  var isPunk = etiquetas.indexOf('Punk') !== -1;
-                  var bn = item.bitmapNumber || 0;
-                  var hash = item.hash || '';
-                  var txs = item.totalTransacciones || 0;
-                  return React.createElement('div', {
-                    key: (item.source || '') + '_' + (item.bitmapId || item.id || i),
-                    className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
-                  },
-                    React.createElement('div', { className: 'flex items-center gap-3' },
-                      React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
-                        React.createElement('img', {
-                          src: '/api/v1/block-image/' + bn + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + txs + '&hash=' + encodeURIComponent(hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
-                          width: 80,
-                          height: 80,
-                          loading: 'lazy',
-                          style: { imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: 4 },
-                          alt: ''
-                        })
-                      ),
-                      React.createElement('div', { className: 'flex-1 min-w-0' },
-                        React.createElement('div', { className: 'flex items-center justify-between' },
-                          React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
-                              '#' + bn + '.bitmap'
+            : viewMode === 'list'
+              ? React.createElement('div', { className: 'divide-y divide-bitmap-border' },
+                  filtered.map(function(item, i) {
+                    var btcPrice = (item.listedPrice || item.price || 0) / 100000000;
+                    var btcPriceStr = btcPrice.toFixed(5);
+                    var addr = BitmapUtils.truncateAddress(item.sellerAddress || item.ownerAddress || '', 6);
+                    var etiquetas = item.etiquetas || '';
+                    var isPerfect = etiquetas.indexOf('Perfect') !== -1;
+                    var isPunk = etiquetas.indexOf('Punk') !== -1;
+                    var bn = item.bitmapNumber || 0;
+                    var hash = item.hash || '';
+                    var txs = item.totalTransacciones || 0;
+                    return React.createElement('div', {
+                      key: (item.source || '') + '_' + (item.bitmapId || item.id || i),
+                      className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
+                    },
+                      React.createElement('div', { className: 'flex items-center gap-3' },
+                        React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
+                          React.createElement('img', {
+                            src: '/api/v1/block-image/' + bn + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + txs + '&hash=' + encodeURIComponent(hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                            width: 80,
+                            height: 80,
+                            loading: 'lazy',
+                            style: { imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: 4 },
+                            alt: ''
+                          })
+                        ),
+                        React.createElement('div', { className: 'flex-1 min-w-0' },
+                          React.createElement('div', { className: 'flex items-center justify-between' },
+                            React.createElement('div', { className: 'flex items-center gap-2' },
+                              React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
+                                '#' + bn + '.bitmap'
+                              ),
+                              React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
                             ),
-                            React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
+                            React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
+                              btcPriceStr + ' BTC'
+                            )
                           ),
-                          React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
-                            btcPriceStr + ' BTC'
+                          React.createElement('div', { className: 'flex items-center justify-between mt-0.5' },
+                            React.createElement('div', { className: 'flex-1 min-w-0' },
+                              etiquetas
+                                ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 })
+                                : null
+                            ),
+                            React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr)
                           )
                         ),
-                        React.createElement('div', { className: 'flex items-center justify-between mt-0.5' },
-                          React.createElement('div', { className: 'flex-1 min-w-0' },
-                            etiquetas
-                              ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 })
-                              : null
-                          ),
-                          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr)
+                        React.createElement('div', {
+                          onClick: function() { toggleBuySelection(item.bitmapId || item.id); },
+                          className: 'w-5 h-5 flex-shrink-0 cursor-pointer rounded flex items-center justify-center',
+                          style: { backgroundColor: selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1 ? '#00AA00' : '#444', border: '1px solid #666' }
+                        },
+                          selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1
+                            ? React.createElement('svg', { width: 12, height: 12, viewBox: '0 0 12 12', fill: 'none' },
+                                React.createElement('path', { d: 'M2 6l3 3 5-5', stroke: '#000', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
+                              )
+                            : null
+                        )
+                      )
+                    );
+                  })
+                )
+              : React.createElement('div', { className: 'flex flex-wrap gap-2 py-2' },
+                  filtered.map(function(item, i) {
+                    var btcPrice = (item.listedPrice || item.price || 0) / 100000000;
+                    var btcPriceStr = btcPrice.toFixed(5);
+                    var etiquetas = item.etiquetas || '';
+                    var isPerfect = etiquetas.indexOf('Perfect') !== -1;
+                    var isPunk = etiquetas.indexOf('Punk') !== -1;
+                    var bn = item.bitmapNumber || 0;
+                    var hash = item.hash || '';
+                    var txs = item.totalTransacciones || 0;
+                    var isSelected = selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1;
+                    return React.createElement('div', {
+                      key: (item.source || '') + '_' + (item.bitmapId || item.id || i),
+                      className: 'bg-bitmap-surface border border-bitmap-border rounded-lg overflow-hidden hover:border-bitmap-orange transition-colors cursor-pointer',
+                      style: { width: 'calc(20% - 7px)', minWidth: 140 }
+                    },
+                      React.createElement('div', { className: 'flex items-center justify-between px-2 py-1.5' },
+                        React.createElement('div', {
+                          onClick: function() { toggleBuySelection(item.bitmapId || item.id); },
+                          className: 'w-4 h-4 cursor-pointer rounded flex items-center justify-center flex-shrink-0',
+                          style: { backgroundColor: isSelected ? '#00AA00' : '#444', border: '1px solid #666' }
+                        },
+                          isSelected
+                            ? React.createElement('svg', { width: 10, height: 10, viewBox: '0 0 12 12', fill: 'none' },
+                                React.createElement('path', { d: 'M2 6l3 3 5-5', stroke: '#000', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
+                              )
+                            : null
+                        ),
+                        React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold truncate ml-1' },
+                          btcPriceStr + ' BTC'
                         )
                       ),
-                      React.createElement('input', {
-                        type: 'checkbox',
-                        checked: selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1,
-                        onChange: function() { toggleBuySelection(item.bitmapId || item.id); },
-                        className: 'w-5 h-5 flex-shrink-0 cursor-pointer rounded border-gray-500',
-                        style: { accentColor: '#00AA00', backgroundColor: '#444', borderColor: '#666' }
+                      React.createElement('img', {
+                        src: '/api/v1/block-image/' + bn + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + txs + '&hash=' + encodeURIComponent(hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                        width: '100%',
+                        loading: 'lazy',
+                        style: { imageRendering: 'pixelated', background: '#1a1a1a', display: 'block' },
+                        alt: ''
                       })
-                    )
-                  );
-                })
-              )
+                    );
+                  })
+                )
         ),
     successToast ? React.createElement(Toast, { message: successToast.message, type: successToast.type, duration: 20000, onDone: function() { setSuccessToast(null); } }) : null
   );
