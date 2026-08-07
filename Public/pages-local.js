@@ -390,7 +390,7 @@ function LocalPage(props) {
   var volume24hUsd = volumen24h > 0 ? '$' + ((volumen24h / 100000000) * (btcPrice || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-';
 
   return React.createElement('div', { className: 'flex flex-col h-full' },
-    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1F1E1C' } },
+    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1B1A18' } },
       React.createElement('div', { className: 'flex items-stretch justify-between' },
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide flex-shrink-0 pt-1' }, 'Bitmapcore Marketplace'),
         React.createElement('div', { className: 'flex items-stretch' },
