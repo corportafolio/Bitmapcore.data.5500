@@ -289,6 +289,11 @@ function LocalPage(props) {
       setListingStatus({ toast:'Error: ' + e.message });
     } finally {
       await fetchListings();
+      fetch('/api/v1/internal/refresh-local', { method: 'POST' }).then(function() {
+        if (typeof UnifiedViewModel !== 'undefined') {
+          UnifiedViewModel.loadFromCacheOnly();
+        }
+      }).catch(function() {});
       if (listingActivated) {
         setSuccessToast({ message: selected.length + ' bitmaps listados correctamente', type: 'success' });
         setTimeout(function() { setSuccessToast(null); }, 20000);
