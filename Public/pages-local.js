@@ -391,38 +391,38 @@ function LocalPage(props) {
 
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2' },
-      React.createElement('div', { className: 'flex items-center justify-between' },
-        React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Bitmapcore Marketplace'),
-        React.createElement('div', { className: 'flex items-center font-acme text-[10px] text-bitmap-muted gap-0' },
-          React.createElement('span', null, 'Piso Global'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
-          React.createElement('span', null, 'Volumen'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
-          React.createElement('span', null, 'Vol 24H'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
-          React.createElement('span', null, 'Listados'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
-          React.createElement('span', null, 'Ventas')
-        )
-      )
-    ),
-    React.createElement('div', { className: 'pl-14 pr-4 py-1 border-b border-bitmap-border' },
-      React.createElement('div', { className: 'flex justify-between items-center' },
-        React.createElement('span', null),
-        React.createElement('div', { className: 'flex items-center font-acme text-[10px] text-bitmap-orange font-bold gap-0' },
-          React.createElement('span', null, pisoBtc + ' BTC'), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
-          React.createElement('span', null, volumeBtc), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
-          React.createElement('span', null, volume24hBtc), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
-          React.createElement('span', null, BitmapUtils.formatNumber(totalListings)), React.createElement('span', { className: 'mx-2 text-bitmap-border' }, '|'),
-          React.createElement('span', null, BitmapUtils.formatNumber(ventas))
-        )
-      )
-    ),
-    React.createElement('div', { className: 'pl-14 pr-4 py-1 border-b border-bitmap-border' },
-      React.createElement('div', { className: 'flex justify-between items-center' },
-        React.createElement('span', null),
-        React.createElement('div', { className: 'flex items-center font-acme text-[10px] text-bitmap-muted gap-0' },
-          React.createElement('span', null, pisoUsd), React.createElement('span', { className: 'mx-2 text-bitmap-border/50' }, '|'),
-          React.createElement('span', null, volumeUsd), React.createElement('span', { className: 'mx-2 text-bitmap-border/50' }, '|'),
-          React.createElement('span', null, volume24hUsd), React.createElement('span', { className: 'mx-2 text-bitmap-border/50' }, '|'),
-          React.createElement('span', null), React.createElement('span', { className: 'mx-2 text-bitmap-border/50' }, '|'),
-          React.createElement('span', null)
+      React.createElement('div', { className: 'flex items-start justify-between' },
+        React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide flex-shrink-0 pt-1' }, 'Bitmapcore Marketplace'),
+        React.createElement('div', { className: 'flex items-start' },
+          React.createElement('div', { className: 'flex flex-col items-center px-2' },
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Piso Global'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, pisoBtc + ' BTC'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, pisoUsd)
+          ),
+          React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-border leading-tight self-stretch flex items-center' }, '|'),
+          React.createElement('div', { className: 'flex flex-col items-center px-2' },
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Volumen'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, volumeBtc),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, volumeUsd)
+          ),
+          React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-border leading-tight self-stretch flex items-center' }, '|'),
+          React.createElement('div', { className: 'flex flex-col items-center px-2' },
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Vol 24H'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, volume24hBtc),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, volume24hUsd)
+          ),
+          React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-border leading-tight self-stretch flex items-center' }, '|'),
+          React.createElement('div', { className: 'flex flex-col items-center px-2' },
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'listados'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, BitmapUtils.formatNumber(totalListings)),
+            React.createElement('span', null)
+          ),
+          React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-border leading-tight self-stretch flex items-center' }, '|'),
+          React.createElement('div', { className: 'flex flex-col items-center px-2' },
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Ventas'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, BitmapUtils.formatNumber(ventas)),
+            React.createElement('span', null)
+          )
         )
       )
     ),
@@ -612,14 +612,6 @@ showListDropdown ? React.createElement('div', {
             )
             )
           : null
-        ),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
-          'listados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
-        ),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
-          'Piso: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
         ),
         React.createElement('div', { className: 'relative' },
           React.createElement('button', {
