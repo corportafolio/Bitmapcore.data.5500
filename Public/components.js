@@ -301,6 +301,7 @@ function FloatingMarketplaceMenu(props) {
   var setShowConfirm = _confirm[1];
 
   var items = [
+    { id:'home', label:'Inicio', path:'/', icon:'\uD83C\uDFE0', isImage:false },
     { id:'ordinalswallet', label:'Ordinalswallet', path:'/ordinalswallet', icon:'ordinalswallet_logo.png', isImage:true },
     { id:'unisat', label:'Unisat', path:'/unisat', icon:'unisat_logo.png', isImage:true },
     { id:'satflow', label:'Satflow', path:'/satflow', icon:'satflow-logo.png', isImage:true },

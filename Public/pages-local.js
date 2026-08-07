@@ -433,7 +433,10 @@ function LocalPage(props) {
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-stretch justify-between' },
-        React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide flex-shrink-0 pt-1' }, 'Bitmapcore Marketplace'),
+        React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
+          React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-8 w-8 object-contain rounded' }),
+          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Bitmapcore Marketplace')
+        ),
         React.createElement('div', { className: 'flex items-stretch' },
           React.createElement('div', { className: 'flex flex-col items-center px-2 border-r border-[#555]' },
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Piso Global'),
