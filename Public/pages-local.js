@@ -54,6 +54,9 @@ function LocalPage(props) {
   var _vm = React.useState('list');
   var viewMode = _vm[0];
   var setViewMode = _vm[1];
+  var _nwl = React.useState(false);
+  var noWalletForListing = _nwl[0];
+  var setNoWalletForListing = _nwl[1];
   var _p = React.useState(0);
   var totalListings = _p[0];
   var setTotalListings = _p[1];
@@ -114,7 +117,11 @@ function LocalPage(props) {
 
   var fetchUserBitmapsForListing = function() {
     var wallet = StoreApp.get('wallet');
-    if (!wallet || !wallet.address) return;
+    if (!wallet || !wallet.address) {
+      setNoWalletForListing(true);
+      return;
+    }
+    setNoWalletForListing(false);
     setIsLoadingDropdown(true);
     setDropdownSearch('');
     setBulkPrice('');
@@ -474,10 +481,10 @@ function LocalPage(props) {
         React.createElement('button', {
           onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
           disabled: isLoadingDropdown,
-          className: 'px-3 py-1 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
+          className: 'px-3 py-1 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
         }, isLoadingDropdown ? 'Cargando...' : 'Listar'),
 showListDropdown ? React.createElement('div', {
-            className: 'absolute left-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-96 overflow-y-auto'
+            className: 'absolute left-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-[32rem] overflow-y-auto'
           },
             isLoadingDropdown ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'Cargando bitmaps...') :
             showConfirmMenu ? React.createElement(React.Fragment, null,
@@ -554,6 +561,10 @@ showListDropdown ? React.createElement('div', {
                   className: 'w-full px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
                 }, 'Cerrar')
               )
+            ) :
+            noWalletForListing ? React.createElement('div', { className: 'p-4 text-center' },
+              React.createElement('div', { className: 'font-acme text-sm text-bitmap-muted mb-2' }, 'No hay wallet conectada'),
+              React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted' }, 'Conecte una wallet para listar sus activos.')
             ) :
             listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay bitmaps disponibles') :
             React.createElement(React.Fragment, null,
