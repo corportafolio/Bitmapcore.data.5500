@@ -437,25 +437,25 @@ function LocalPage(props) {
         )
       )
     ),
-    React.createElement('div', { className: 'pl-14 pr-4 py-2 border-b border-bitmap-border flex items-center gap-2' },
+    React.createElement('div', { className: 'pl-14 pr-4 py-1 border-b border-bitmap-border flex items-center gap-2 sticky top-0 z-10', style: { backgroundColor: '#080008' } },
       React.createElement('input', {
         type: 'text',
         value: searchQuery,
         onChange: function(e) { setSearchQuery(e.target.value); },
         placeholder: 'Buscar por numero de bitmap...',
-        className: 'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
+        className: 'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-1 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
       }),
       selectedBuyItems.length > 0 ? React.createElement('button', {
-        className: 'px-3 py-2 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors flex-shrink-0 font-bold'
+        className: 'px-3 py-1 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors flex-shrink-0 font-bold'
       }, 'Comprar ' + selectedBuyItems.length + ' seleccionados') : React.createElement('button', {
         disabled: true,
-        className: 'px-3 py-2 bg-bitmap-orange text-black font-acme text-xs rounded-lg flex-shrink-0 font-bold opacity-50'
+        className: 'px-3 py-1 bg-bitmap-orange text-black font-acme text-xs rounded-lg flex-shrink-0 font-bold opacity-50'
       }, 'Comprar seleccionados'),
       React.createElement('div', { className: 'relative flex-shrink-0' },
         React.createElement('button', {
           onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
           disabled: isLoadingDropdown,
-          className: 'px-3 py-2 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
+          className: 'px-3 py-1 bg-bitmap-orange text-white font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
         }, isLoadingDropdown ? 'Cargando...' : 'Listar'),
 showListDropdown ? React.createElement('div', {
             className: 'absolute left-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-96 overflow-y-auto'
