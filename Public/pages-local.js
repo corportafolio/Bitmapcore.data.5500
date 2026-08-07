@@ -393,7 +393,7 @@ function LocalPage(props) {
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2' },
       React.createElement('div', { className: 'flex items-start justify-between' },
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide flex-shrink-0 pt-1' }, 'Bitmapcore Marketplace'),
-        React.createElement('div', { className: 'flex items-start' },
+        React.createElement('div', { className: 'flex items-stretch' },
           React.createElement('div', { className: 'flex flex-col items-center px-2' },
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Piso Global'),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, pisoBtc + ' BTC'),
