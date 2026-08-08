@@ -457,7 +457,7 @@ function LocalPage(props) {
         throw new Error('Firma cancelada');
       }
 
-      setBuyStatus({ message: 'Transmitiendo transacción batch...', type: 'loading' });
+      setBuyStatus({ message: 'Enviando a la mempool, esperando confirmación...', type: 'loading' });
 
       var broadcastRes = await fetch('/api/v1/transaction/batch-broadcast', {
         method: 'POST',
@@ -528,6 +528,13 @@ function LocalPage(props) {
 
       setBuyStatus({ message: 'Error: ' + e.message, type: 'error' });
     } finally {
+      if (buyResult && buyResult.type === 'success' && bitmapIds && bitmapIds.length > 0) {
+        var soldSet = {};
+        bitmapIds.forEach(function(id) { soldSet[id] = true; });
+        setListings(listings.filter(function(l) {
+          return !soldSet[l.bitmapId || l.id];
+        }));
+      }
       setBuySuccessData(buyResult);
       setSelectedBuyItems([]);
       setShowBuyMenu(false);
@@ -661,6 +668,7 @@ function LocalPage(props) {
           className: 'absolute right-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-[32rem] overflow-y-auto'
         },
           buyStatus && buyStatus.type === 'loading' ? React.createElement('div', { className: 'px-3 py-3 text-center' },
+            React.createElement('div', { className: 'inline-block w-6 h-6 border-2 border-bitmap-orange border-t-transparent rounded-full animate-spin mb-2' }),
             React.createElement('div', { className: 'font-acme text-xs text-bitmap-orange mb-1' }, buyStatus.message),
             React.createElement('div', { className: 'w-full bg-bitmap-surface rounded h-1 mt-2' },
               React.createElement('div', { className: 'bg-bitmap-orange h-1 rounded', style: { width: '50%', animation: 'pulse 1.5s infinite' } })

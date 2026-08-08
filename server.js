@@ -968,30 +968,54 @@ async function pollOrdinalswallet() {
       console.error('[OW] Error fetching escrows: ' + e.message);
     }
 
-    if (!isFirstSync) {
+    {
+      const lastSoldRow = dbOw.prepare("SELECT value FROM ordinalswallet_stats WHERE key='lastSoldTimestamp'").get();
+      const soldSince = lastSoldRow ? lastSoldRow.value : lastTs;
+      console.error('[OW] Sold search since: ' + soldSince + (lastSoldRow ? ' (lastSoldTs)' : ' (fallback to lastPollTs)'));
+
       try {
-        const soldRes = await axios.get('https://turbo.ordinalswallet.com/collection/bitmap/sold-escrows', {
-          params: { offset: 0, limit: 10000 },
-          timeout: 30000
-        });
-        const sold = Array.isArray(soldRes.data) ? soldRes.data : [];
-        const newSold = sold.filter(s => parseCreatedTimestamp(s.bought_at) > lastTs);
-        console.error('[OW] Sold total: ' + sold.length + ', nuevos: ' + newSold.length);
-        for (const s of newSold) {
-          const insId = s.inscription_id || '';
-          if (insId) {
-            dbOw.prepare("DELETE FROM ordinalswallet_cache WHERE bitmapId=?").run(insId);
-            if (dbSales) {
-              try {
-                dbSales.prepare("INSERT INTO all_sales (bitmap_name, bitmap_number, inscription_id, price, buyer_address, seller_address, source, txid, sold_at, synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(
-                  s.name || '', parseBitmapNumber(s.name), insId,
-                  s.satoshi_price || 0, s.buyer_address || '', s.seller_address || '',
-                  'ordinalswallet', '', parseCreatedTimestamp(s.bought_at), now
-                );
-              } catch (se) { console.error('[OW] Error inserting sale:', se.message); }
+        let soldOffset = 0;
+        let soldTotal = 0;
+        let soldDeleted = 0;
+        let soldPages = 0;
+        let soldStop = false;
+        let maxSoldTs = soldSince;
+        while (!soldStop) {
+          const soldRes = await axios.get('https://turbo.ordinalswallet.com/collection/bitmap/sold-escrows', {
+            params: { offset: soldOffset, limit: 100 },
+            timeout: 30000
+          });
+          const soldPage = Array.isArray(soldRes.data) ? soldRes.data : [];
+          if (soldPage.length === 0) break;
+          soldPages++;
+          for (const s of soldPage) {
+            const insId = s.inscription_id || '';
+            const boughtAt = parseCreatedTimestamp(s.bought_at);
+            if (boughtAt <= soldSince && soldSince > 0) { soldStop = true; break; }
+            soldTotal++;
+            if (boughtAt > maxSoldTs) maxSoldTs = boughtAt;
+            if (insId) {
+              const deleted = dbOw.prepare("DELETE FROM ordinalswallet_cache WHERE bitmapId=?").run(insId);
+              if (deleted.changes > 0) soldDeleted++;
+              if (dbSales) {
+                try {
+                  dbSales.prepare("INSERT INTO all_sales (bitmap_name, bitmap_number, inscription_id, price, buyer_address, seller_address, source, txid, sold_at, synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(
+                    s.name || '', parseBitmapNumber(s.name), insId,
+                    s.satoshi_price || 0, s.buyer_address || '', s.seller_address || '',
+                    'ordinalswallet', '', boughtAt, now
+                  );
+                } catch (se) { /* duplicate, skip */ }
+              }
             }
           }
+          if (soldPage.length < 100) break;
+          soldOffset += 100;
+          await new Promise(r => setTimeout(r, 200));
         }
+        if (maxSoldTs > soldSince) {
+          dbOw.prepare("INSERT OR REPLACE INTO ordinalswallet_stats (key, value, updatedAt) VALUES ('lastSoldTimestamp',?,?)").run(maxSoldTs, now);
+        }
+        console.error('[OW] Sold: ' + soldTotal + ' revisados, ' + soldDeleted + ' borrados del cache, ' + soldPages + ' paginas');
       } catch (e) {
         console.error('[OW] Error fetching sold: ' + e.message);
       }
@@ -1042,7 +1066,9 @@ async function pollUnisat() {
     const lastTsRow = dbUnisat.prepare("SELECT value FROM unisat_stats WHERE key='lastPollTimestamp'").get();
     const lastTs = lastTsRow ? lastTsRow.value : 0;
     const isFirstSync = lastTs === 0;
-    console.error("[UNI] lastTs=" + lastTs + ", isFirstSync=" + isFirstSync);
+    const lastSoldRow = dbUnisat.prepare("SELECT value FROM unisat_stats WHERE key='lastSoldTimestamp'").get();
+    let uniSoldSince = lastSoldRow ? lastSoldRow.value : lastTs;
+    console.error("[UNI] lastTs=" + lastTs + ", isFirstSync=" + isFirstSync + ", soldSince=" + uniSoldSince);
 
     const insertStmt = dbUnisat.prepare("INSERT OR REPLACE INTO unisat_cache (bitmapNumber, bitmapId, listedPrice, listedAt, ownerAddress, extraData, extraData2, timestamp, insertionOrder) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     let totalSaved = 0;
@@ -1087,7 +1113,8 @@ async function pollUnisat() {
             }
             console.error("[UNI] " + evt + " page " + pages + ": " + items.length + " total, " + newItems.length + " nuevos");
           } else {
-            const newItems = isFirstSync ? items : items.filter(i => (i.timestamp || 0) > lastTs);
+            const soldTs = (evt === 'Sold') ? uniSoldSince : lastTs;
+            const newItems = isFirstSync ? items : items.filter(i => (i.timestamp || 0) > soldTs);
             if (!isFirstSync && newItems.length === 0 && items.length > 0) {
               hasMore = false;
               break;
@@ -1103,6 +1130,7 @@ async function pollUnisat() {
                     item.price || item.unitPrice || 0, item.to || '', item.from || '',
                     'unisat', item.txid || '', item.timestamp || now, now
                   );
+                  if (item.timestamp && item.timestamp > uniSoldSince) uniSoldSince = item.timestamp;
                 } catch (se) { console.error("[UNI] Error inserting sale:", se.message); }
               }
             }
@@ -1111,7 +1139,8 @@ async function pollUnisat() {
 
           if (!isFirstSync && items.length > 0) {
             const oldestTs = items[items.length - 1].timestamp || 0;
-            if (oldestTs <= lastTs) {
+            const stopTs = (evt === 'Sold') ? uniSoldSince : lastTs;
+            if (oldestTs <= stopTs) {
               console.error("[UNI] " + evt + " stopping - reached old items");
               hasMore = false;
               break;
@@ -1127,6 +1156,10 @@ async function pollUnisat() {
         }
       }
       console.error("[UNI] " + evt + " done: " + pages + " pages");
+    }
+
+    if (uniSoldSince > (lastSoldRow ? lastSoldRow.value : 0)) {
+      dbUnisat.prepare("INSERT OR REPLACE INTO unisat_stats (key, value, updatedAt) VALUES ('lastSoldTimestamp',?,?)").run(uniSoldSince, now);
     }
 
     const minRow = dbUnisat.prepare("SELECT MIN(listedPrice) as p FROM unisat_cache WHERE bitmapId != '' AND listedPrice > 0").get();
@@ -1279,6 +1312,18 @@ async function pollUnified() {
           const deletedUNI = dbUnified.prepare("DELETE FROM unified_listings WHERE source='unisat' AND bitmapId NOT IN (" + placeholders + ")").run(...uniIds);
           console.error('[UNIFIED] Cleaned stale UNI: ' + deletedUNI.changes);
         }
+        try {
+          const dbLocal2 = new Database(path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db'), { readonly: true });
+          const localActive = dbLocal2.prepare("SELECT inscription_id FROM listings WHERE is_active=1").all().map(r => r.inscription_id);
+          dbLocal2.close();
+          if (localActive.length > 0) {
+            const placeholders = localActive.map(() => '?').join(',');
+            const deletedLOCAL = dbUnified.prepare("DELETE FROM unified_listings WHERE source='local' AND bitmapId NOT IN (" + placeholders + ")").run(...localActive);
+            if (deletedLOCAL.changes > 0) console.error('[UNIFIED] Cleaned stale LOCAL: ' + deletedLOCAL.changes);
+          }
+        } catch (e) {
+          console.error('[UNIFIED] Error cleaning stale local:', e.message);
+        }
       } catch (e) {
         console.error('[UNIFIED] Error cleaning stale:', e.message);
       }
@@ -1289,14 +1334,21 @@ async function pollUnified() {
         const path = require('path');
         const Database = require('better-sqlite3');
         const dbLocal = new Database(path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db'), { readonly: true });
-        const localVentas = dbLocal.prepare("SELECT * FROM ventas_historial WHERE sold_at > ?").all(lastTs);
+        const localSoldRow = dbUnified.prepare("SELECT value FROM unified_stats WHERE key='localLastSoldTimestamp'").get();
+        const localSoldSince = localSoldRow ? localSoldRow.value : lastTs;
+        const localVentas = dbLocal.prepare("SELECT * FROM ventas_historial WHERE sold_at > ?").all(localSoldSince);
         const insertSale = dbSales.prepare("INSERT INTO all_sales (bitmap_name, bitmap_number, inscription_id, price, buyer_address, seller_address, source, txid, sold_at, synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)");
+        let maxLocalSoldTs = localSoldSince;
         for (const v of localVentas) {
           try {
             insertSale.run(v.name || '', v.bitmap_number || 0, v.inscription_id || '',
               v.price || 0, v.buyer_address || '', v.seller_address || '',
               'local', v.txid || '', v.sold_at || 0, now);
+            if (v.sold_at && v.sold_at > maxLocalSoldTs) maxLocalSoldTs = v.sold_at;
           } catch (se) { /* duplicate or error, skip */ }
+        }
+        if (maxLocalSoldTs > localSoldSince) {
+          dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('localLastSoldTimestamp',?,?)").run(maxLocalSoldTs, now);
         }
         dbLocal.close();
         if (localVentas.length > 0) console.error('[UNIFIED] Synced ' + localVentas.length + ' local sales to all_sales');
