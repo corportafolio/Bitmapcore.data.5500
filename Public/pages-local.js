@@ -66,6 +66,9 @@ function LocalPage(props) {
   var _buyResult = React.useState(null);
   var buyResult = _buyResult[0];
   var setBuyResult = _buyResult[1];
+  var _buySuccess = React.useState(null);
+  var buySuccessData = _buySuccess[0];
+  var setBuySuccessData = _buySuccess[1];
   var _p = React.useState(0);
   var totalListings = _p[0];
   var setTotalListings = _p[1];
@@ -495,6 +498,33 @@ function LocalPage(props) {
     setBuyResult({ results: results, totalPaid: totalPaid, totalFees: totalFees });
     setBuyStatus({ message: 'Completado', type: 'done' });
     setSelectedBuyItems([]);
+    setShowBuyMenu(false);
+
+    var successItems = results.filter(function(r) { return r.status === 'success'; });
+    var errorItems = results.filter(function(r) { return r.status !== 'success'; });
+
+    var networkFees = [];
+    for (var fi = 0; fi < successItems.length; fi++) {
+      try {
+        var txRes = await fetch('https://mempool.space/api/tx/' + successItems[fi].txid);
+        var txData = await txRes.json();
+        networkFees.push({ txid: successItems[fi].txid, fee: txData.fee || 0 });
+      } catch(fe) {
+        networkFees.push({ txid: successItems[fi].txid, fee: 0 });
+      }
+    }
+
+    var totalNetworkFee = networkFees.reduce(function(sum, nf) { return sum + nf.fee; }, 0);
+
+    setBuySuccessData({
+      items: successItems,
+      errors: errorItems,
+      totalPaid: totalPaid,
+      totalFees: totalFees,
+      networkFees: networkFees,
+      totalNetworkFee: totalNetworkFee,
+      btcPrice: btcPrice
+    });
 
     fetchListings();
     fetch('/api/v1/internal/refresh-local', { method: 'POST' }).catch(function() {});
@@ -1021,6 +1051,132 @@ showListDropdown ? React.createElement('div', {
                   })
                 )
         ),
+    buySuccessData ? React.createElement('div', {
+      className: 'fixed inset-0 z-50 flex items-center justify-center',
+      style: { backgroundColor: 'rgba(0,0,0,0.8)' }
+    },
+      React.createElement('div', {
+        className: 'relative w-full max-w-lg mx-4 rounded-xl overflow-hidden',
+        style: { backgroundColor: '#111111', border: '1px solid #333', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }
+      },
+        React.createElement('div', { className: 'px-6 pt-6 pb-4' },
+          React.createElement('div', { className: 'flex items-center gap-3 mb-4' },
+            React.createElement('div', {
+              className: 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
+              style: { backgroundColor: 'rgba(0,170,0,0.15)' }
+            },
+              React.createElement('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none' },
+                React.createElement('path', { d: 'M5 13l4 4L19 7', stroke: '#00AA00', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round' })
+              )
+            ),
+            React.createElement('div', null,
+              React.createElement('h2', { className: 'font-alfaslab text-lg', style: { color: '#00AA00' } }, 'Compra exitosa'),
+              React.createElement('p', { className: 'font-acme text-xs', style: { color: '#888' } },
+                buySuccessData.items.length + ' bitmap' + (buySuccessData.items.length > 1 ? 's' : '') + ' comprado' + (buySuccessData.items.length > 1 ? 's' : '') + ' exitosamente'
+              )
+            )
+          ),
+          React.createElement('div', { className: 'rounded-lg p-4 mb-4', style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' } },
+            React.createElement('div', { className: 'space-y-2' },
+              buySuccessData.items.map(function(item, i) {
+                return React.createElement('div', { key: i, className: 'flex items-center justify-between' },
+                  React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
+                    React.createElement('div', {
+                      className: 'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                      style: { backgroundColor: '#00AA00' }
+                    }),
+                    React.createElement('span', { className: 'font-acme text-sm truncate', style: { color: '#ddd' } }, item.name)
+                  ),
+                  React.createElement('span', { className: 'font-acme text-sm flex-shrink-0 ml-3', style: { color: '#aaa' } },
+                    (item.price / 100000000).toFixed(5) + ' BTC'
+                  )
+                );
+              })
+            )
+          ),
+          React.createElement('div', { className: 'rounded-lg p-4 mb-4', style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' } },
+            React.createElement('div', { className: 'flex justify-between mb-2' },
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Subtotal'),
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#ccc' } },
+                (buySuccessData.totalPaid / 100000000).toFixed(5) + ' BTC'
+              )
+            ),
+            React.createElement('div', { className: 'flex justify-between mb-2' },
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Fee marketplace (2%)'),
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#aaa' } },
+                (buySuccessData.totalFees / 100000000).toFixed(5) + ' BTC'
+              )
+            ),
+            buySuccessData.totalNetworkFee > 0 ? React.createElement('div', { className: 'flex justify-between mb-2' },
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Fee de red (mempool)'),
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#aaa' } },
+                (buySuccessData.totalNetworkFee / 100000000).toFixed(8) + ' BTC'
+              )
+            ) : null,
+            React.createElement('div', {
+              className: 'flex justify-between pt-2 mt-2',
+              style: { borderTop: '1px solid #333' }
+            },
+              React.createElement('span', { className: 'font-acme text-sm font-bold', style: { color: '#fff' } }, 'Total pagado'),
+              React.createElement('span', { className: 'font-acme text-sm font-bold', style: { color: '#00AA00' } },
+                ((buySuccessData.totalPaid + buySuccessData.totalFees) / 100000000).toFixed(5) + ' BTC'
+              )
+            ),
+            buySuccessData.btcPrice ? React.createElement('div', { className: 'flex justify-end mt-1' },
+              React.createElement('span', { className: 'font-acme text-[10px]', style: { color: '#666' } },
+                '\u2248 $' + (((buySuccessData.totalPaid + buySuccessData.totalFees) / 100000000) * buySuccessData.btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' USD'
+              )
+            ) : null
+          ),
+          React.createElement('div', { className: 'mb-4' },
+            React.createElement('span', { className: 'font-acme text-[10px] block mb-2', style: { color: '#666' } }, 'Transacciones:'),
+            React.createElement('div', { className: 'space-y-1.5' },
+              buySuccessData.networkFees.map(function(nf, i) {
+                return React.createElement('a', {
+                  key: i,
+                  href: 'https://mempool.space/tx/' + nf.txid,
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                  className: 'flex items-center gap-2 px-3 py-2 rounded-lg transition-colors',
+                  style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' },
+                  onMouseOver: function(e) { e.currentTarget.style.borderColor = '#00AA00'; },
+                  onMouseOut: function(e) { e.currentTarget.style.borderColor = '#2a2a2a'; }
+                },
+                  React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', flexShrink: 0 },
+                    React.createElement('path', { d: 'M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6', stroke: '#00AA00', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+                    React.createElement('polyline', { points: '15 3 21 3 21 9', stroke: '#00AA00', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+                    React.createElement('line', { x1: '10', y1: '14', x2: '21', y2: '3', stroke: '#00AA00', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
+                  ),
+                  React.createElement('span', { className: 'font-acme text-[10px] truncate flex-1', style: { color: '#aaa' } },
+                    nf.txid.substring(0, 16) + '...'
+                  ),
+                  React.createElement('span', { className: 'font-acme text-[10px] flex-shrink-0', style: { color: '#666' } },
+                    nf.fee > 0 ? (nf.fee / 100000000).toFixed(6) + ' BTC' : ''
+                  )
+                );
+              })
+            )
+          ),
+          buySuccessData.errors && buySuccessData.errors.length > 0 ? React.createElement('div', { className: 'mb-4 rounded-lg p-3', style: { backgroundColor: 'rgba(255,51,51,0.08)', border: '1px solid rgba(255,51,51,0.2)' } },
+            React.createElement('span', { className: 'font-acme text-[10px] block mb-1', style: { color: '#FF5555' } }, 'Bitmaps no comprados:'),
+            buySuccessData.errors.map(function(err, i) {
+              return React.createElement('div', { key: i, className: 'font-acme text-[10px]', style: { color: '#aa5555' } },
+                err.name + ' \u2014 ' + (err.reason || 'Error')
+              );
+            })
+          ) : null
+        ),
+        React.createElement('div', { className: 'px-6 pb-6 pt-2' },
+          React.createElement('button', {
+            onClick: function() { setBuySuccessData(null); },
+            className: 'w-full py-2.5 rounded-lg font-acme text-sm font-bold transition-colors',
+            style: { backgroundColor: '#00AA00', color: '#000' },
+            onMouseOver: function(e) { e.currentTarget.style.backgroundColor = '#00cc00'; },
+            onMouseOut: function(e) { e.currentTarget.style.backgroundColor = '#00AA00'; }
+          }, 'Aceptar')
+        )
+      )
+    ) : null,
     successToast ? React.createElement(Toast, { message: successToast.message, type: successToast.type, duration: 20000, onDone: function() { setSuccessToast(null); } }) : null
   );
 }
