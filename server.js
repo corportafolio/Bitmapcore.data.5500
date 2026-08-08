@@ -150,6 +150,36 @@ try {
   console.error('Unified cache DB not created:', err.message);
 }
 
+let dbSales = null;
+try {
+  const fs = require('fs');
+  const dataDir = path.join(__dirname, 'data');
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  dbSales = new Database(path.join(dataDir, 'sales_history.db'));
+  dbSales.pragma('journal_mode = WAL');
+  dbSales.exec(`
+    CREATE TABLE IF NOT EXISTS all_sales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bitmap_name TEXT,
+      bitmap_number INTEGER,
+      inscription_id TEXT,
+      price INTEGER,
+      buyer_address TEXT,
+      seller_address TEXT,
+      source TEXT,
+      txid TEXT,
+      sold_at INTEGER,
+      synced_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_all_sales_sold_at ON all_sales(sold_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_all_sales_source ON all_sales(source);
+    CREATE INDEX IF NOT EXISTS idx_all_sales_bitmap_number ON all_sales(bitmap_number);
+  `);
+  console.log('Sales history DB connected');
+} catch (err) {
+  console.error('Sales history DB not created:', err.message);
+}
+
 function getTableNames() {
   if (!db) return [];
   try {
@@ -714,6 +744,67 @@ app.get('/api/v1/unified', (req, res) => {
   }
 });
 
+// ===== SALES HISTORY =====
+app.get('/api/v1/sales/history', (req, res) => {
+  if (!dbSales) return sendSuccess(res, { items: [], total: 0 });
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const source = req.query.source || 'all';
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const offset = parseInt(req.query.offset) || 0;
+    const since = Date.now() - (days * 24 * 60 * 60 * 1000);
+
+    let query = 'SELECT * FROM all_sales WHERE sold_at > ?';
+    const params = [since];
+
+    if (source !== 'all') {
+      query += ' AND source = ?';
+      params.push(source);
+    }
+
+    query += ' ORDER BY sold_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const items = dbSales.prepare(query).all(...params);
+
+    let countQuery = 'SELECT COUNT(*) as c FROM all_sales WHERE sold_at > ?';
+    const countParams = [since];
+    if (source !== 'all') {
+      countQuery += ' AND source = ?';
+      countParams.push(source);
+    }
+    const countRow = dbSales.prepare(countQuery).get(...countParams);
+
+    sendSuccess(res, { items: items, total: countRow ? countRow.c : 0, days: days, source: source });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/sales/stats', (req, res) => {
+  if (!dbSales) return sendSuccess(res, {});
+  try {
+    const now = Date.now();
+    const last24h = now - 86400000;
+    const last7d = now - (7 * 86400000);
+    const last30d = now - (30 * 86400000);
+
+    const sales24h = dbSales.prepare("SELECT COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ?").get(last24h);
+    const sales7d = dbSales.prepare("SELECT COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ?").get(last7d);
+    const sales30d = dbSales.prepare("SELECT COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ?").get(last30d);
+    const bySource = dbSales.prepare("SELECT source, COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ? GROUP BY source").all(last30d);
+
+    sendSuccess(res, {
+      h24: { count: sales24h.c, volume: sales24h.v },
+      d7: { count: sales7d.c, volume: sales7d.v },
+      d30: { count: sales30d.c, volume: sales30d.v },
+      bySource: bySource
+    });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
 // ===== INTERNAL ENDPOINTS =====
 app.post('/api/v1/internal/refresh-local', async (req, res) => {
   try {
@@ -884,11 +975,22 @@ async function pollOrdinalswallet() {
           timeout: 30000
         });
         const sold = Array.isArray(soldRes.data) ? soldRes.data : [];
-        const newSold = sold.filter(s => parseCreatedTimestamp(s.boughtAt) > lastTs);
+        const newSold = sold.filter(s => parseCreatedTimestamp(s.bought_at) > lastTs);
         console.error('[OW] Sold total: ' + sold.length + ', nuevos: ' + newSold.length);
         for (const s of newSold) {
           const insId = s.inscription_id || '';
-          if (insId) dbOw.prepare("DELETE FROM ordinalswallet_cache WHERE bitmapId=?").run(insId);
+          if (insId) {
+            dbOw.prepare("DELETE FROM ordinalswallet_cache WHERE bitmapId=?").run(insId);
+            if (dbSales) {
+              try {
+                dbSales.prepare("INSERT INTO all_sales (bitmap_name, bitmap_number, inscription_id, price, buyer_address, seller_address, source, txid, sold_at, synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(
+                  s.name || '', parseBitmapNumber(s.name), insId,
+                  s.satoshi_price || 0, s.buyer_address || '', s.seller_address || '',
+                  'ordinalswallet', '', parseCreatedTimestamp(s.bought_at), now
+                );
+              } catch (se) { console.error('[OW] Error inserting sale:', se.message); }
+            }
+          }
         }
       } catch (e) {
         console.error('[OW] Error fetching sold: ' + e.message);
@@ -993,6 +1095,16 @@ async function pollUnisat() {
             for (const item of newItems) {
               const insId = item.inscriptionId || item.inscription_id || "";
               if (insId) dbUnisat.prepare("DELETE FROM unisat_cache WHERE bitmapId=?").run(insId);
+              if (insId && evt === 'Sold' && dbSales) {
+                try {
+                  const soldName = item.collectionItemName || item.collection_item_name || '';
+                  dbSales.prepare("INSERT INTO all_sales (bitmap_name, bitmap_number, inscription_id, price, buyer_address, seller_address, source, txid, sold_at, synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(
+                    soldName, parseBitmapNumber(soldName), insId,
+                    item.price || item.unitPrice || 0, item.to || '', item.from || '',
+                    'unisat', item.txid || '', item.timestamp || now, now
+                  );
+                } catch (se) { console.error("[UNI] Error inserting sale:", se.message); }
+              }
             }
             console.error("[UNI] " + evt + " page " + pages + ": " + items.length + " total, " + newItems.length + " nuevos");
           }
@@ -1150,6 +1262,43 @@ async function pollUnified() {
     );
     if (freshTs > lastTs) {
       dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('lastPollTimestamp',?,?)").run(freshTs, now);
+    }
+
+    if (!isFirstSync) {
+      try {
+        const deletedOW = dbUnified.prepare("DELETE FROM unified_listings WHERE source='ordinalswallet' AND bitmapId NOT IN (SELECT bitmapId FROM ordinalswallet_cache WHERE bitmapId != '')").run();
+        const deletedUNI = dbUnified.prepare("DELETE FROM unified_listings WHERE source='unisat' AND bitmapId NOT IN (SELECT bitmapId FROM unisat_cache WHERE bitmapId != '')").run();
+        console.error('[UNIFIED] Cleaned stale: OW=' + deletedOW.changes + ', UNI=' + deletedUNI.changes);
+      } catch (e) {
+        console.error('[UNIFIED] Error cleaning stale:', e.message);
+      }
+    }
+
+    if (dbSales) {
+      try {
+        const path = require('path');
+        const Database = require('better-sqlite3');
+        const dbLocal = new Database(path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db'), { readonly: true });
+        const localVentas = dbLocal.prepare("SELECT * FROM ventas_historial WHERE sold_at > ?").all(lastTs);
+        const insertSale = dbSales.prepare("INSERT INTO all_sales (bitmap_name, bitmap_number, inscription_id, price, buyer_address, seller_address, source, txid, sold_at, synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)");
+        for (const v of localVentas) {
+          try {
+            insertSale.run(v.name || '', v.bitmap_number || 0, v.inscription_id || '',
+              v.price || 0, v.buyer_address || '', v.seller_address || '',
+              'local', v.txid || '', v.sold_at || 0, now);
+          } catch (se) { /* duplicate or error, skip */ }
+        }
+        dbLocal.close();
+        if (localVentas.length > 0) console.error('[UNIFIED] Synced ' + localVentas.length + ' local sales to all_sales');
+      } catch (e) {
+        console.error('[UNIFIED] Error syncing local sales:', e.message);
+      }
+
+      try {
+        const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
+        const cleaned = dbSales.prepare("DELETE FROM all_sales WHERE sold_at < ?").run(thirtyDaysAgo);
+        if (cleaned.changes > 0) console.error('[SALES] Cleaned ' + cleaned.changes + ' old records (>30 days)');
+      } catch (e) { /* ignore */ }
     }
 
     console.error('[UNIFIED] Merge done: ' + total + ' nuevos, total=' + (countRow?.c || 0) + ', floor=' + (minRow?.p || 0));
