@@ -1266,9 +1266,19 @@ async function pollUnified() {
 
     if (!isFirstSync) {
       try {
-        const deletedOW = dbUnified.prepare("DELETE FROM unified_listings WHERE source='ordinalswallet' AND bitmapId NOT IN (SELECT bitmapId FROM ordinalswallet_cache WHERE bitmapId != '')").run();
-        const deletedUNI = dbUnified.prepare("DELETE FROM unified_listings WHERE source='unisat' AND bitmapId NOT IN (SELECT bitmapId FROM unisat_cache WHERE bitmapId != '')").run();
-        console.error('[UNIFIED] Cleaned stale: OW=' + deletedOW.changes + ', UNI=' + deletedUNI.changes);
+        const owIds = dbOw.prepare("SELECT bitmapId FROM ordinalswallet_cache WHERE bitmapId != ''").all().map(r => r.bitmapId);
+        const uniIds = dbUnisat.prepare("SELECT bitmapId FROM unisat_cache WHERE bitmapId != ''").all().map(r => r.bitmapId);
+
+        if (owIds.length > 0) {
+          const placeholders = owIds.map(() => '?').join(',');
+          const deletedOW = dbUnified.prepare("DELETE FROM unified_listings WHERE source='ordinalswallet' AND bitmapId NOT IN (" + placeholders + ")").run(...owIds);
+          console.error('[UNIFIED] Cleaned stale OW: ' + deletedOW.changes);
+        }
+        if (uniIds.length > 0) {
+          const placeholders = uniIds.map(() => '?').join(',');
+          const deletedUNI = dbUnified.prepare("DELETE FROM unified_listings WHERE source='unisat' AND bitmapId NOT IN (" + placeholders + ")").run(...uniIds);
+          console.error('[UNIFIED] Cleaned stale UNI: ' + deletedUNI.changes);
+        }
       } catch (e) {
         console.error('[UNIFIED] Error cleaning stale:', e.message);
       }
