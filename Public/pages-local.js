@@ -398,136 +398,139 @@ function LocalPage(props) {
     if (selected.length === 0) return;
 
     setShowBuyMenu(true);
-    setBuyStatus({ message: 'Preparando compra...', type: 'loading' });
+    setBuyStatus({ message: 'Preparando compra batch...', type: 'loading' });
     setBuyResult(null);
+    setBuySuccessData(null);
 
-    var results = [];
-    var totalPaid = 0;
-    var totalFees = 0;
+    var buyResult = null;
+    var idempotencyKey = 'batch_buy_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+    var bitmapIds = selected.map(function(item) { return item.bitmapId || item.id; });
 
-    for (var idx = 0; idx < selected.length; idx++) {
-      var item = selected[idx];
-      var listingId = item.bitmapId || item.id;
-      var priceSats = item.listedPrice || item.price || 0;
+    try {
+      setBuyStatus({ message: 'Creando PSBT batch para ' + selected.length + ' bitmaps...', type: 'loading' });
 
-      if (!listingId || !priceSats) {
-        results.push({ name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'skipped', reason: 'Sin precio' });
-        continue;
+      var buyRes = await fetch('/api/v1/transaction/batch-buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bitmapIds: bitmapIds,
+          buyerAddress: wallet.address,
+          idempotencyKey: idempotencyKey
+        })
+      });
+      var buyJson = await buyRes.json();
+
+      if (!buyJson.success || !buyJson.data || !buyJson.data.psbt) {
+        throw new Error(buyJson.error || 'Error al crear PSBT batch');
       }
 
-      setBuyStatus({ message: 'Comprando ' + (idx + 1) + '/' + selected.length + ': #' + (item.bitmapNumber || '?') + '.bitmap...', type: 'loading' });
+      var psbtToSign = buyJson.data.psbt;
+      var transactionId = buyJson.data.transactionId;
+      var items = buyJson.data.items;
+      var signedPsbt = null;
 
-      try {
-        var idempotencyKey = 'buy_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+      setBuyStatus({ message: 'Firmando PSBT en wallet...', type: 'loading' });
 
-        var buyRes = await fetch('/api/v1/transaction/buy-bitmap', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            bitmapId: listingId,
-            buyerAddress: wallet.address,
-            idempotencyKey: idempotencyKey
-          })
-        });
-        var buyJson = await buyRes.json();
-
-        if (!buyJson.success || !buyJson.data || !buyJson.data.psbt) {
-          results.push({ name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: buyJson.error || 'Error al crear PSBT' });
-          continue;
+      if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
+        try {
+          signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address);
+        } catch(xe) {
+          throw new Error('Firma Xverse cancelada');
         }
-
-        var psbtToSign = buyJson.data.psbt;
-        var transactionId = buyJson.data.transactionId;
-        var signedPsbt = null;
-
-        if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
-          try {
-            setBuyStatus({ message: 'Firmando en Xverse... (' + (idx + 1) + '/' + selected.length + ')', type: 'loading' });
-            signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address);
-          } catch(xe) {
-            results.push({ name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: 'Firma Xverse cancelada' });
-            continue;
-          }
-        } else if (window.unisat && window.unisat.signPsbt) {
-          try {
-            setBuyStatus({ message: 'Firmando en Unisat... (' + (idx + 1) + '/' + selected.length + ')', type: 'loading' });
-            var signPromise = window.unisat.signPsbt(psbtToSign);
-            var signTimeout = new Promise(function(_, reject) {
-              setTimeout(function() { reject(new Error('timeout')); }, 30000);
-            });
-            signedPsbt = await Promise.race([signPromise, signTimeout]);
-          } catch(ue) {
-            results.push({ name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: 'Firma Unisat cancelada' });
-            continue;
-          }
-        } else {
-          results.push({ name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: 'Wallet no disponible' });
-          continue;
+      } else if (window.unisat && window.unisat.signPsbt) {
+        try {
+          var signPromise = window.unisat.signPsbt(psbtToSign);
+          var signTimeout = new Promise(function(_, reject) {
+            setTimeout(function() { reject(new Error('timeout')); }, 60000);
+          });
+          signedPsbt = await Promise.race([signPromise, signTimeout]);
+        } catch(ue) {
+          throw new Error('Firma Unisat cancelada');
         }
-
-        if (!signedPsbt) {
-          results.push({ name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: 'Firma cancelada' });
-          continue;
-        }
-
-        setBuyStatus({ message: 'Transmitiendo... (' + (idx + 1) + '/' + selected.length + ')', type: 'loading' });
-
-        var broadcastRes = await fetch('/api/v1/transaction/broadcast', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            signedPsbt: signedPsbt,
-            transactionId: transactionId
-          })
-        });
-        var broadcastJson = await broadcastRes.json();
-
-        if (broadcastJson.success && broadcastJson.data && broadcastJson.data.txid) {
-          var feeSats = Math.floor(priceSats * 0.02);
-          totalPaid += priceSats;
-          totalFees += feeSats;
-          results.push({ name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'success', txid: broadcastJson.data.txid, price: priceSats, fee: feeSats });
-        } else {
-          results.push({ name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: broadcastJson.error || 'Error al transmitir' });
-        }
-      } catch(e) {
-        results.push({ name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: e.message });
+      } else {
+        throw new Error('Wallet no disponible para firmar');
       }
-    }
 
-    setBuyResult({ results: results, totalPaid: totalPaid, totalFees: totalFees });
-    setBuyStatus({ message: 'Completado', type: 'done' });
-    setSelectedBuyItems([]);
-    setShowBuyMenu(false);
+      if (!signedPsbt) {
+        throw new Error('Firma cancelada');
+      }
 
-    var successItems = results.filter(function(r) { return r.status === 'success'; });
-    var errorItems = results.filter(function(r) { return r.status !== 'success'; });
+      setBuyStatus({ message: 'Transmitiendo transacción batch...', type: 'loading' });
 
-    var networkFees = [];
-    for (var fi = 0; fi < successItems.length; fi++) {
+      var broadcastRes = await fetch('/api/v1/transaction/batch-broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signedPsbt: signedPsbt,
+          transactionId: transactionId
+        })
+      });
+      var broadcastJson = await broadcastRes.json();
+
+      if (!broadcastJson.success || !broadcastJson.data || !broadcastJson.data.txid) {
+        throw new Error(broadcastJson.error || 'Error al transmitir batch');
+      }
+
+      var txid = broadcastJson.data.txid;
+
+      var successItems = items.map(function(item) {
+        return { name: item.name || 'Bitmap comprado', status: 'success', txid: txid, price: item.price, fee: Math.floor(item.price * 0.02) };
+      });
+      var errorItems = [];
+
+      var totalPaid = successItems.reduce(function(sum, s) { return sum + s.price; }, 0);
+      var totalFees = successItems.reduce(function(sum, s) { return sum + s.fee; }, 0);
+
+      var networkFees = [];
       try {
-        var txRes = await fetch('https://mempool.space/api/tx/' + successItems[fi].txid);
+        var txRes = await fetch('https://mempool.space/api/tx/' + txid);
         var txData = await txRes.json();
-        networkFees.push({ txid: successItems[fi].txid, fee: txData.fee || 0 });
+        networkFees.push({ txid: txid, fee: txData.fee || 0 });
       } catch(fe) {
-        networkFees.push({ txid: successItems[fi].txid, fee: 0 });
+        networkFees.push({ txid: txid, fee: 0 });
       }
+
+      var totalNetworkFee = networkFees.reduce(function(sum, nf) { return sum + nf.fee; }, 0);
+
+      buyResult = {
+        type: 'success',
+        items: successItems,
+        errors: errorItems,
+        totalPaid: totalPaid,
+        totalFees: totalFees,
+        networkFees: networkFees,
+        totalNetworkFee: totalNetworkFee,
+        btcPrice: btcPrice
+      };
+
+      setBuyStatus({ message: 'Compra batch exitosa: ' + successItems.length + ' bitmaps', type: 'done' });
+
+    } catch(e) {
+      var errorItems = selected.map(function(item) {
+        return { name: '#' + (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: e.message };
+      });
+      var totalPaid = 0;
+      var totalFees = 0;
+
+      buyResult = {
+        type: 'error',
+        items: [],
+        errors: errorItems,
+        totalPaid: totalPaid,
+        totalFees: totalFees,
+        networkFees: [],
+        totalNetworkFee: 0,
+        btcPrice: btcPrice
+      };
+
+      setBuyStatus({ message: 'Error: ' + e.message, type: 'error' });
+    } finally {
+      setBuySuccessData(buyResult);
+      setSelectedBuyItems([]);
+      setShowBuyMenu(false);
+      fetchListings();
+      fetch('/api/v1/internal/refresh-local', { method: 'POST' }).catch(function() {});
     }
-
-    var totalNetworkFee = networkFees.reduce(function(sum, nf) { return sum + nf.fee; }, 0);
-
-    setBuySuccessData({
-      items: successItems,
-      errors: errorItems,
-      totalPaid: totalPaid,
-      totalFees: totalFees,
-      networkFees: networkFees,
-      totalNetworkFee: totalNetworkFee,
-      btcPrice: btcPrice
-    });
-
-    fetchListings();
-    fetch('/api/v1/internal/refresh-local', { method: 'POST' }).catch(function() {});
   };
 
   var handleSort = function(sort) {
@@ -666,11 +669,11 @@ function LocalPage(props) {
             React.createElement('div', { className: 'px-3 py-2 border-t border-bitmap-border' },
               React.createElement('div', { className: 'flex justify-between mb-1' },
                 React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Total pagado:'),
-                React.createElement('span', { className: 'font-acme text-[10px] text-white' }, (buyResult.totalPaid / 100000000).toFixed(5) + ' BTC')
+                React.createElement('span', { className: 'font-acme text-[10px] text-white' }, (buyResult.totalPaid / 100000000).toFixed(8) + ' BTC')
               ),
               React.createElement('div', { className: 'flex justify-between mb-2' },
                 React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Fee marketplace:'),
-                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange' }, (buyResult.totalFees / 100000000).toFixed(5) + ' BTC')
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange' }, (buyResult.totalFees / 100000000).toFixed(8) + ' BTC')
               ),
               React.createElement('button', {
                 onClick: function(e) { e.stopPropagation(); setShowBuyMenu(false); setBuyResult(null); setBuyStatus(null); },
@@ -691,8 +694,8 @@ function LocalPage(props) {
                 return React.createElement('div', { key: item.bitmapId || item.id, className: 'flex items-center justify-between py-1 border-b border-bitmap-border/30 last:border-0' },
                   React.createElement('span', { className: 'font-acme text-xs text-white truncate' }, '#' + (item.bitmapNumber || '?') + '.bitmap'),
                   React.createElement('div', { className: 'text-right flex-shrink-0 ml-2' },
-                    React.createElement('span', { className: 'font-acme text-xs text-white block' }, (priceSats / 100000000).toFixed(5) + ' BTC'),
-                    React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-orange block' }, 'fee: ' + (feeSats / 100000000).toFixed(5))
+                    React.createElement('span', { className: 'font-acme text-xs text-white block' }, (priceSats / 100000000).toFixed(8) + ' BTC'),
+                    React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-orange block' }, 'fee: ' + (feeSats / 100000000).toFixed(8))
                   )
                 );
               })
@@ -701,19 +704,19 @@ function LocalPage(props) {
               React.createElement('div', { className: 'flex justify-between mb-1' },
                 React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, 'Subtotal (' + selectedBuyItems.length + ' items):'),
                 React.createElement('span', { className: 'font-acme text-xs text-white' },
-                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + (item.listedPrice || item.price || 0); }, 0) / 100000000).toFixed(5) + ' BTC'
+                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + (item.listedPrice || item.price || 0); }, 0) / 100000000).toFixed(8) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-1' },
                 React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, 'Fee marketplace (2%):'),
                 React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange' },
-                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + Math.floor((item.listedPrice || item.price || 0) * 0.02); }, 0) / 100000000).toFixed(5) + ' BTC'
+                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + Math.floor((item.listedPrice || item.price || 0) * 0.02); }, 0) / 100000000).toFixed(8) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-2 border-t border-bitmap-border/50 pt-1' },
                 React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Total a pagar:'),
                 React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange font-bold' },
-                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.floor(p * 0.02); }, 0) / 100000000).toFixed(5) + ' BTC'
+                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.floor(p * 0.02); }, 0) / 100000000).toFixed(8) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex gap-2' },
@@ -1063,20 +1066,29 @@ showListDropdown ? React.createElement('div', {
           React.createElement('div', { className: 'flex items-center gap-3 mb-4' },
             React.createElement('div', {
               className: 'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
-              style: { backgroundColor: 'rgba(0,170,0,0.15)' }
+              style: { backgroundColor: buySuccessData.type === 'error' ? 'rgba(255,51,51,0.15)' : buySuccessData.type === 'partial' ? 'rgba(255,170,0,0.15)' : 'rgba(0,170,0,0.15)' }
             },
-              React.createElement('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none' },
+              buySuccessData.type === 'error' ? React.createElement('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none' },
+                React.createElement('path', { d: 'M18 6L6 18M6 6l12 12', stroke: '#FF5555', strokeWidth: 2.5, strokeLinecap: 'round' })
+              ) : buySuccessData.type === 'partial' ? React.createElement('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none' },
+                React.createElement('path', { d: 'M12 9v4M12 17h.01', stroke: '#FFAA00', strokeWidth: 2.5, strokeLinecap: 'round' }),
+                React.createElement('circle', { cx: 12, cy: 12, r: 10, stroke: '#FFAA00', strokeWidth: 2 })
+              ) : React.createElement('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none' },
                 React.createElement('path', { d: 'M5 13l4 4L19 7', stroke: '#00AA00', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round' })
               )
             ),
             React.createElement('div', null,
-              React.createElement('h2', { className: 'font-alfaslab text-lg', style: { color: '#00AA00' } }, 'Compra exitosa'),
+              React.createElement('h2', { className: 'font-alfaslab text-lg', style: { color: buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : '#00AA00' } },
+                buySuccessData.type === 'error' ? 'Error en la compra' : buySuccessData.type === 'partial' ? 'Compra parcial' : 'Compra exitosa'
+              ),
               React.createElement('p', { className: 'font-acme text-xs', style: { color: '#888' } },
+                buySuccessData.type === 'error' ? 'No se completó la compra. Ningún bitmap fue comprado.' :
+                buySuccessData.type === 'partial' ? buySuccessData.items.length + ' bitmap' + (buySuccessData.items.length > 1 ? 's' : '') + ' comprado' + (buySuccessData.items.length > 1 ? 's' : '') + ' exitosamente' :
                 buySuccessData.items.length + ' bitmap' + (buySuccessData.items.length > 1 ? 's' : '') + ' comprado' + (buySuccessData.items.length > 1 ? 's' : '') + ' exitosamente'
               )
             )
           ),
-          React.createElement('div', { className: 'rounded-lg p-4 mb-4', style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' } },
+          buySuccessData.items.length > 0 ? React.createElement('div', { className: 'rounded-lg p-4 mb-4', style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' } },
             React.createElement('div', { className: 'space-y-2' },
               buySuccessData.items.map(function(item, i) {
                 return React.createElement('div', { key: i, className: 'flex items-center justify-between' },
@@ -1088,23 +1100,23 @@ showListDropdown ? React.createElement('div', {
                     React.createElement('span', { className: 'font-acme text-sm truncate', style: { color: '#ddd' } }, item.name)
                   ),
                   React.createElement('span', { className: 'font-acme text-sm flex-shrink-0 ml-3', style: { color: '#aaa' } },
-                    (item.price / 100000000).toFixed(5) + ' BTC'
+                    (item.price / 100000000).toFixed(8) + ' BTC'
                   )
                 );
               })
             )
-          ),
-          React.createElement('div', { className: 'rounded-lg p-4 mb-4', style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' } },
+          ) : null,
+          buySuccessData.totalPaid > 0 ? React.createElement('div', { className: 'rounded-lg p-4 mb-4', style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' } },
             React.createElement('div', { className: 'flex justify-between mb-2' },
               React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Subtotal'),
               React.createElement('span', { className: 'font-acme text-xs', style: { color: '#ccc' } },
-                (buySuccessData.totalPaid / 100000000).toFixed(5) + ' BTC'
+                (buySuccessData.totalPaid / 100000000).toFixed(8) + ' BTC'
               )
             ),
             React.createElement('div', { className: 'flex justify-between mb-2' },
               React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Fee marketplace (2%)'),
               React.createElement('span', { className: 'font-acme text-xs', style: { color: '#aaa' } },
-                (buySuccessData.totalFees / 100000000).toFixed(5) + ' BTC'
+                (buySuccessData.totalFees / 100000000).toFixed(8) + ' BTC'
               )
             ),
             buySuccessData.totalNetworkFee > 0 ? React.createElement('div', { className: 'flex justify-between mb-2' },
@@ -1119,7 +1131,7 @@ showListDropdown ? React.createElement('div', {
             },
               React.createElement('span', { className: 'font-acme text-sm font-bold', style: { color: '#fff' } }, 'Total pagado'),
               React.createElement('span', { className: 'font-acme text-sm font-bold', style: { color: '#00AA00' } },
-                ((buySuccessData.totalPaid + buySuccessData.totalFees) / 100000000).toFixed(5) + ' BTC'
+                ((buySuccessData.totalPaid + buySuccessData.totalFees) / 100000000).toFixed(8) + ' BTC'
               )
             ),
             buySuccessData.btcPrice ? React.createElement('div', { className: 'flex justify-end mt-1' },
@@ -1127,8 +1139,8 @@ showListDropdown ? React.createElement('div', {
                 '\u2248 $' + (((buySuccessData.totalPaid + buySuccessData.totalFees) / 100000000) * buySuccessData.btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' USD'
               )
             ) : null
-          ),
-          React.createElement('div', { className: 'mb-4' },
+          ) : null,
+          buySuccessData.networkFees && buySuccessData.networkFees.length > 0 ? React.createElement('div', { className: 'mb-4' },
             React.createElement('span', { className: 'font-acme text-[10px] block mb-2', style: { color: '#666' } }, 'Transacciones:'),
             React.createElement('div', { className: 'space-y-1.5' },
               buySuccessData.networkFees.map(function(nf, i) {
@@ -1156,7 +1168,7 @@ showListDropdown ? React.createElement('div', {
                 );
               })
             )
-          ),
+          ) : null,
           buySuccessData.errors && buySuccessData.errors.length > 0 ? React.createElement('div', { className: 'mb-4 rounded-lg p-3', style: { backgroundColor: 'rgba(255,51,51,0.08)', border: '1px solid rgba(255,51,51,0.2)' } },
             React.createElement('span', { className: 'font-acme text-[10px] block mb-1', style: { color: '#FF5555' } }, 'Bitmaps no comprados:'),
             buySuccessData.errors.map(function(err, i) {
@@ -1170,9 +1182,9 @@ showListDropdown ? React.createElement('div', {
           React.createElement('button', {
             onClick: function() { setBuySuccessData(null); },
             className: 'w-full py-2.5 rounded-lg font-acme text-sm font-bold transition-colors',
-            style: { backgroundColor: '#00AA00', color: '#000' },
-            onMouseOver: function(e) { e.currentTarget.style.backgroundColor = '#00cc00'; },
-            onMouseOut: function(e) { e.currentTarget.style.backgroundColor = '#00AA00'; }
+            style: { backgroundColor: buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : '#00AA00', color: '#000' },
+            onMouseOver: function(e) { e.currentTarget.style.backgroundColor = buySuccessData.type === 'error' ? '#ff7777' : buySuccessData.type === 'partial' ? '#ffc34d' : '#00cc00'; },
+            onMouseOut: function(e) { e.currentTarget.style.backgroundColor = buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : '#00AA00'; }
           }, 'Aceptar')
         )
       )
