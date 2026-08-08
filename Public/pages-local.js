@@ -386,8 +386,9 @@ function LocalPage(props) {
   var handleBuySelected = async function() {
     var wallet = StoreApp.get('wallet');
     if (!wallet || !wallet.address) {
-      setBuyStatus({ message: 'No hay wallet conectada. Conecte una wallet para comprar.', type: 'error' });
-      setShowBuyMenu(true);
+      setShowBuyMenu(false);
+      setSuccessToast({ message: 'No hay wallet conectada, conecte su wallet para comerciar activos.', type: 'error' });
+      setTimeout(function() { setSuccessToast(null); }, 20000);
       return;
     }
 
@@ -638,7 +639,17 @@ function LocalPage(props) {
       }),
       React.createElement('div', { className: 'relative flex-shrink-0' },
         selectedBuyItems.length > 0 ? React.createElement('button', {
-          onClick: function(e) { e.stopPropagation(); setShowBuyMenu(!showBuyMenu); },
+          onClick: function(e) {
+            e.stopPropagation();
+            var w = StoreApp.get('wallet');
+            if (!w || !w.address) {
+              setShowBuyMenu(false);
+              setSuccessToast({ message: 'No hay wallet conectada, conecte su wallet para comerciar activos.', type: 'error' });
+              setTimeout(function() { setSuccessToast(null); }, 20000);
+              return;
+            }
+            setShowBuyMenu(!showBuyMenu);
+          },
           className: 'px-3 py-1 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors flex-shrink-0 font-bold'
         }, 'Comprar ' + selectedBuyItems.length + ' seleccionados') : React.createElement('button', {
           disabled: true,
