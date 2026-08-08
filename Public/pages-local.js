@@ -422,7 +422,8 @@ function LocalPage(props) {
       var buyJson = await buyRes.json();
 
       if (!buyJson.success || !buyJson.data || !buyJson.data.psbt) {
-        throw new Error(buyJson.error || 'Error al crear PSBT batch');
+        var errMsg = buyJson.error && buyJson.error.message ? buyJson.error.message : (buyJson.error || 'Error al crear PSBT batch');
+        throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
       }
 
       var psbtToSign = buyJson.data.psbt;
@@ -469,7 +470,8 @@ function LocalPage(props) {
       var broadcastJson = await broadcastRes.json();
 
       if (!broadcastJson.success || !broadcastJson.data || !broadcastJson.data.txid) {
-        throw new Error(broadcastJson.error || 'Error al transmitir batch');
+        var bErrMsg = broadcastJson.error && broadcastJson.error.message ? broadcastJson.error.message : (broadcastJson.error || 'Error al transmitir batch');
+        throw new Error(typeof bErrMsg === 'string' ? bErrMsg : JSON.stringify(bErrMsg));
       }
 
       var txid = broadcastJson.data.txid;
