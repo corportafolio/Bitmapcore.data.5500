@@ -730,6 +730,12 @@ function LocalPage(props) {
                   (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.floor(p * 0.02); }, 0) / 100000000).toFixed(8) + ' BTC'
                 )
               ),
+              React.createElement('div', { className: 'flex justify-between mb-2' },
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Total USD:'),
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
+                  usd(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.floor(p * 0.02); }, 0))
+                )
+              ),
               React.createElement('div', { className: 'flex gap-2' },
                 React.createElement('button', {
                   onClick: function(e) { e.stopPropagation(); setShowBuyMenu(false); },
