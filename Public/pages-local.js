@@ -669,10 +669,25 @@ function LocalPage(props) {
               })
             ),
             React.createElement('div', { className: 'px-3 py-2 border-t border-bitmap-border' },
-              React.createElement('div', { className: 'flex justify-between mb-2' },
-                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, 'Total (' + selectedBuyItems.length + ' items):'),
-                React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange font-bold' },
+              React.createElement('div', { className: 'flex justify-between mb-1' },
+                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, 'Subtotal (' + selectedBuyItems.length + ' items):'),
+                React.createElement('span', { className: 'font-acme text-xs text-white' },
                   (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + (item.listedPrice || item.price || 0); }, 0) / 100000000).toFixed(5) + ' BTC'
+                )
+              ),
+              React.createElement('div', { className: 'flex justify-between mb-2 border-t border-bitmap-border/50 pt-1' },
+                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, 'Fee marketplace (2%):'),
+                React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange' },
+                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + Math.floor((item.listedPrice || item.price || 0) * 0.02); }, 0) / 100000000).toFixed(5) + ' BTC'
+                )
+              ),
+              React.createElement('div', { className: 'flex justify-between mb-2 border-t border-bitmap-border/50 pt-1' },
+                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Total a pagar:'),
+                React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange font-bold' },
+                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { 
+                    var p = item.listedPrice || item.price || 0;
+                    return sum + p + Math.floor(p * 0.02);
+                  }, 0) / 100000000).toFixed(5) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex gap-2' },
