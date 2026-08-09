@@ -314,19 +314,16 @@ function LocalPage(props) {
       if (createJson.success && createJson.data) {
         var psbtToSigns = createJson.data.psbtToSigns || [];
         var psbtHexArray = psbtToSigns.map(function(p) { return p.unsignedPsbtHex; });
+        var combinedPsbtB64 = createJson.data.psbtToSign || null;
 
         if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
           try {
             setListingStatus({ toast:'Firmando en Xverse...' });
-            var xverseB64Array = psbtHexArray.map(function(hex) {
-              if (/^[0-9a-fA-F]+$/.test(hex) && hex.length % 2 === 0) {
-                var bytes = new Uint8Array(hex.match(/.{1,2}/g).map(function(b) { return parseInt(b, 16); }));
-                var bin = ''; for (var bi = 0; bi < bytes.length; bi++) bin += String.fromCharCode(bytes[bi]);
-                return btoa(bin);
-              }
-              return hex;
-            });
-            signedPsbtHexs = await StoreApp._xverseSignMultiplePsbts(xverseB64Array, wallet.address);
+            if (!combinedPsbtB64) throw new Error('No se recibio PSBT combinado del servidor');
+            var inputIndices = [];
+            for (var xi = 0; xi < psbtToSigns.length; xi++) inputIndices.push(xi);
+            var signedCombined = await StoreApp._xverseSignPsbt(combinedPsbtB64, wallet.address, inputIndices);
+            signedPsbtHexs = [signedCombined];
           } catch(xe) {
             setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
           }
@@ -381,7 +378,7 @@ function LocalPage(props) {
       if (listingActivated) {
         setSuccessToast({ message: selected.length + ' bitmaps listados correctamente', type: 'success' });
         setTimeout(function() { setSuccessToast(null); }, 20000);
-      } else if (signedPsbt) {
+      } else if (signedPsbtHexs) {
         setSuccessToast({ message: 'No se pudo completar el listado', type: 'error' });
         setTimeout(function() { setSuccessToast(null); }, 20000);
       }
