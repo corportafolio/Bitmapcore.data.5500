@@ -437,24 +437,22 @@ function DetallePage(props) {
       var createRes = await MarketplaceApi.batchList(batchItems);
       var createJson = await createRes;
 
-      if (createJson.success && createJson.data && createJson.data.psbtToSigns) {
-        var psbtToSigns = createJson.data.psbtToSigns;
+      if (createJson.success && createJson.data) {
+        var psbtToSigns = createJson.data.psbtToSigns || [];
         var psbtHexArray = psbtToSigns.map(function(p) { return p.unsignedPsbtHex; });
 
         if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
           try {
             setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Xverse...' });
-            var xverseSigned = [];
-            for (var xi = 0; xi < psbtHexArray.length; xi++) {
-              var b64 = psbtHexArray[xi];
-              if (/^[0-9a-fA-F]+$/.test(b64) && b64.length % 2 === 0) {
-                var bytes = new Uint8Array(b64.match(/.{1,2}/g).map(function(b) { return parseInt(b, 16); }));
+            var xverseB64Array = psbtHexArray.map(function(hex) {
+              if (/^[0-9a-fA-F]+$/.test(hex) && hex.length % 2 === 0) {
+                var bytes = new Uint8Array(hex.match(/.{1,2}/g).map(function(b) { return parseInt(b, 16); }));
                 var bin = ''; for (var bi = 0; bi < bytes.length; bi++) bin += String.fromCharCode(bytes[bi]);
-                b64 = btoa(bin);
+                return btoa(bin);
               }
-              xverseSigned.push(await StoreApp._xverseSignPsbt(b64, wallet.address));
-            }
-            signedPsbtHexs = xverseSigned;
+              return hex;
+            });
+            signedPsbtHexs = await StoreApp._xverseSignMultiplePsbts(xverseB64Array, wallet.address);
           } catch(xe) {
             setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
           }

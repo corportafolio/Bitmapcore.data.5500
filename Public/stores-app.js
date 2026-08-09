@@ -54,18 +54,39 @@ var StoreApp = {
     var ev = new CustomEvent('wallet-error', { detail: { message: msg } });
     if (typeof window !== 'undefined') window.dispatchEvent(ev);
   },
-  _xverseSignPsbt: async function(psbtBase64, ordinalsAddress) {
+  _xverseSignPsbt: async function(psbtBase64, ordinalsAddress, inputIndices) {
     var provider = StoreApp._getXverseProvider();
     if (!provider) throw new Error('Xverse wallet no disponible');
+    var indices = inputIndices || [0];
     var result = await provider.request('signPsbt', {
       psbt: psbtBase64,
-      signInputs: ordinalsAddress ? { [ordinalsAddress]: [0] } : undefined,
+      signInputs: ordinalsAddress ? { [ordinalsAddress]: indices } : undefined,
       broadcast: false
     });
     var signed = result && result.result ? result.result : result;
     if (signed && typeof signed === 'object' && signed.psbt) return signed.psbt;
     if (typeof signed === 'string') return signed;
     throw new Error('Xverse: respuesta invalida al firmar PSBT');
+  },
+  _xverseSignMultiplePsbts: async function(psbtBase64Array, ordinalsAddress) {
+    var provider = StoreApp._getXverseProvider();
+    if (!provider) throw new Error('Xverse wallet no disponible');
+    var psbtsPayload = psbtBase64Array.map(function(psbtB64) {
+      return {
+        psbtBase64: psbtB64,
+        inputsToSign: ordinalsAddress ? [{ address: ordinalsAddress, signingIndexes: [0], sigHash: 0x83 }] : undefined,
+      };
+    });
+    var result = await provider.request('signMultipleTransactions', {
+      psbts: psbtsPayload,
+      broadcast: false,
+    });
+    var signed = result && result.result ? result.result : result;
+    if (Array.isArray(signed)) {
+      return signed.map(function(s) { return s && s.psbt ? s.psbt : s; });
+    }
+    if (signed && typeof signed === 'object' && signed.psbt) return [signed.psbt];
+    throw new Error('Xverse: respuesta invalida al firmar PSBTs multiples');
   },
   getPublicKeyFresh: async function() {
     var wallet = StoreApp._state.wallet;
