@@ -320,7 +320,13 @@ function LocalPage(props) {
             setListingStatus({ toast:'Firmando en Xverse...' });
             var xverseSigned = [];
             for (var xi = 0; xi < psbtHexArray.length; xi++) {
-              xverseSigned.push(await StoreApp._xverseSignPsbt(psbtHexArray[xi], wallet.address));
+              var b64 = psbtHexArray[xi];
+              if (/^[0-9a-fA-F]+$/.test(b64) && b64.length % 2 === 0) {
+                var bytes = new Uint8Array(b64.match(/.{1,2}/g).map(function(b) { return parseInt(b, 16); }));
+                var bin = ''; for (var bi = 0; bi < bytes.length; bi++) bin += String.fromCharCode(bytes[bi]);
+                b64 = btoa(bin);
+              }
+              xverseSigned.push(await StoreApp._xverseSignPsbt(b64, wallet.address));
             }
             signedPsbtHexs = xverseSigned;
           } catch(xe) {
