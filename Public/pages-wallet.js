@@ -452,7 +452,7 @@ function DetallePage(props) {
             setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Unisat...' });
             var toSignInputs = [];
             for (var t = 0; t < selected.length; t++) {
-              toSignInputs.push({ index: t, address: wallet.address });
+              toSignInputs.push({ index: t, address: wallet.address, sighashTypes: [0x83] });
             }
             var signPromise = window.unisat.signPsbt(psbtToSign, { toSignInputs: toSignInputs });
             var signTimeout = new Promise(function(_, reject) {
@@ -569,7 +569,7 @@ function DetallePage(props) {
       } else if (window.unisat && window.unisat.signPsbt) {
         try {
           setListingStatus({ listing:true, count:1, toast:'Firmando en Unisat...' });
-          var signPromise = window.unisat.signPsbt(unsignedPsbt, { toSignInputs: [{ index: 0, address: wallet.address }] });
+          var signPromise = window.unisat.signPsbt(unsignedPsbt, { toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83] }] });
           var signTimeout = new Promise(function(_, reject) {
             setTimeout(function() { reject(new Error('timeout')); }, 30000);
           });

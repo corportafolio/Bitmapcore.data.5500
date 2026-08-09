@@ -66,6 +66,7 @@ var MarketplaceApi = {
   getTags: function() { return ApiClient.get('/api/v1/tags', true); },
   getTagBlocks: function(tag) { return ApiClient.get('/api/v1/tags/' + encodeURIComponent(tag), true); },
   getSales: function() { return ApiClient.get('/api/v1/sales/history?days=30&limit=200', true); },
+  getSalesStats: function() { return ApiClient.get('/api/v1/sales/stats', true); },
   getDescuentos: function() { return ApiClient.get('/api/v1/descuentos', true); },
   getOwnerListings: function(address) {
     return MarketplaceApi.getLocal().then(function(res) {

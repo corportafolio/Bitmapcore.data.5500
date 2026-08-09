@@ -114,7 +114,7 @@ function OrdinalswalletPage(props) {
   }, [showSortMenu]);
 
   return React.createElement('div', { className: 'flex flex-col h-full' },
-    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2' },
+    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Ordinalswallet Marketplace'),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },
@@ -337,7 +337,7 @@ function UnisatPage(props) {
   }, [showSortMenu]);
 
   return React.createElement('div', { className: 'flex flex-col h-full' },
-    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2' },
+    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Unisat Marketplace'),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },
@@ -566,7 +566,7 @@ function SatflowPage(props) {
   }, [showSortMenu]);
 
   return React.createElement('div', { className: 'flex flex-col h-full' },
-    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2' },
+    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Satflow Marketplace'),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },

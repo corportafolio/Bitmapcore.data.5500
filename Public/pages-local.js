@@ -326,7 +326,7 @@ function LocalPage(props) {
             setListingStatus({ toast:'Firmando en Unisat...' });
             var toSignInputs = [];
             for (var t = 0; t < selected.length; t++) {
-              toSignInputs.push({ index: t, address: wallet.address });
+              toSignInputs.push({ index: t, address: wallet.address, sighashTypes: [0x83] });
             }
             signedPsbt = await window.unisat.signPsbt(psbtToSign, { toSignInputs: toSignInputs });
           } catch(ue) {
