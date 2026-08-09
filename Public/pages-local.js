@@ -324,11 +324,11 @@ function LocalPage(props) {
         } else if (window.unisat && window.unisat.signPsbt) {
           try {
             setListingStatus({ toast:'Firmando en Unisat...' });
-            var signPromise = window.unisat.signPsbt(psbtToSign);
-            var signTimeout = new Promise(function(_, reject) {
-              setTimeout(function() { reject(new Error('timeout')); }, 30000);
-            });
-            signedPsbt = await Promise.race([signPromise, signTimeout]);
+            var toSignInputs = [];
+            for (var t = 0; t < selected.length; t++) {
+              toSignInputs.push({ index: t, address: wallet.address });
+            }
+            signedPsbt = await window.unisat.signPsbt(psbtToSign, { toSignInputs: toSignInputs });
           } catch(ue) {
             setListingStatus({ toast:'Unisat: firma cancelada o fallida' });
           }
@@ -429,6 +429,7 @@ function LocalPage(props) {
       var psbtToSign = buyJson.data.psbt;
       var transactionId = buyJson.data.transactionId;
       var items = buyJson.data.items;
+      var buyerInputCount = buyJson.data.buyerInputCount || 0;
       var signedPsbt = null;
 
       setBuyStatus({ message: 'Firmando PSBT en wallet...', type: 'loading' });
@@ -441,11 +442,11 @@ function LocalPage(props) {
         }
       } else if (window.unisat && window.unisat.signPsbt) {
         try {
-          var signPromise = window.unisat.signPsbt(psbtToSign);
-          var signTimeout = new Promise(function(_, reject) {
-            setTimeout(function() { reject(new Error('timeout')); }, 60000);
-          });
-          signedPsbt = await Promise.race([signPromise, signTimeout]);
+          var toSignInputs = [];
+          for (var t = items.length; t < items.length + buyerInputCount; t++) {
+            toSignInputs.push({ index: t, address: wallet.address });
+          }
+          signedPsbt = await window.unisat.signPsbt(psbtToSign, { toSignInputs: toSignInputs });
         } catch(ue) {
           throw new Error('Firma Unisat cancelada');
         }
