@@ -100,11 +100,11 @@ var MarketplaceApi = {
       body: JSON.stringify({ items: items })
     }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   },
-  batchSign: function(listingIds, signedPsbt, sellerOrdinalPublicKey) {
+  batchSign: function(listingIds, signedPsbtHexs, sellerOrdinalPublicKey) {
     return fetch('/api/v1/bitmaps/batch/sign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ listingIds: listingIds, signedPsbt: signedPsbt, sellerOrdinalPublicKey: sellerOrdinalPublicKey })
+      body: JSON.stringify({ listingIds: listingIds, signedPsbtHexs: signedPsbtHexs, sellerOrdinalPublicKey: sellerOrdinalPublicKey })
     }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   }
 };

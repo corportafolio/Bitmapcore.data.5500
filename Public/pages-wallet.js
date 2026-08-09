@@ -382,7 +382,7 @@ function DetallePage(props) {
     setShowListModal(false);
     setListingStatus({ listing:true, count:selected.length });
 
-    var signedPsbt = null;
+    var signedPsbtHexs = null;
     var listingActivated = false;
 
     try {
@@ -437,28 +437,38 @@ function DetallePage(props) {
       var createRes = await MarketplaceApi.batchList(batchItems);
       var createJson = await createRes;
 
-      if (createJson.success && createJson.data && createJson.data.psbtToSign) {
-        var psbtToSign = createJson.data.psbtToSign;
+      if (createJson.success && createJson.data && createJson.data.psbtToSigns) {
+        var psbtToSigns = createJson.data.psbtToSigns;
+        var psbtHexArray = psbtToSigns.map(function(p) { return p.unsignedPsbtHex; });
 
         if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
           try {
             setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Xverse...' });
-            signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address);
+            var xverseSigned = [];
+            for (var xi = 0; xi < psbtHexArray.length; xi++) {
+              xverseSigned.push(await StoreApp._xverseSignPsbt(psbtHexArray[xi], wallet.address));
+            }
+            signedPsbtHexs = xverseSigned;
           } catch(xe) {
             setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
           }
-        } else if (window.unisat && window.unisat.signPsbt) {
+        } else if (window.unisat && window.unisat.signPsbts) {
           try {
             setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Unisat...' });
-            var toSignInputs = [];
-            for (var t = 0; t < selected.length; t++) {
-              toSignInputs.push({ index: t, address: wallet.address, sighashTypes: [0x83] });
+            signedPsbtHexs = await window.unisat.signPsbts(psbtHexArray);
+          } catch(ue) {
+            setListingStatus({ toast:'Unisat: firma cancelada o fallida' });
+          }
+        } else if (window.unisat && window.unisat.signPsbt) {
+          try {
+            setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Unisat (uno por uno)...' });
+            signedPsbtHexs = [];
+            for (var ui = 0; ui < psbtHexArray.length; ui++) {
+              var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
+                toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83] }]
+              });
+              signedPsbtHexs.push(singleSigned);
             }
-            var signPromise = window.unisat.signPsbt(psbtToSign, { toSignInputs: toSignInputs });
-            var signTimeout = new Promise(function(_, reject) {
-              setTimeout(function() { reject(new Error('timeout')); }, 30000);
-            });
-            signedPsbt = await Promise.race([signPromise, signTimeout]);
           } catch(ue) {
             setListingStatus({ toast:'Unisat: firma cancelada o fallida' });
           }
@@ -466,11 +476,11 @@ function DetallePage(props) {
           setListingStatus({ toast:'Wallet no disponible para firmar' });
         }
 
-        if (signedPsbt) {
+        if (signedPsbtHexs && signedPsbtHexs.length > 0) {
           var listingIds = createJson.data.listingIds || [];
           if (listingIds.length > 0) {
             setListingStatus({ listing:true, count:selected.length, toast:'Activando listings...' });
-            await MarketplaceApi.batchSign(listingIds, signedPsbt, pubKey);
+            await MarketplaceApi.batchSign(listingIds, signedPsbtHexs, pubKey);
             listingActivated = true;
           }
         } else {
