@@ -425,6 +425,10 @@ function LocalPage(props) {
     try {
       setBuyStatus({ message: 'Creando PSBT batch para ' + selected.length + ' bitmaps...', type: 'loading' });
 
+      if (!wallet.publicKey) {
+        try { wallet.publicKey = await StoreApp.getPublicKeyFresh(); } catch(pkErr) { /* ignore */ }
+      }
+
       var bodyPayload = {
           bitmapIds: bitmapIds,
           buyerAddress: wallet.address,
