@@ -428,23 +428,23 @@ function LocalPage(props) {
       if (!wallet.publicKey) {
         try {
           wallet.publicKey = await StoreApp.getPublicKeyFresh();
-        } catch(pkErr) {
-          setBuyStatus({ message: 'Error: no se pudo obtener la clave publica de la wallet. Reconecte la wallet e intente de nuevo.', type: 'error' });
-          return;
-        }
-      }
-
-      if (!wallet.publicKey) {
-        setBuyStatus({ message: 'Error: clave publica de wallet no disponible. Reconecte la wallet e intente de nuevo.', type: 'error' });
-        return;
+          if (wallet.publicKey) {
+            var storedWallet = localStorage.getItem(StoreApp.WALLET_STORAGE_KEY);
+            if (storedWallet) {
+              var sw = JSON.parse(storedWallet);
+              sw.publicKey = wallet.publicKey;
+              localStorage.setItem(StoreApp.WALLET_STORAGE_KEY, JSON.stringify(sw));
+            }
+          }
+        } catch(pkErr) { /* continue without publicKey */ }
       }
 
       var bodyPayload = {
           bitmapIds: bitmapIds,
           buyerAddress: wallet.address,
-          idempotencyKey: idempotencyKey,
-          buyerPublicKey: wallet.publicKey
+          idempotencyKey: idempotencyKey
         };
+        if (wallet.publicKey) bodyPayload.buyerPublicKey = wallet.publicKey;
 
       var buyRes = await fetch('/api/v1/transaction/batch-buy', {
         method: 'POST',
