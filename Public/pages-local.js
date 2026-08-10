@@ -470,6 +470,7 @@ function LocalPage(props) {
       var transactionId = buyJson.data.transactionId;
       var items = buyJson.data.items;
       var buyerInputCount = buyJson.data.buyerInputCount || 0;
+      var serverMarketplaceFee = buyJson.data.marketplaceFee || 0;
       var signedPsbt = null;
 
       setBuyStatus({ message: 'Firmando PSBT en wallet...', type: 'loading' });
@@ -525,13 +526,12 @@ function LocalPage(props) {
 
       var txid = broadcastJson.data.txid;
 
+      var totalPaid = items.reduce(function(sum, item) { return sum + item.price; }, 0);
+      var totalFees = serverMarketplaceFee > 0 ? serverMarketplaceFee : Math.max(546 * items.length, Math.floor(totalPaid * 0.02));
       var successItems = items.map(function(item) {
-        return { name: item.name || 'Bitmap comprado', status: 'success', txid: txid, price: item.price, fee: Math.floor(item.price * 0.02) };
+        return { name: item.name || 'Bitmap comprado', status: 'success', txid: txid, price: item.price, fee: Math.round(totalFees / items.length) };
       });
       var errorItems = [];
-
-      var totalPaid = successItems.reduce(function(sum, s) { return sum + s.price; }, 0);
-      var totalFees = successItems.reduce(function(sum, s) { return sum + s.fee; }, 0);
 
       var networkFees = [];
       try {
@@ -760,7 +760,7 @@ function LocalPage(props) {
                 return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1;
               }).map(function(item) {
                 var priceSats = item.listedPrice || item.price || 0;
-                var feeSats = Math.floor(priceSats * 0.02);
+                var feeSats = Math.max(546, Math.floor(priceSats * 0.02));
                 return React.createElement('div', { key: item.bitmapId || item.id, className: 'flex items-center justify-between py-1 border-b border-bitmap-border/30 last:border-0' },
                   React.createElement('span', { className: 'font-acme text-xs text-white truncate' }, '#' + (item.bitmapNumber || '?') + '.bitmap'),
                   React.createElement('div', { className: 'text-right flex-shrink-0 ml-2' },
@@ -778,15 +778,15 @@ function LocalPage(props) {
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-1' },
-                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, 'Fee marketplace (2%):'),
+                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, 'Fee marketplace:'),
                 React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange' },
-                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + Math.floor((item.listedPrice || item.price || 0) * 0.02); }, 0) / 100000000).toFixed(8) + ' BTC'
+                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + Math.max(546, Math.floor((item.listedPrice || item.price || 0) * 0.02)); }, 0) / 100000000).toFixed(8) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-2 border-t border-bitmap-border/50 pt-1' },
                 React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Total a pagar:'),
                 React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange font-bold' },
-                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.floor(p * 0.02); }, 0) / 100000000).toFixed(8) + ' BTC'
+                  (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.max(546, Math.floor(p * 0.02)); }, 0) / 100000000).toFixed(8) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-2' },
@@ -1190,7 +1190,7 @@ showListDropdown ? React.createElement('div', {
               )
             ),
             React.createElement('div', { className: 'flex justify-between mb-2' },
-              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Fee marketplace (2%)'),
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Fee marketplace'),
               React.createElement('span', { className: 'font-acme text-xs', style: { color: '#aaa' } },
                 (buySuccessData.totalFees / 100000000).toFixed(8) + ' BTC'
               )
