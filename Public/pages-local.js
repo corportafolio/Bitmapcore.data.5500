@@ -458,7 +458,11 @@ function LocalPage(props) {
 
       if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
         try {
-          signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address);
+          var buyerInputIndices = [];
+          for (var bi = items.length; bi < items.length + buyerInputCount; bi++) {
+            buyerInputIndices.push(bi);
+          }
+          signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address, buyerInputIndices);
         } catch(xe) {
           throw new Error('Firma Xverse cancelada');
         }
@@ -468,7 +472,11 @@ function LocalPage(props) {
           for (var t = items.length; t < items.length + buyerInputCount; t++) {
             toSignInputs.push({ index: t, address: wallet.address });
           }
-          signedPsbt = await window.unisat.signPsbt(psbtToSign, { toSignInputs: toSignInputs });
+          var psbtHex = psbtToSign;
+          if (psbtToSign && !/^[0-9a-fA-F]+$/.test(psbtToSign)) {
+            psbtHex = Uint8Array.from(atob(psbtToSign), function(c) { return c.charCodeAt(0); }).reduce(function(h, b) { return h + b.toString(16).padStart(2, '0'); }, '');
+          }
+          signedPsbt = await window.unisat.signPsbt(psbtHex, { toSignInputs: toSignInputs });
         } catch(ue) {
           throw new Error('Firma Unisat cancelada');
         }
