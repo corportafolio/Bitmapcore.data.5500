@@ -439,12 +439,20 @@ function LocalPage(props) {
         } catch(pkErr) { /* continue without publicKey */ }
       }
 
+      if (!wallet.publicKey) {
+        setShowBuyMenu(false);
+        setBuyStatus(null);
+        setSuccessToast({ message: 'No se pudo obtener la clave publica. Reconecte su wallet: vaya a Configuracion > Conectar wallet.', type: 'error' });
+        setTimeout(function() { setSuccessToast(null); }, 20000);
+        return;
+      }
+
       var bodyPayload = {
           bitmapIds: bitmapIds,
           buyerAddress: wallet.address,
-          idempotencyKey: idempotencyKey
+          idempotencyKey: idempotencyKey,
+          buyerPublicKey: wallet.publicKey
         };
-        if (wallet.publicKey) bodyPayload.buyerPublicKey = wallet.publicKey;
 
       var buyRes = await fetch('/api/v1/transaction/batch-buy', {
         method: 'POST',
