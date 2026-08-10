@@ -425,15 +425,17 @@ function LocalPage(props) {
     try {
       setBuyStatus({ message: 'Creando PSBT batch para ' + selected.length + ' bitmaps...', type: 'loading' });
 
+      var bodyPayload = {
+          bitmapIds: bitmapIds,
+          buyerAddress: wallet.address,
+          idempotencyKey: idempotencyKey
+        };
+        if (wallet.publicKey) bodyPayload.buyerPublicKey = wallet.publicKey;
+
       var buyRes = await fetch('/api/v1/transaction/batch-buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bitmapIds: bitmapIds,
-          buyerAddress: wallet.address,
-          idempotencyKey: idempotencyKey,
-          buyerPublicKey: wallet.publicKey || ''
-        })
+        body: JSON.stringify(bodyPayload)
       });
       var buyJson = await buyRes.json();
 
