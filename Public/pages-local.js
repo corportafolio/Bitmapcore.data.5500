@@ -426,15 +426,25 @@ function LocalPage(props) {
       setBuyStatus({ message: 'Creando PSBT batch para ' + selected.length + ' bitmaps...', type: 'loading' });
 
       if (!wallet.publicKey) {
-        try { wallet.publicKey = await StoreApp.getPublicKeyFresh(); } catch(pkErr) { /* ignore */ }
+        try {
+          wallet.publicKey = await StoreApp.getPublicKeyFresh();
+        } catch(pkErr) {
+          setBuyStatus({ message: 'Error: no se pudo obtener la clave publica de la wallet. Reconecte la wallet e intente de nuevo.', type: 'error' });
+          return;
+        }
+      }
+
+      if (!wallet.publicKey) {
+        setBuyStatus({ message: 'Error: clave publica de wallet no disponible. Reconecte la wallet e intente de nuevo.', type: 'error' });
+        return;
       }
 
       var bodyPayload = {
           bitmapIds: bitmapIds,
           buyerAddress: wallet.address,
-          idempotencyKey: idempotencyKey
+          idempotencyKey: idempotencyKey,
+          buyerPublicKey: wallet.publicKey
         };
-        if (wallet.publicKey) bodyPayload.buyerPublicKey = wallet.publicKey;
 
       var buyRes = await fetch('/api/v1/transaction/batch-buy', {
         method: 'POST',

@@ -10,6 +10,7 @@ var StoreApp = {
   WALLET_STORAGE_KEY: 'bitmapcore_wallet',
 
   initWallet: function() {
+    var self = this;
     try {
       var stored = localStorage.getItem(this.WALLET_STORAGE_KEY);
       if (stored) {
@@ -24,6 +25,20 @@ var StoreApp = {
             walletType: wallet.walletType || 'unisat'
           };
           this._emit('wallet');
+          if (!wallet.publicKey) {
+            this.getPublicKeyFresh().then(function(pk) {
+              if (pk) {
+                self._state.wallet.publicKey = pk;
+                var stored2 = localStorage.getItem(self.WALLET_STORAGE_KEY);
+                if (stored2) {
+                  var w2 = JSON.parse(stored2);
+                  w2.publicKey = pk;
+                  localStorage.setItem(self.WALLET_STORAGE_KEY, JSON.stringify(w2));
+                }
+                self._emit('wallet');
+              }
+            }).catch(function() {});
+          }
         }
       }
     } catch(e) {
