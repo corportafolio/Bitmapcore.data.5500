@@ -431,7 +431,8 @@ function LocalPage(props) {
         body: JSON.stringify({
           bitmapIds: bitmapIds,
           buyerAddress: wallet.address,
-          idempotencyKey: idempotencyKey
+          idempotencyKey: idempotencyKey,
+          buyerPublicKey: wallet.publicKey || ''
         })
       });
       var buyJson = await buyRes.json();
