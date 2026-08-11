@@ -456,20 +456,14 @@ function DetallePage(props) {
           } catch(xe) {
             setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
           }
-        } else if (window.unisat && window.unisat.signPsbts) {
-          try {
-            setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Unisat...' });
-            signedPsbtHexs = await window.unisat.signPsbts(psbtHexArray);
-          } catch(ue) {
-            setListingStatus({ toast:'Unisat: firma cancelada o fallida' });
-          }
         } else if (window.unisat && window.unisat.signPsbt) {
           try {
-            setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Unisat (uno por uno)...' });
+            setListingStatus({ listing:true, count:selected.length, toast:'Firmando en Unisat...' });
             signedPsbtHexs = [];
             for (var ui = 0; ui < psbtHexArray.length; ui++) {
               var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
-                toSignInputs: [{ index: 0, address: wallet.address }]
+                autoFinalized: false,
+                toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
               });
               signedPsbtHexs.push(singleSigned);
             }
@@ -583,7 +577,7 @@ function DetallePage(props) {
       } else if (window.unisat && window.unisat.signPsbt) {
         try {
           setListingStatus({ listing:true, count:1, toast:'Firmando en Unisat...' });
-          var signPromise = window.unisat.signPsbt(unsignedPsbt, { toSignInputs: [{ index: 0, address: wallet.address }] });
+          var signPromise = window.unisat.signPsbt(unsignedPsbt, { autoFinalized: false, toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }] });
           var signTimeout = new Promise(function(_, reject) {
             setTimeout(function() { reject(new Error('timeout')); }, 30000);
           });

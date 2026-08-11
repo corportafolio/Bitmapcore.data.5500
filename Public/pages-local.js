@@ -359,20 +359,14 @@ function LocalPage(props) {
           } catch(xe) {
             setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
           }
-        } else if (window.unisat && window.unisat.signPsbts) {
-          try {
-            setListingStatus({ toast:'Firmando en Unisat...' });
-            signedPsbtHexs = await window.unisat.signPsbts(psbtHexArray);
-          } catch(ue) {
-            setListingStatus({ toast:'Unisat: firma cancelada o fallida' });
-          }
         } else if (window.unisat && window.unisat.signPsbt) {
           try {
-            setListingStatus({ toast:'Firmando en Unisat (uno por uno)...' });
+            setListingStatus({ toast:'Firmando en Unisat...' });
             signedPsbtHexs = [];
             for (var ui = 0; ui < psbtHexArray.length; ui++) {
               var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
-                toSignInputs: [{ index: 0, address: wallet.address }]
+                autoFinalized: false,
+                toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
               });
               signedPsbtHexs.push(singleSigned);
             }
