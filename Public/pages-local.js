@@ -303,13 +303,16 @@ function LocalPage(props) {
     var listingActivated = false;
 
     try {
-      setListingStatus({ toast:'Obteniendo clave publica...' });
-      var pubKey;
-      try {
-        pubKey = await StoreApp.getPublicKeyFresh();
-      } catch(pke) {
-        setListingStatus({ toast:'Error: no se pudo obtener la clave publica de la wallet' });
-        return;
+      setListingStatus({ toast:'Preparando listings...' });
+      var pubKey = wallet.publicKey;
+      if (!pubKey) {
+        setListingStatus({ toast:'Obteniendo clave publica...' });
+        try {
+          pubKey = await StoreApp.getPublicKeyFresh();
+        } catch(pke) {
+          setListingStatus({ toast:'Error: no se pudo obtener la clave publica de la wallet' });
+          return;
+        }
       }
       if (!pubKey) {
         setListingStatus({ toast:'Error: reconecta la wallet para obtener la clave publica' });
