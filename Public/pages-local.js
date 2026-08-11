@@ -1412,9 +1412,9 @@ showListDropdown ? React.createElement('div', {
           React.createElement('button', {
             onClick: function() { setBuySuccessData(null); },
             className: 'w-full py-2.5 rounded-lg font-acme text-sm font-bold transition-colors',
-            style: { backgroundColor: buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : '#00AA00', color: '#000' },
-            onMouseOver: function(e) { e.currentTarget.style.backgroundColor = buySuccessData.type === 'error' ? '#ff7777' : buySuccessData.type === 'partial' ? '#ffc34d' : '#00cc00'; },
-            onMouseOut: function(e) { e.currentTarget.style.backgroundColor = buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : '#00AA00'; }
+            style: { backgroundColor: buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : 'linear-gradient(180deg, #2F7D32, #1C4E20)', color: '#fff' },
+            onMouseOver: function(e) { e.currentTarget.style.backgroundColor = buySuccessData.type === 'error' ? '#ff7777' : buySuccessData.type === 'partial' ? '#ffc34d' : 'linear-gradient(180deg, #3A913D, #256028)'; },
+            onMouseOut: function(e) { e.currentTarget.style.backgroundColor = buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : 'linear-gradient(180deg, #2F7D32, #1C4E20)'; }
           }, 'Aceptar')
         )
       )
