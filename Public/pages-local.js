@@ -493,6 +493,7 @@ function LocalPage(props) {
           bitmapIds: bitmapIds,
           buyerAddress: wallet.address,
           buyerPaymentAddress: wallet.paymentAddress || wallet.address,
+          buyerPaymentPublicKey: wallet.paymentPublicKey || null,
           idempotencyKey: idempotencyKey,
           buyerPublicKey: wallet.publicKey,
           feeRate: feeRate
