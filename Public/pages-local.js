@@ -372,7 +372,7 @@ function LocalPage(props) {
             signedPsbtHexs = [];
             for (var ui = 0; ui < psbtHexArray.length; ui++) {
               var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
-                toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83] }]
+                toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x82] }]
               });
               signedPsbtHexs.push(singleSigned);
             }
