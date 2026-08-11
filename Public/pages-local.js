@@ -552,7 +552,7 @@ function LocalPage(props) {
         throw new Error('Firma cancelada');
       }
 
-      setBuyStatus({ message: 'Enviando a la mempool, esperando confirmación...', type: 'loading' });
+      setBuyStatus({ message: 'IMPORTANTE: No cierre esta pestaña hasta que se complete la transacción. Enviando a la mempool, esperando confirmación...', type: 'loading' });
 
       var broadcastRes = await fetch('/api/v1/transaction/batch-broadcast', {
         method: 'POST',
@@ -774,7 +774,7 @@ function LocalPage(props) {
         },
           buyStatus && buyStatus.type === 'loading' ? React.createElement('div', { className: 'px-3 py-3 text-center' },
             React.createElement('div', { className: 'inline-block w-6 h-6 border-2 border-bitmap-orange border-t-transparent rounded-full animate-spin mb-2' }),
-            React.createElement('div', { className: 'font-acme text-xs text-bitmap-orange mb-1' }, buyStatus.message),
+            React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted mb-1' }, buyStatus.message),
             React.createElement('div', { className: 'w-full bg-bitmap-surface rounded h-1 mt-2' },
               React.createElement('div', { className: 'bg-bitmap-orange h-1 rounded', style: { width: '50%', animation: 'pulse 1.5s infinite' } })
             )
@@ -1413,9 +1413,9 @@ showListDropdown ? React.createElement('div', {
           React.createElement('button', {
             onClick: function() { setBuySuccessData(null); },
             className: 'w-full py-2.5 rounded-lg font-acme text-sm font-bold transition-colors',
-            style: { backgroundColor: buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : 'linear-gradient(180deg, #2F7D32, #1C4E20)', color: '#fff' },
-            onMouseOver: function(e) { e.currentTarget.style.backgroundColor = buySuccessData.type === 'error' ? '#ff7777' : buySuccessData.type === 'partial' ? '#ffc34d' : 'linear-gradient(180deg, #3A913D, #256028)'; },
-            onMouseOut: function(e) { e.currentTarget.style.backgroundColor = buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : 'linear-gradient(180deg, #2F7D32, #1C4E20)'; }
+            style: { background: buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : 'linear-gradient(180deg, #2F7D32, #1C4E20)', color: '#fff' },
+            onMouseOver: function(e) { e.currentTarget.style.background = buySuccessData.type === 'error' ? '#ff7777' : buySuccessData.type === 'partial' ? '#ffc34d' : 'linear-gradient(180deg, #3A913D, #256028)'; },
+            onMouseOut: function(e) { e.currentTarget.style.background = buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : 'linear-gradient(180deg, #2F7D32, #1C4E20)'; }
           }, 'Aceptar')
         )
       )
