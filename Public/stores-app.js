@@ -19,6 +19,8 @@ var StoreApp = {
           this._state.wallet = {
             address: wallet.address,
             publicKey: wallet.publicKey || null,
+            paymentAddress: wallet.paymentAddress || null,
+            paymentPublicKey: wallet.paymentPublicKey || null,
             balance: 0,
             isConnected: true,
             network: wallet.network || 'mainnet',
@@ -176,7 +178,7 @@ var StoreApp = {
             walletType: 'xverse'
           };
           StoreApp._state.wallet = walletData;
-          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address: ordinalsAddr.address, publicKey: ordinalsAddr.publicKey, network: 'mainnet', walletType: 'xverse' }));
+          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address: ordinalsAddr.address, publicKey: ordinalsAddr.publicKey, paymentAddress: paymentAddr ? paymentAddr.address : null, paymentPublicKey: paymentAddr ? paymentAddr.publicKey : null, network: 'mainnet', walletType: 'xverse' }));
           StoreApp._emit('wallet');
           resolve(ordinalsAddr.address);
         }).catch(function() {
@@ -252,7 +254,7 @@ var StoreApp = {
             walletType: 'xverse'
           };
           StoreApp._state.wallet = walletData2;
-          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address: ordAddr2.address, publicKey: ordAddr2.publicKey, network: 'mainnet', walletType: 'xverse' }));
+          localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address: ordAddr2.address, publicKey: ordAddr2.publicKey, paymentAddress: payAddr2 ? payAddr2.address : null, paymentPublicKey: payAddr2 ? payAddr2.publicKey : null, network: 'mainnet', walletType: 'xverse' }));
           StoreApp._emit('wallet');
           resolve(ordAddr2.address);
         }).catch(function() {

@@ -84,6 +84,18 @@ function LocalPage(props) {
   var _t = React.useState(null);
   var btcPrice = _t[0];
   var setBtcPrice = _t[1];
+  var _feeRate = React.useState('media');
+  var selectedFeeRate = _feeRate[0];
+  var setSelectedFeeRate = _feeRate[1];
+  var _customFeeStr = React.useState('');
+  var customFeeStr = _customFeeStr[0];
+  var setCustomFeeStr = _customFeeStr[1];
+  var _showCustomFee = React.useState(false);
+  var showCustomFee = _showCustomFee[0];
+  var setShowCustomFee = _showCustomFee[1];
+  var _mempoolFees = React.useState(null);
+  var mempoolFees = _mempoolFees[0];
+  var setMempoolFees = _mempoolFees[1];
 
   var fetchStats = function() {
     fetch('/api/v1/local/stats')
@@ -95,6 +107,23 @@ function LocalPage(props) {
           setVolumen24h(d.data.volumen24h || 0);
         }
       }).catch(function() {});
+  };
+
+  var fetchMempoolFees = function() {
+    fetch('https://mempool.space/api/v1/fees/recommended')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        setMempoolFees({
+          fastestFee: d.fastestFee || 25,
+          halfHourFee: d.halfHourFee || 18,
+          hourFee: d.hourFee || 12,
+          economyFee: d.economyFee || 8,
+          minimumFee: d.minimumFee || 3
+        });
+      })
+      .catch(function() {
+        setMempoolFees({ fastestFee: 25, halfHourFee: 18, hourFee: 12, economyFee: 8, minimumFee: 3 });
+      });
   };
 
   React.useEffect(function() {
@@ -398,6 +427,21 @@ function LocalPage(props) {
     return function() { window.removeEventListener('click', close); };
   }, [showSortMenu, showListDropdown, showBuyMenu]);
 
+  var getFeeRateSats = function() {
+    if (selectedFeeRate === 'custom') {
+      var v = parseInt(customFeeStr, 10);
+      return Math.max(1, (v > 0) ? v : (mempoolFees ? mempoolFees.hourFee : 10));
+    }
+    if (!mempoolFees) return Math.max(1, 10);
+    if (selectedFeeRate === 'baja') return Math.max(1, mempoolFees.economyFee);
+    if (selectedFeeRate === 'alta') return Math.max(1, mempoolFees.fastestFee * 2);
+    return Math.max(1, mempoolFees.hourFee);
+  };
+
+  var getMempoolBaja = function() { return Math.max(1, mempoolFees ? mempoolFees.economyFee : 8); };
+  var getMempoolMedia = function() { return Math.max(1, mempoolFees ? mempoolFees.hourFee : 12); };
+  var getMempoolAlta = function() { return Math.max(1, mempoolFees ? mempoolFees.fastestFee * 2 : 25); };
+
   var handleBuySelected = async function() {
     var wallet = StoreApp.get('wallet');
     if (!wallet || !wallet.address) {
@@ -421,6 +465,7 @@ function LocalPage(props) {
     var buyResult = null;
     var idempotencyKey = 'batch_buy_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
     var bitmapIds = selected.map(function(item) { return item.bitmapId || item.id; });
+    var feeRate = getFeeRateSats();
 
     try {
       setBuyStatus({ message: 'Creando PSBT batch para ' + selected.length + ' bitmaps...', type: 'loading' });
@@ -450,8 +495,10 @@ function LocalPage(props) {
       var bodyPayload = {
           bitmapIds: bitmapIds,
           buyerAddress: wallet.address,
+          buyerPaymentAddress: wallet.paymentAddress || wallet.address,
           idempotencyKey: idempotencyKey,
-          buyerPublicKey: wallet.publicKey
+          buyerPublicKey: wallet.publicKey,
+          feeRate: feeRate
         };
 
       var buyRes = await fetch('/api/v1/transaction/batch-buy', {
@@ -481,7 +528,7 @@ function LocalPage(props) {
           for (var bi = items.length; bi < items.length + buyerInputCount; bi++) {
             buyerInputIndices.push(bi);
           }
-          signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.address, buyerInputIndices);
+          signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.paymentAddress || wallet.address, buyerInputIndices);
         } catch(xe) {
           throw new Error('Firma Xverse cancelada');
         }
@@ -517,7 +564,17 @@ function LocalPage(props) {
           transactionId: transactionId
         })
       });
-      var broadcastJson = await broadcastRes.json();
+      var broadcastText = await broadcastRes.text();
+      var broadcastJson;
+      try {
+        broadcastJson = JSON.parse(broadcastText);
+      } catch(parseErr) {
+        if (broadcastRes.ok) {
+          broadcastJson = { success: true, data: { txid: 'unknown_' + transactionId } };
+        } else {
+          throw new Error('Error del servidor (' + broadcastRes.status + '): ' + broadcastText.substring(0, 200));
+        }
+      }
 
       if (!broadcastJson.success || !broadcastJson.data || !broadcastJson.data.txid) {
         var bErrMsg = broadcastJson.error && broadcastJson.error.message ? broadcastJson.error.message : (broadcastJson.error || 'Error al transmitir batch');
@@ -706,6 +763,7 @@ function LocalPage(props) {
               setTimeout(function() { setSuccessToast(null); }, 20000);
               return;
             }
+            fetchMempoolFees();
             setShowBuyMenu(!showBuyMenu);
           },
           className: 'px-3 py-1 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors flex-shrink-0 font-bold'
@@ -755,45 +813,134 @@ function LocalPage(props) {
             React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border' },
               React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Confirmar compra')
             ),
-            React.createElement('div', { className: 'px-3 py-2 max-h-48 overflow-y-auto' },
+            React.createElement('div', { className: 'px-3 py-2 max-h-32 overflow-y-auto' },
               filtered.filter(function(item) {
                 return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1;
               }).map(function(item) {
                 var priceSats = item.listedPrice || item.price || 0;
-                var feeSats = Math.max(546, Math.floor(priceSats * 0.02));
                 return React.createElement('div', { key: item.bitmapId || item.id, className: 'flex items-center justify-between py-1 border-b border-bitmap-border/30 last:border-0' },
                   React.createElement('span', { className: 'font-acme text-xs text-white truncate' }, '#' + (item.bitmapNumber || '?') + '.bitmap'),
-                  React.createElement('div', { className: 'text-right flex-shrink-0 ml-2' },
-                    React.createElement('span', { className: 'font-acme text-xs text-white block' }, (priceSats / 100000000).toFixed(8) + ' BTC'),
-                    React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-orange block' }, 'fee: ' + (feeSats / 100000000).toFixed(8))
-                  )
+                  React.createElement('span', { className: 'font-acme text-xs text-white flex-shrink-0 ml-2' }, (priceSats / 100000000).toFixed(8) + ' BTC')
                 );
               })
             ),
             React.createElement('div', { className: 'px-3 py-2 border-t border-bitmap-border' },
               React.createElement('div', { className: 'flex justify-between mb-1' },
-                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, 'Subtotal (' + selectedBuyItems.length + ' items):'),
-                React.createElement('span', { className: 'font-acme text-xs text-white' },
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Subtotal (' + selectedBuyItems.length + ' items):'),
+                React.createElement('span', { className: 'font-acme text-[10px] text-white' },
                   (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + (item.listedPrice || item.price || 0); }, 0) / 100000000).toFixed(8) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-1' },
-                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, 'Fee marketplace:'),
-                React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange' },
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Fee marketplace (2%):'),
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange' },
                   (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + Math.max(546, Math.floor((item.listedPrice || item.price || 0) * 0.02)); }, 0) / 100000000).toFixed(8) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-2 border-t border-bitmap-border/50 pt-1' },
-                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Total a pagar:'),
-                React.createElement('span', { className: 'font-acme text-xs text-bitmap-orange font-bold' },
+                React.createElement('span', { className: 'font-acme text-[10px] text-white font-bold' }, 'Total a pagar:'),
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold' },
                   (filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.max(546, Math.floor(p * 0.02)); }, 0) / 100000000).toFixed(8) + ' BTC'
                 )
               ),
-              React.createElement('div', { className: 'flex justify-between mb-2' },
-                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Total USD:'),
-                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
-                  usd(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.floor(p * 0.02); }, 0))
-                )
+              (function() {
+                var w = StoreApp.get('wallet');
+                var buyerOrd = w && w.address ? w.address : '';
+                var buyerPay = w && w.paymentAddress ? w.paymentAddress : '';
+                var sellerItem = filtered.find(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; });
+                var sellerOrd = sellerItem ? (sellerItem.sellerAddress || sellerItem.ownerAddress || '') : '';
+                var sellerPay = sellerItem ? (sellerItem.sellerPaymentAddress || '') : '';
+                var hasSellerPay = sellerPay && sellerPay !== sellerOrd;
+                var hasBuyerPay = buyerPay && buyerPay !== buyerOrd;
+                return React.createElement('div', { className: 'rounded-lg p-3 mb-2', style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' } },
+                  React.createElement('div', { className: 'flex items-center gap-1.5 mb-2' },
+                    React.createElement('svg', { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none' },
+                      React.createElement('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', stroke: '#00AA00', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
+                    ),
+                    React.createElement('span', { className: 'font-acme text-[10px] font-bold', style: { color: '#00AA00' } }, 'Direcciones de la transaccion')
+                  ),
+                  React.createElement('div', { className: 'space-y-1.5' },
+                    React.createElement('div', null,
+                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, 'Vendedor:'),
+                      React.createElement('span', { className: 'font-acme text-[10px] block truncate', style: { color: '#ccc', fontFamily: 'monospace' } },
+                        sellerOrd ? BitmapUtils.truncateAddress(sellerOrd, 8) : '---'
+                      )
+                    ),
+                    hasSellerPay ? React.createElement('div', null,
+                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, 'Pago del vendedor:'),
+                      React.createElement('span', { className: 'font-acme text-[10px] block truncate', style: { color: '#FFAA00', fontFamily: 'monospace' } },
+                        BitmapUtils.truncateAddress(sellerPay, 8)
+                      )
+                    ) : null,
+                    React.createElement('div', { className: hasSellerPay || hasBuyerPay ? 'pt-1 mt-1' : '', style: (hasSellerPay || hasBuyerPay) ? { borderTop: '1px solid #333' } : {} },
+                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, 'Comprador:'),
+                      React.createElement('span', { className: 'font-acme text-[10px] block truncate', style: { color: '#00AA00', fontFamily: 'monospace' } },
+                        buyerOrd ? BitmapUtils.truncateAddress(buyerOrd, 8) : '---'
+                      )
+                    ),
+                    hasBuyerPay ? React.createElement('div', null,
+                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, 'Pago del comprador:'),
+                      React.createElement('span', { className: 'font-acme text-[10px] block truncate', style: { color: '#00AA00', fontFamily: 'monospace' } },
+                        BitmapUtils.truncateAddress(buyerPay, 8)
+                      )
+                    ) : null
+                  )
+                );
+              })(),
+              React.createElement('div', { className: 'mb-2' },
+                React.createElement('span', { className: 'font-acme text-[10px] block mb-1.5', style: { color: '#888' } }, 'Fee de red (sats/vB):'),
+                React.createElement('div', { className: 'flex gap-1.5' },
+                  React.createElement('button', {
+                    onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('baja'); setShowCustomFee(false); },
+                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-colors text-center',
+                    style: {
+                      backgroundColor: selectedFeeRate === 'baja' ? '#00AA00' : '#1a1a1a',
+                      color: selectedFeeRate === 'baja' ? '#000' : '#888',
+                      border: '1px solid ' + (selectedFeeRate === 'baja' ? '#00AA00' : '#333')
+                    }
+                  }, React.createElement('div', null, 'Baja'), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'baja' ? '#000' : '#666' } }, '~' + getMempoolBaja())),
+                  React.createElement('button', {
+                    onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('media'); setShowCustomFee(false); },
+                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-colors text-center',
+                    style: {
+                      backgroundColor: selectedFeeRate === 'media' ? '#00AA00' : '#1a1a1a',
+                      color: selectedFeeRate === 'media' ? '#000' : '#888',
+                      border: '1px solid ' + (selectedFeeRate === 'media' ? '#00AA00' : '#333')
+                    }
+                  }, React.createElement('div', null, 'Media'), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'media' ? '#000' : '#666' } }, '~' + getMempoolMedia())),
+                  React.createElement('button', {
+                    onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('alta'); setShowCustomFee(false); },
+                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-colors text-center',
+                    style: {
+                      backgroundColor: selectedFeeRate === 'alta' ? '#00AA00' : '#1a1a1a',
+                      color: selectedFeeRate === 'alta' ? '#000' : '#888',
+                      border: '1px solid ' + (selectedFeeRate === 'alta' ? '#00AA00' : '#333')
+                    }
+                  }, React.createElement('div', null, 'Alta'), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'alta' ? '#000' : '#666' } }, '~' + getMempoolAlta())),
+                  React.createElement('button', {
+                    onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('custom'); setShowCustomFee(true); },
+                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-colors text-center',
+                    style: {
+                      backgroundColor: selectedFeeRate === 'custom' ? '#FFAA00' : '#1a1a1a',
+                      color: selectedFeeRate === 'custom' ? '#000' : '#888',
+                      border: '1px solid ' + (selectedFeeRate === 'custom' ? '#FFAA00' : '#333')
+                    }
+                  }, 'Custom')
+                ),
+                selectedFeeRate === 'custom' ? React.createElement('div', { className: 'flex items-center gap-2 mt-2' },
+                  React.createElement('input', {
+                    type: 'number',
+                    min: '1',
+                    max: '100',
+                    value: customFeeStr,
+                    onChange: function(e) { setCustomFeeStr(e.target.value); },
+                    onClick: function(e) { e.stopPropagation(); },
+                    placeholder: '1-100',
+                    className: 'w-20 bg-bitmap-surface border border-bitmap-border rounded px-2 py-1 font-acme text-[10px] text-white focus:outline-none focus:border-bitmap-orange',
+                    style: { fontSize: '10px' }
+                  }),
+                  React.createElement('span', { className: 'font-acme text-[10px]', style: { color: '#888' } }, 'sats/vB')
+                ) : null
               ),
               React.createElement('div', { className: 'flex gap-2' },
                 React.createElement('button', {
