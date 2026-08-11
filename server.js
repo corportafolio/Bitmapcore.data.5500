@@ -1320,6 +1320,9 @@ async function pollUnified() {
             const placeholders = localActive.map(() => '?').join(',');
             const deletedLOCAL = dbUnified.prepare("DELETE FROM unified_listings WHERE source='local' AND bitmapId NOT IN (" + placeholders + ")").run(...localActive);
             if (deletedLOCAL.changes > 0) console.error('[UNIFIED] Cleaned stale LOCAL: ' + deletedLOCAL.changes);
+          } else {
+            const deletedLOCAL = dbUnified.prepare("DELETE FROM unified_listings WHERE source='local'").run();
+            if (deletedLOCAL.changes > 0) console.error('[UNIFIED] Cleaned all LOCAL (no active): ' + deletedLOCAL.changes);
           }
         } catch (e) {
           console.error('[UNIFIED] Error cleaning stale local:', e.message);
