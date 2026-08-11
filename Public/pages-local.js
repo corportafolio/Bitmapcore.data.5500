@@ -114,15 +114,15 @@ function LocalPage(props) {
       .then(function(r) { return r.json(); })
       .then(function(d) {
         setMempoolFees({
-          fastestFee: d.fastestFee || 25,
-          halfHourFee: d.halfHourFee || 18,
-          hourFee: d.hourFee || 12,
-          economyFee: d.economyFee || 8,
-          minimumFee: d.minimumFee || 3
+          fastestFee: d.fastestFee || 3,
+          halfHourFee: d.halfHourFee || 3,
+          hourFee: d.hourFee || 1,
+          economyFee: d.economyFee || 1,
+          minimumFee: d.minimumFee || 1
         });
       })
       .catch(function() {
-        setMempoolFees({ fastestFee: 25, halfHourFee: 18, hourFee: 12, economyFee: 8, minimumFee: 3 });
+        setMempoolFees({ fastestFee: 3, halfHourFee: 3, hourFee: 1, economyFee: 1, minimumFee: 1 });
       });
   };
 
@@ -430,17 +430,17 @@ function LocalPage(props) {
   var getFeeRateSats = function() {
     if (selectedFeeRate === 'custom') {
       var v = parseInt(customFeeStr, 10);
-      return Math.max(1, (v > 0) ? v : (mempoolFees ? mempoolFees.hourFee : 10));
+      return Math.max(1, (v > 0) ? v : (mempoolFees ? mempoolFees.hourFee : 1));
     }
-    if (!mempoolFees) return Math.max(1, 10);
-    if (selectedFeeRate === 'baja') return Math.max(1, mempoolFees.economyFee);
-    if (selectedFeeRate === 'alta') return Math.max(1, mempoolFees.fastestFee * 2);
+    if (!mempoolFees) return Math.max(1, 1);
+    if (selectedFeeRate === 'baja') return Math.max(1, Math.floor(mempoolFees.hourFee * 0.7));
+    if (selectedFeeRate === 'alta') return Math.max(1, mempoolFees.hourFee * 2);
     return Math.max(1, mempoolFees.hourFee);
   };
 
-  var getMempoolBaja = function() { return Math.max(1, mempoolFees ? mempoolFees.economyFee : 8); };
-  var getMempoolMedia = function() { return Math.max(1, mempoolFees ? mempoolFees.hourFee : 12); };
-  var getMempoolAlta = function() { return Math.max(1, mempoolFees ? mempoolFees.fastestFee * 2 : 25); };
+  var getMempoolBaja = function() { return Math.max(1, mempoolFees ? Math.floor(mempoolFees.hourFee * 0.7) : 1); };
+  var getMempoolMedia = function() { return Math.max(1, mempoolFees ? mempoolFees.hourFee : 1); };
+  var getMempoolAlta = function() { return Math.max(1, mempoolFees ? mempoolFees.hourFee * 2 : 3); };
 
   var handleBuySelected = async function() {
     var wallet = StoreApp.get('wallet');
