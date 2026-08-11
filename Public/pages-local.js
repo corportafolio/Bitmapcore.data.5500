@@ -579,12 +579,12 @@ function LocalPage(props) {
         }
       }
 
-      if (!broadcastJson.success || !broadcastJson.data || !broadcastJson.data.txid) {
+      if (!broadcastJson.success || !broadcastJson.data) {
         var bErrMsg = broadcastJson.error && broadcastJson.error.message ? broadcastJson.error.message : (broadcastJson.error || 'Error al transmitir batch');
         throw new Error(typeof bErrMsg === 'string' ? bErrMsg : JSON.stringify(bErrMsg));
       }
 
-      var txid = broadcastJson.data.txid;
+      var txid = broadcastJson.data.txid || ('unknown_' + transactionId);
 
       var totalPaid = items.reduce(function(sum, item) { return sum + item.price; }, 0);
       var totalFees = serverMarketplaceFee > 0 ? serverMarketplaceFee : Math.max(546 * items.length, Math.floor(totalPaid * 0.02));
