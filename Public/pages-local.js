@@ -855,9 +855,9 @@ function LocalPage(props) {
                 return React.createElement('div', { className: 'rounded-lg p-3 mb-2', style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' } },
                   React.createElement('div', { className: 'flex items-center gap-1.5 mb-2' },
                     React.createElement('svg', { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none' },
-                      React.createElement('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', stroke: '#00AA00', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
+                      React.createElement('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', stroke: '#FFD700', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
                     ),
-                    React.createElement('span', { className: 'font-acme text-[10px] font-bold', style: { color: '#00AA00' } }, 'Direcciones de la transaccion')
+                    React.createElement('span', { className: 'font-acme text-[10px] font-bold', style: { color: '#FFD700' } }, 'Direcciones de la transaccion')
                   ),
                   React.createElement('div', { className: 'space-y-1.5' },
                     React.createElement('div', null,
@@ -892,38 +892,42 @@ function LocalPage(props) {
                 React.createElement('div', { className: 'flex gap-1.5' },
                   React.createElement('button', {
                     onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('baja'); setShowCustomFee(false); },
-                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-colors text-center',
+                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-all text-center',
                     style: {
-                      backgroundColor: selectedFeeRate === 'baja' ? '#00AA00' : '#1a1a1a',
+                      background: selectedFeeRate === 'baja' ? 'linear-gradient(180deg, #FFD700, #E6A800)' : '#1a1a1a',
                       color: selectedFeeRate === 'baja' ? '#000' : '#888',
-                      border: '1px solid ' + (selectedFeeRate === 'baja' ? '#00AA00' : '#333')
+                      border: '1px solid ' + (selectedFeeRate === 'baja' ? '#FFD700' : '#333'),
+                      boxShadow: selectedFeeRate === 'baja' ? '0 2px 8px rgba(255,215,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)' : 'none'
                     }
                   }, React.createElement('div', null, 'Baja'), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'baja' ? '#000' : '#666' } }, '~' + getMempoolBaja())),
                   React.createElement('button', {
                     onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('media'); setShowCustomFee(false); },
-                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-colors text-center',
+                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-all text-center',
                     style: {
-                      backgroundColor: selectedFeeRate === 'media' ? '#00AA00' : '#1a1a1a',
+                      background: selectedFeeRate === 'media' ? 'linear-gradient(180deg, #FFD700, #E6A800)' : '#1a1a1a',
                       color: selectedFeeRate === 'media' ? '#000' : '#888',
-                      border: '1px solid ' + (selectedFeeRate === 'media' ? '#00AA00' : '#333')
+                      border: '1px solid ' + (selectedFeeRate === 'media' ? '#FFD700' : '#333'),
+                      boxShadow: selectedFeeRate === 'media' ? '0 2px 8px rgba(255,215,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)' : 'none'
                     }
                   }, React.createElement('div', null, 'Media'), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'media' ? '#000' : '#666' } }, '~' + getMempoolMedia())),
                   React.createElement('button', {
                     onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('alta'); setShowCustomFee(false); },
-                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-colors text-center',
+                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-all text-center',
                     style: {
-                      backgroundColor: selectedFeeRate === 'alta' ? '#00AA00' : '#1a1a1a',
+                      background: selectedFeeRate === 'alta' ? 'linear-gradient(180deg, #FFD700, #E6A800)' : '#1a1a1a',
                       color: selectedFeeRate === 'alta' ? '#000' : '#888',
-                      border: '1px solid ' + (selectedFeeRate === 'alta' ? '#00AA00' : '#333')
+                      border: '1px solid ' + (selectedFeeRate === 'alta' ? '#FFD700' : '#333'),
+                      boxShadow: selectedFeeRate === 'alta' ? '0 2px 8px rgba(255,215,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)' : 'none'
                     }
                   }, React.createElement('div', null, 'Alta'), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'alta' ? '#000' : '#666' } }, '~' + getMempoolAlta())),
                   React.createElement('button', {
                     onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('custom'); setShowCustomFee(true); },
-                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-colors text-center',
+                    className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-all text-center',
                     style: {
-                      backgroundColor: selectedFeeRate === 'custom' ? '#FFAA00' : '#1a1a1a',
-                      color: selectedFeeRate === 'custom' ? '#000' : '#888',
-                      border: '1px solid ' + (selectedFeeRate === 'custom' ? '#FFAA00' : '#333')
+                      background: selectedFeeRate === 'custom' ? 'linear-gradient(180deg, #A0522D, #6B3410)' : '#1a1a1a',
+                      color: selectedFeeRate === 'custom' ? '#fff' : '#888',
+                      border: '1px solid ' + (selectedFeeRate === 'custom' ? '#A0522D' : '#333'),
+                      boxShadow: selectedFeeRate === 'custom' ? '0 2px 8px rgba(160,82,45,0.4), inset 0 1px 0 rgba(255,255,255,0.2)' : 'none'
                     }
                   }, 'Custom')
                 ),
@@ -949,7 +953,13 @@ function LocalPage(props) {
                 }, 'Cancelar'),
                 React.createElement('button', {
                   onClick: function(e) { e.stopPropagation(); handleBuySelected(); },
-                  className: 'flex-1 px-3 py-1.5 bg-bitmap-orange text-black font-acme text-xs rounded hover:bg-bitmap-orange/80 transition-colors font-bold'
+                  className: 'flex-1 px-3 py-1.5 font-acme text-xs rounded font-bold transition-all',
+                  style: {
+                    background: 'linear-gradient(180deg, #FF6B35, #E8520E)',
+                    color: '#000',
+                    border: '1px solid #FF6B35',
+                    boxShadow: '0 2px 8px rgba(255,107,53,0.4), inset 0 1px 0 rgba(255,255,255,0.3)'
+                  }
                 }, 'Comprar')
               )
             )
