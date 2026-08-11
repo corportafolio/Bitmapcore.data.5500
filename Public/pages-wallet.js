@@ -632,6 +632,11 @@ function DetallePage(props) {
       await MarketplaceApi.delistListing(listing.id, wallet.address);
       setListingStatus({ toast:'Bitmap deslistado' });
       loadMyListings();
+      fetch('/api/v1/internal/refresh-local', { method: 'POST' }).then(function() {
+        if (typeof UnifiedViewModel !== 'undefined') {
+          UnifiedViewModel.loadFromCacheOnly();
+        }
+      }).catch(function() {});
     } catch(e) {
       setListingStatus({ toast:'Error: ' + e.message });
     }
