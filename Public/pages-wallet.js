@@ -416,7 +416,7 @@ function DetallePage(props) {
           price: item.priceSatoshis,
           sellerAddress: wallet.address,
           sellerOrdinalPublicKey: pubKey,
-          sellerPaymentAddress: wallet.paymentAddress || wallet.address,
+          sellerPaymentAddress: wallet.address,
           name: item.name || ('Bitmap #' + item.inscriptionNumber),
           imageUrl: '',
           bitmapNumber: extractBlockNumber(item.name),
