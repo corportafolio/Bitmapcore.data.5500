@@ -365,6 +365,7 @@ function LocalPage(props) {
             setListingStatus({ toast:'Firmando en Unisat...' });
             signedPsbtHexs = [];
             for (var ui = 0; ui < psbtHexArray.length; ui++) {
+              setListingStatus({ toast:'Firmando listing ' + (ui + 1) + ' de ' + psbtHexArray.length + ' en Unisat...' });
               var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
                 autoFinalized: false,
                 toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
@@ -773,6 +774,9 @@ function LocalPage(props) {
         )
       )
     ),
+    listingStatus && listingStatus.toast ? React.createElement('div', { className: 'pl-14 pr-4 py-1.5 border-b border-bitmap-border', style: { backgroundColor: '#141414' } },
+      React.createElement('p', { className: 'font-acme text-xs', style: { color: '#FF9C4A' } }, listingStatus.toast)
+    ) : null,
     React.createElement('div', { className: 'pl-14 pr-4 py-1 border-b border-bitmap-border flex items-center gap-2 sticky top-0 z-10', style: { backgroundColor: '#080008' } },
       React.createElement('input', {
         type: 'text',
