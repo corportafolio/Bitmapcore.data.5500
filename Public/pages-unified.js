@@ -470,10 +470,12 @@ function VentasPage(props) {
   var renderStatCol = function(label, count, volume) {
     var countStr = count ? BitmapUtils.formatNumber(count) : '0';
     var volBtc = volume > 0 ? (volume / 100000000).toFixed(5) + ' BTC' : '0 BTC';
+    var volUsd = volume > 0 && btcPrice ? '$' + ((volume / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '$0.00';
     return React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },
       React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, label),
       React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, countStr + ' ventas'),
-      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, volBtc)
+      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, volBtc),
+      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, volUsd)
     );
   };
 
@@ -490,7 +492,8 @@ function VentasPage(props) {
           React.createElement('div', { className: 'flex flex-col items-center px-3' },
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Último mes'),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, (d30.count ? BitmapUtils.formatNumber(d30.count) : '0') + ' ventas'),
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, d30.volume > 0 ? (d30.volume / 100000000).toFixed(5) + ' BTC' : '0 BTC')
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, d30.volume > 0 ? (d30.volume / 100000000).toFixed(5) + ' BTC' : '0 BTC'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, d30.volume > 0 && btcPrice ? '$' + ((d30.volume / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '$0.00')
           )
         )
       )
@@ -587,9 +590,14 @@ function VentasPage(props) {
                     )
                   ),
                   React.createElement('div', { className: 'flex flex-col items-end flex-shrink-0 ml-2' },
+                  React.createElement('div', { className: 'flex items-baseline justify-end gap-1' },
+                    React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
+                      btcPrice ? '$' + ((sale.price / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '$0.00'
+                    ),
                     React.createElement('span', { className: 'font-acme text-sm text-white' },
                       (sale.price / 100000000).toFixed(5) + ' BTC'
-                    ),
+                    )
+                  ),
                     React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
                       timeAgo(sale.sold_at) + (sale.sold_at ? ' atras' : '')
                     ),
