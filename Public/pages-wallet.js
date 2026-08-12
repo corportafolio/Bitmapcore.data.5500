@@ -90,6 +90,45 @@ function WalletDashboardPage(props) {
   );
 }
 
+var AssetCache = {
+  dbName: 'bitmapcore-assets',
+  key: function(address) { return 'assets-' + address.toLowerCase(); },
+  load: function(address) {
+    return IndexedDBCache.load(AssetCache.dbName, AssetCache.key(address)).then(function(v) {
+      if (v && v.collections && v.lastHeight !== undefined) return v;
+      return null;
+    }).catch(function() { return null; });
+  },
+  save: function(address, data) {
+    var payload = {
+      collections: data.collections,
+      total: data.total,
+      lastHeight: data.lastHeight || 0,
+      updatedAt: Date.now()
+    };
+    return IndexedDBCache.save(AssetCache.dbName, AssetCache.key(address), payload).catch(function() {});
+  },
+  merge: function(cached, fresh) {
+    if (!cached) return fresh;
+    var byName = {};
+    (cached.collections || []).forEach(function(c) { byName[c.name] = c; });
+    (fresh.collections || []).forEach(function(fc) {
+      var existing = byName[fc.name];
+      if (!existing) { byName[fc.name] = fc; return; }
+      var seen = {};
+      existing.items.forEach(function(it) { seen[it.id] = it; });
+      fc.items.forEach(function(it) { if (!seen[it.id]) existing.items.push(it); });
+      existing.items.sort(function(a, b) { return (a.inscriptionNumber || 0) - (b.inscriptionNumber || 0); });
+      existing.count = existing.items.length;
+    });
+    var collections = Object.keys(byName).map(function(n) { return byName[n]; });
+    var total = collections.reduce(function(s, c) { return s + c.items.length; }, 0);
+    var lastHeight = cached.lastHeight || 0;
+    if (fresh.lastHeight && fresh.lastHeight > lastHeight) lastHeight = fresh.lastHeight;
+    return { collections: collections, total: total, lastHeight: lastHeight };
+  }
+};
+
 function MisActivosPage(props) {
   var navigate = props.navigate;
   var wallet = StoreApp.get('wallet');
@@ -114,23 +153,43 @@ function MisActivosPage(props) {
   var loadAssets = function() {
     var w = walletRef || wallet;
     if (!w || !w.address) { setIsLoading(false); setData(null); return; }
-    setIsLoading(true);
+    var addr = w.address;
+    if (!walletRef) setWalletRef(w);
     setError(null);
-    AssetApi.getUserAssets(w.address).then(function(res) {
-      if (res.success && res.data) {
-        setData(res.data);
+
+    AssetCache.load(addr).then(function(cached) {
+      if (cached && cached.collections) {
+        setData(cached);
+        setIsLoading(false);
       } else {
-        setError(res.error ? res.error.message : 'Error desconocido');
+        setIsLoading(true);
       }
-      setIsLoading(false);
-    }).catch(function(e) {
-      setError(e.message || 'Error de red');
-      setIsLoading(false);
+      var since = cached && cached.lastHeight ? cached.lastHeight : null;
+      return AssetApi.getUserAssets(addr, since || undefined).then(function(res) {
+        if (res.success && res.data) {
+          var fresh = {
+            collections: res.data.collections,
+            total: res.data.total,
+            lastHeight: res.data.lastHeight || 0
+          };
+          var merged = cached ? AssetCache.merge(cached, fresh) : fresh;
+          AssetCache.save(addr, merged);
+          setData(merged);
+        } else if (!cached) {
+          setError(res.error ? res.error.message : 'Error desconocido');
+        }
+        setIsLoading(false);
+      }).catch(function(e) {
+        if (!cached) setError(e.message || 'Error de red');
+        setIsLoading(false);
+      });
     });
   };
 
   React.useEffect(function() {
     loadAssets();
+    var pollTimer = setInterval(loadAssets, 60000);
+    return function() { clearInterval(pollTimer); };
   }, [wallet.address]);
 
   var total = data ? data.total : 0;
@@ -246,17 +305,32 @@ function DetallePage(props) {
 
   React.useEffect(function() {
     if (!wallet.address) return;
+    var addr = wallet.address;
     setIsLoading(true);
-    AssetApi.getUserAssets(wallet.address).then(function(res) {
-      if (res.success && res.data) {
-        setData(res.data);
-      } else {
-        setError(res.error ? res.error.message : 'Error');
+    AssetCache.load(addr).then(function(cached) {
+      if (cached && cached.collections) {
+        setData(cached);
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }).catch(function(e) {
-      setError(e.message);
-      setIsLoading(false);
+      var since = cached && cached.lastHeight ? cached.lastHeight : null;
+      return AssetApi.getUserAssets(addr, since || undefined).then(function(res) {
+        if (res.success && res.data) {
+          var fresh = {
+            collections: res.data.collections,
+            total: res.data.total,
+            lastHeight: res.data.lastHeight || 0
+          };
+          var merged = cached ? AssetCache.merge(cached, fresh) : fresh;
+          AssetCache.save(addr, merged);
+          setData(merged);
+        } else if (!cached) {
+          setError(res.error ? res.error.message : 'Error');
+        }
+        setIsLoading(false);
+      }).catch(function(e) {
+        if (!cached) setError(e.message);
+        setIsLoading(false);
+      });
     });
   }, [wallet.address]);
 
