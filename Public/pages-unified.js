@@ -575,8 +575,15 @@ function VentasPage(props) {
                         React.createElement('span', { className: 'text-bitmap-muted' }, '...' + sale.seller_address.slice(-4))
                       ) : null
                     ),
-                    React.createElement('div', { className: 'truncate mt-0.5' },
-                      etiquetas ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 }) : null
+                    React.createElement('div', { className: 'flex items-center gap-1 min-w-0 overflow-hidden whitespace-nowrap mt-0.5' },
+                      React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted flex-shrink-0' },
+                        etiquetas ? etiquetas.split('|').filter(function(t) { return t.trim() !== ''; }).length + ' tags' : '0 tags'
+                      ),
+                      React.createElement('div', { className: 'flex items-center gap-1 min-w-0 overflow-hidden' },
+                        etiquetas ? etiquetas.split('|').filter(function(t) { return t.trim() !== ''; }).map(function(tag, ti) {
+                          return React.createElement(UniversalTag, { key: ti, text: tag.trim(), fontSize: 9 });
+                        }) : null
+                      )
                     )
                   ),
                   React.createElement('div', { className: 'flex flex-col items-end flex-shrink-0 ml-2' },
