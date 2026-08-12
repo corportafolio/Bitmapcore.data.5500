@@ -351,11 +351,12 @@ function LocalPage(props) {
         if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
           try {
             setListingStatus({ toast:'Firmando en Xverse...' });
-            if (!combinedPsbtB64) throw new Error('No se recibio PSBT combinado del servidor');
-            var inputIndices = [];
-            for (var xi = 0; xi < psbtToSigns.length; xi++) inputIndices.push(xi);
-            var signedCombined = await StoreApp._xverseSignPsbt(combinedPsbtB64, wallet.address, inputIndices);
-            signedPsbtHexs = [signedCombined];
+            signedPsbtHexs = [];
+            for (var xi = 0; xi < psbtToSigns.length; xi++) {
+              setListingStatus({ toast:'Firmando listing ' + (xi + 1) + ' de ' + psbtToSigns.length + ' en Xverse...' });
+              var singleSigned = await StoreApp._xverseSignPsbt(psbtToSigns[xi].unsignedPsbtHex, wallet.address, [0]);
+              signedPsbtHexs.push(singleSigned);
+            }
           } catch(xe) {
             setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
           }

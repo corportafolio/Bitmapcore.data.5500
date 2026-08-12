@@ -75,15 +75,38 @@ var StoreApp = {
     var provider = StoreApp._getXverseProvider();
     if (!provider) throw new Error('Xverse wallet no disponible');
     var indices = inputIndices || [0];
-    var result = await provider.request('signPsbt', {
-      psbt: psbtBase64,
-      signInputs: ordinalsAddress ? { [ordinalsAddress]: indices } : undefined,
-      broadcast: false
-    });
-    var signed = result && result.result ? result.result : result;
-    if (signed && typeof signed === 'object' && signed.psbt) return signed.psbt;
-    if (typeof signed === 'string') return signed;
-    throw new Error('Xverse: respuesta invalida al firmar PSBT');
+    var psbtToSign = psbtBase64;
+    var attemptHex = true;
+    if (/^[0-9a-fA-F]+$/.test(String(psbtBase64)) && String(psbtBase64).length % 2 === 0) {
+      attemptHex = true;
+    } else {
+      attemptHex = false;
+    }
+    try {
+      var result = await provider.request('signPsbt', {
+        psbt: psbtToSign,
+        signInputs: ordinalsAddress ? { [ordinalsAddress]: indices } : undefined,
+        broadcast: false
+      });
+      var signed = result && result.result ? result.result : result;
+      if (signed && typeof signed === 'object' && signed.psbt) return signed.psbt;
+      if (typeof signed === 'string') return signed;
+      throw new Error('Xverse: respuesta invalida al firmar PSBT');
+    } catch(err) {
+      if (attemptHex) {
+        var hexBuf = new Uint8Array(String(psbtBase64).match(/.{2}/g).map(function(b) { return parseInt(b, 16); }));
+        var b64 = btoa(String.fromCharCode.apply(null, hexBuf));
+        var retry = await provider.request('signPsbt', {
+          psbt: b64,
+          signInputs: ordinalsAddress ? { [ordinalsAddress]: indices } : undefined,
+          broadcast: false
+        });
+        var retrySigned = retry && retry.result ? retry.result : retry;
+        if (retrySigned && typeof retrySigned === 'object' && retrySigned.psbt) return retrySigned.psbt;
+        if (typeof retrySigned === 'string') return retrySigned;
+      }
+      throw err;
+    }
   },
   getPublicKeyFresh: async function() {
     var wallet = StoreApp._state.wallet;
