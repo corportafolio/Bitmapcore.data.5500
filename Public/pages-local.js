@@ -489,11 +489,45 @@ function LocalPage(props) {
         return;
       }
 
+      if (!wallet.paymentPublicKey) {
+        try {
+          if (wallet.walletType === 'unisat') {
+            wallet.paymentPublicKey = wallet.publicKey;
+          } else if (wallet.walletType === 'xverse') {
+            var xProvider = StoreApp._getXverseProvider();
+            if (xProvider) {
+              var payResp = await xProvider.request('wallet_connect', {
+                addresses: ['payment'],
+                message: 'BitmapCore necesita tu clave publica de pago',
+                network: 'Mainnet'
+              });
+              var payAddrs = [];
+              if (payResp && payResp.addresses) payAddrs = payResp.addresses;
+              else if (payResp && payResp.result && payResp.result.addresses) payAddrs = payResp.result.addresses;
+              for (var pi = 0; pi < payAddrs.length; pi++) {
+                if (payAddrs[pi].purpose === 'payment' && payAddrs[pi].publicKey) {
+                  wallet.paymentPublicKey = payAddrs[pi].publicKey;
+                  break;
+                }
+              }
+            }
+          }
+          if (wallet.paymentPublicKey) {
+            var storedWallet = localStorage.getItem(StoreApp.WALLET_STORAGE_KEY);
+            if (storedWallet) {
+              var sw = JSON.parse(storedWallet);
+              sw.paymentPublicKey = wallet.paymentPublicKey;
+              localStorage.setItem(StoreApp.WALLET_STORAGE_KEY, JSON.stringify(sw));
+            }
+          }
+        } catch(pkErr) { /* continue without paymentPublicKey */ }
+      }
+
       var bodyPayload = {
           bitmapIds: bitmapIds,
           buyerAddress: wallet.address,
           buyerPaymentAddress: wallet.paymentAddress || wallet.address,
-          buyerPaymentPublicKey: wallet.paymentPublicKey || null,
+          buyerPaymentPublicKey: wallet.paymentPublicKey || wallet.publicKey,
           idempotencyKey: idempotencyKey,
           buyerPublicKey: wallet.publicKey,
           feeRate: feeRate
