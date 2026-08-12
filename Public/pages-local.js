@@ -26,6 +26,7 @@ function LocalPage(props) {
   var isLoadingDropdown = _h[0];
   var setIsLoadingDropdown = _h[1];
   var _i = React.useState(null);
+  var listingStatus = _i[0];
   var setListingStatus = _i[1];
   var _j = React.useState('');
   var dropdownSearch = _j[0];
