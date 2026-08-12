@@ -561,11 +561,18 @@ function VentasPage(props) {
                         className: 'px-1.5 py-0.5 rounded text-[9px] font-acme flex-shrink-0',
                         style: { backgroundColor: sourceColor(sale.source) + '22', color: sourceColor(sale.source) }
                       }, sourceLabel(sale.source)),
-                      sale.buyer_address ? React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted flex-shrink-0' },
-                        'comprador: ...' + sale.buyer_address.slice(-4)
+                      React.createElement('img', {
+                        src: sale.source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : (sale.source === 'local' ? 'logo_bitmapcore_logo.png' : 'unisat_logo.png'),
+                        style: { width: 10, height: 10, flexShrink: 0 },
+                        alt: ''
+                      }),
+                      sale.buyer_address ? React.createElement('span', { className: 'font-acme text-[10px] flex-shrink-0' },
+                        React.createElement('span', { style: { color: '#4ADE80' } }, 'comprador: '),
+                        React.createElement('span', { className: 'text-bitmap-muted' }, '...' + sale.buyer_address.slice(-4))
                       ) : null,
-                      sale.seller_address ? React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted flex-shrink-0' },
-                        'vendedor: ...' + sale.seller_address.slice(-4)
+                      sale.seller_address ? React.createElement('span', { className: 'font-acme text-[10px] flex-shrink-0' },
+                        React.createElement('span', { style: { color: '#F87171' } }, 'vendedor: '),
+                        React.createElement('span', { className: 'text-bitmap-muted' }, '...' + sale.seller_address.slice(-4))
                       ) : null
                     ),
                     React.createElement('div', { className: 'truncate mt-0.5' },
