@@ -485,7 +485,7 @@ function VentasPage(props) {
           React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Ventas Recientes')
         ),
         React.createElement('div', { className: 'flex items-stretch' },
-          renderStatCol('Último día', h24.count, h24.volume),
+          renderStatCol('24 horas', h24.count, h24.volume),
           renderStatCol('Última semana', d7.count, d7.volume),
           React.createElement('div', { className: 'flex flex-col items-center px-3' },
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Último mes'),
@@ -567,11 +567,11 @@ function VentasPage(props) {
                         alt: ''
                       }),
                       sale.buyer_address ? React.createElement('span', { className: 'font-acme text-[10px] flex-shrink-0' },
-                        React.createElement('span', { style: { color: '#4ADE80' } }, 'comprador: '),
+                        React.createElement('span', { style: { color: '#22C55E' } }, 'comprador: '),
                         React.createElement('span', { className: 'text-bitmap-muted' }, '...' + sale.buyer_address.slice(-4))
                       ) : null,
                       sale.seller_address ? React.createElement('span', { className: 'font-acme text-[10px] flex-shrink-0' },
-                        React.createElement('span', { style: { color: '#F87171' } }, 'vendedor: '),
+                        React.createElement('span', { style: { color: '#EF4444' } }, 'vendedor: '),
                         React.createElement('span', { className: 'text-bitmap-muted' }, '...' + sale.seller_address.slice(-4))
                       ) : null
                     ),
