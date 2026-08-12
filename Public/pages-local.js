@@ -508,6 +508,9 @@ function LocalPage(props) {
 
       if (!buyJson.success || !buyJson.data || !buyJson.data.psbt) {
         var errMsg = buyJson.error && buyJson.error.message ? buyJson.error.message : (buyJson.error || 'Error al crear PSBT batch');
+        if (typeof errMsg === 'string' && errMsg.indexOf('Saldo disponible insuficiente') !== -1) {
+          throw new Error('Operación cancelada: no tienes fondos suficientes. Recarga tu billetera y vuelve a intentar la compra.');
+        }
         throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
       }
 
@@ -588,14 +591,7 @@ function LocalPage(props) {
       });
       var errorItems = [];
 
-      var networkFees = [];
-      try {
-        var txRes = await fetch('https://mempool.space/api/tx/' + txid);
-        var txData = await txRes.json();
-        networkFees.push({ txid: txid, fee: txData.fee || 0 });
-      } catch(fe) {
-        networkFees.push({ txid: txid, fee: 0 });
-      }
+      var networkFees = [{ txid: txid, fee: 0 }];
 
       var totalNetworkFee = networkFees.reduce(function(sum, nf) { return sum + nf.fee; }, 0);
 
