@@ -1090,15 +1090,18 @@ showListDropdown ? React.createElement('div', {
             ) :
             listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay bitmaps disponibles') :
             React.createElement(React.Fragment, null,
-              React.createElement('div', { className: 'px-3 pb-2 border-b border-bitmap-border/50' },
+              React.createElement('div', { className: 'px-3 pb-2 border-b border-bitmap-border/50 flex items-center gap-2' },
                 React.createElement('input', {
                   type: 'text',
                   value: dropdownSearch,
                   onChange: function(e) { setDropdownSearch(e.target.value); },
                   placeholder: 'Buscar por # de bloque...',
-                  className: 'w-full bg-bitmap-surface border border-bitmap-border rounded px-2 py-1 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange',
+                  className: 'flex-1 min-w-0 bg-bitmap-surface border border-bitmap-border rounded px-2 py-1 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange',
                   onClick: function(e) { e.stopPropagation(); }
-                })
+                }),
+                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0' },
+                  listItems.length + ' bitmaps'
+                )
               ),
               React.createElement('div', { className: 'flex items-center justify-between px-3 py-2 border-b border-bitmap-border/50' },
                 React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' },
@@ -1131,8 +1134,7 @@ showListDropdown ? React.createElement('div', {
                       checked: item.isSelected,
                       onChange: function(e) { toggleListItemSelection(item.id, e.target.checked); },
                       onClick: function(e) { e.stopPropagation(); },
-                      className: 'w-4 h-4',
-                      style: { accentColor: item.isSelected ? '#00AA00' : '#666666', color: item.isSelected ? '#00AA00' : '#666666' }
+                      className: 'bitmap-check'
                     }),
                     imgSrc ? React.createElement('img', {
                       src: imgSrc,

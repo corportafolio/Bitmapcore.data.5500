@@ -134,6 +134,37 @@
        *{scrollbar-width:thin;scrollbar-color:var(--bitmap-surface) var(--bitmap-black)}
    </style>
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .bitmap-check {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #444444;
+    border-radius: 3px;
+    background: #2a2a2a;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .bitmap-check:checked {
+    background: #2a2a2a;
+    border-color: #FE3E00;
+  }
+  .bitmap-check:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid #FE3E00;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+</style>
 </head>
 <body>
   <script>
@@ -172,7 +203,7 @@
   <script src="pages-home.js"></script>
   <script src="pages-selector.js"></script>
   <script src="pages-marketplaces.js?v=3"></script>
-  <script src="pages-local.js?v=15"></script>
+  <script src="pages-local.js?v=16"></script>
   <script src="pages-unified.js"></script>
   <script src="pages-wallet.js?v=3"></script>
   <script src="pages-block.js"></script>
