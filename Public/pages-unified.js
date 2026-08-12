@@ -535,36 +535,57 @@ function VentasPage(props) {
               )
             ),
             group.items.map(function(sale, i) {
+              var etiquetas = sale.etiquetas || '';
+              var isPerfect = etiquetas.indexOf('Perfect') !== -1;
+              var isPunk = etiquetas.indexOf('Punk') !== -1;
+              var imgSrc = sale.bitmap_number ? '/api/v1/block-image/' + sale.bitmap_number + '?size=40&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (sale.totalTransacciones || 0) + '&hash=' + encodeURIComponent(sale.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk : '';
               return React.createElement('div', {
                 key: sale.id || i,
-                className: 'flex items-center justify-between py-1.5 border-b border-[#222] hover:bg-[#111] transition-colors px-1'
+                className: 'py-1.5 border-b border-[#222] hover:bg-[#111] transition-colors px-1'
               },
-                React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
-                  React.createElement('div', {
-                    className: 'w-2 h-2 rounded-full flex-shrink-0',
-                    style: { backgroundColor: sourceColor(sale.source) }
-                  }),
-                  React.createElement('span', { className: 'font-alfaslab text-sm text-white truncate' },
-                    sale.bitmap_name || ('#' + (sale.bitmap_number || '?') + '.bitmap')
+                React.createElement('div', { className: 'flex items-center gap-2' },
+                  imgSrc ? React.createElement('img', {
+                    src: imgSrc,
+                    width: 40,
+                    height: 40,
+                    loading: 'lazy',
+                    style: { imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: 4, flexShrink: 0 },
+                    alt: ''
+                  }) : null,
+                  React.createElement('div', { className: 'flex-1 min-w-0' },
+                    React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
+                      React.createElement('span', { className: 'font-alfaslab text-sm text-white truncate' },
+                        sale.bitmap_name || ('#' + (sale.bitmap_number || '?') + '.bitmap')
+                      ),
+                      React.createElement('span', {
+                        className: 'px-1.5 py-0.5 rounded text-[9px] font-acme flex-shrink-0',
+                        style: { backgroundColor: sourceColor(sale.source) + '22', color: sourceColor(sale.source) }
+                      }, sourceLabel(sale.source)),
+                      sale.buyer_address ? React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted flex-shrink-0' },
+                        'comprador: ...' + sale.buyer_address.slice(-4)
+                      ) : null,
+                      sale.seller_address ? React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted flex-shrink-0' },
+                        'vendedor: ...' + sale.seller_address.slice(-4)
+                      ) : null
+                    ),
+                    React.createElement('div', { className: 'truncate mt-0.5' },
+                      etiquetas ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 }) : null
+                    )
                   ),
-                  React.createElement('span', {
-                    className: 'px-1.5 py-0.5 rounded text-[9px] font-acme flex-shrink-0',
-                    style: { backgroundColor: sourceColor(sale.source) + '22', color: sourceColor(sale.source) }
-                  }, sourceLabel(sale.source))
-                ),
-                React.createElement('div', { className: 'flex items-center gap-3 flex-shrink-0 ml-2' },
-                  React.createElement('span', { className: 'font-acme text-sm text-white' },
-                    (sale.price / 100000000).toFixed(5) + ' BTC'
-                  ),
-                  React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
-                    timeAgo(sale.sold_at) + (sale.sold_at ? ' atras' : '')
-                  ),
-                  sale.txid ? React.createElement('a', {
-                    href: 'https://mempool.space/tx/' + sale.txid,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    className: 'font-acme text-[10px] text-bitmap-orange hover:underline'
-                  }, 'ver tx \u2197') : null
+                  React.createElement('div', { className: 'flex flex-col items-end flex-shrink-0 ml-2' },
+                    React.createElement('span', { className: 'font-acme text-sm text-white' },
+                      (sale.price / 100000000).toFixed(5) + ' BTC'
+                    ),
+                    React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
+                      timeAgo(sale.sold_at) + (sale.sold_at ? ' atras' : '')
+                    ),
+                    sale.txid ? React.createElement('a', {
+                      href: 'https://mempool.space/tx/' + sale.txid,
+                      target: '_blank',
+                      rel: 'noopener noreferrer',
+                      className: 'font-acme text-[10px] text-bitmap-orange hover:underline'
+                    }, 'ver tx \u2197') : null
+                  )
                 )
               );
             })
