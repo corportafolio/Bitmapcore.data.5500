@@ -76,11 +76,9 @@ var StoreApp = {
     if (!provider) throw new Error('Xverse wallet no disponible');
     var indices = inputIndices || [0];
     var psbtToSign = psbtBase64;
-    var attemptHex = true;
     if (/^[0-9a-fA-F]+$/.test(String(psbtBase64)) && String(psbtBase64).length % 2 === 0) {
-      attemptHex = true;
-    } else {
-      attemptHex = false;
+      var hexBuf = new Uint8Array(String(psbtBase64).match(/.{2}/g).map(function(b) { return parseInt(b, 16); }));
+      psbtToSign = btoa(String.fromCharCode.apply(null, hexBuf));
     }
     try {
       var result = await provider.request('signPsbt', {
@@ -93,11 +91,9 @@ var StoreApp = {
       if (typeof signed === 'string') return signed;
       throw new Error('Xverse: respuesta invalida al firmar PSBT');
     } catch(err) {
-      if (attemptHex) {
-        var hexBuf = new Uint8Array(String(psbtBase64).match(/.{2}/g).map(function(b) { return parseInt(b, 16); }));
-        var b64 = btoa(String.fromCharCode.apply(null, hexBuf));
+      if (psbtToSign !== psbtBase64) {
         var retry = await provider.request('signPsbt', {
-          psbt: b64,
+          psbt: psbtBase64,
           signInputs: ordinalsAddress ? { [ordinalsAddress]: indices } : undefined,
           broadcast: false
         });
