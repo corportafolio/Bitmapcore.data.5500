@@ -80,29 +80,15 @@ var StoreApp = {
       var hexBuf = new Uint8Array(String(psbtBase64).match(/.{2}/g).map(function(b) { return parseInt(b, 16); }));
       psbtToSign = btoa(String.fromCharCode.apply(null, hexBuf));
     }
-    try {
-      var result = await provider.request('signPsbt', {
-        psbt: psbtToSign,
-        signInputs: ordinalsAddress ? { [ordinalsAddress]: indices } : undefined,
-        broadcast: false
-      });
-      var signed = result && result.result ? result.result : result;
-      if (signed && typeof signed === 'object' && signed.psbt) return signed.psbt;
-      if (typeof signed === 'string') return signed;
-      throw new Error('Xverse: respuesta invalida al firmar PSBT');
-    } catch(err) {
-      if (psbtToSign !== psbtBase64) {
-        var retry = await provider.request('signPsbt', {
-          psbt: psbtBase64,
-          signInputs: ordinalsAddress ? { [ordinalsAddress]: indices } : undefined,
-          broadcast: false
-        });
-        var retrySigned = retry && retry.result ? retry.result : retry;
-        if (retrySigned && typeof retrySigned === 'object' && retrySigned.psbt) return retrySigned.psbt;
-        if (typeof retrySigned === 'string') return retrySigned;
-      }
-      throw err;
-    }
+    var result = await provider.request('signPsbt', {
+      psbt: psbtToSign,
+      signInputs: ordinalsAddress ? { [ordinalsAddress]: indices } : undefined,
+      broadcast: false
+    });
+    var signed = result && result.result ? result.result : result;
+    if (signed && typeof signed === 'object' && signed.psbt) return signed.psbt;
+    if (typeof signed === 'string') return signed;
+    throw new Error('Xverse: respuesta invalida al firmar PSBT');
   },
   getPublicKeyFresh: async function() {
     var wallet = StoreApp._state.wallet;
