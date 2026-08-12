@@ -767,6 +767,23 @@ app.get('/api/v1/sales/history', (req, res) => {
 
     const items = dbSales.prepare(query).all(...params);
 
+    if (db) {
+      const blockStmt = db.prepare('SELECT etiquetas, hash, totalTransacciones FROM blocks WHERE bloque = ?');
+      for (const it of items) {
+        if (it.bitmap_number) {
+          const b = blockStmt.get(it.bitmap_number);
+          if (b) {
+            it.etiquetas = b.etiquetas || '';
+            it.hash = b.hash || '';
+            it.totalTransacciones = parseInt(b.totalTransacciones) || 0;
+          } else {
+            it.etiquetas = it.etiquetas || '';
+            it.totalTransacciones = it.totalTransacciones || 0;
+          }
+        }
+      }
+    }
+
     let countQuery = 'SELECT COUNT(*) as c FROM all_sales WHERE sold_at > ?';
     const countParams = [since];
     if (source !== 'all') {
