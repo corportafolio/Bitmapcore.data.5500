@@ -65,7 +65,7 @@ function OrdinalswalletPage(props) {
   var mins = Math.floor(remaining / 60);
   var secs = remaining % 60;
   var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
-  var floorBtc = floorPrice > 0 ? (floorPrice / 100000000).toFixed(5) : 'N/A';
+  var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
 
   var handleSort = function(sort) {
     vm.updateSortOrder(sort);
@@ -171,7 +171,7 @@ function OrdinalswalletPage(props) {
             ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
-                  var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
+                  var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
                   var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
                   var etiquetas = item.etiquetas || '';
                   var isPerfect = etiquetas.indexOf('Perfect') !== -1;
@@ -288,7 +288,7 @@ function UnisatPage(props) {
   var mins = Math.floor(remaining / 60);
   var secs = remaining % 60;
   var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
-  var floorBtc = floorPrice > 0 ? (floorPrice / 100000000).toFixed(5) : 'N/A';
+  var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
 
   var handleSort = function(sort) {
     vm.updateSortOrder(sort);
@@ -394,7 +394,7 @@ function UnisatPage(props) {
             ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
-                  var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
+                  var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
                   var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
                   var etiquetas = item.etiquetas || '';
                   var isPerfect = etiquetas.indexOf('Perfect') !== -1;
@@ -516,7 +516,7 @@ function SatflowPage(props) {
   var mins = Math.floor(remaining / 60);
   var secs = remaining % 60;
   var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
-  var floorBtc = floorPrice > 0 ? (floorPrice / 100000000).toFixed(5) : 'N/A';
+  var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
   var connIndicator = connectionStatus === 'connected' ? '🟢' : connectionStatus === 'connecting' ? '🟡' : '🔴';
 
   var handleSort = function(sort) {
@@ -623,7 +623,7 @@ function SatflowPage(props) {
             ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
-                  var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
+                  var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
                   var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
                   var etiquetas = item.etiquetas || '';
                   var isPerfect = etiquetas.indexOf('Perfect') !== -1;

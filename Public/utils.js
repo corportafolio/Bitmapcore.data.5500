@@ -2,6 +2,7 @@ var BitmapUtils = {
   satsToBtc: function(sats) { return sats / 100000000; },
   btcToSats: function(btc) { return Math.round(btc * 100000000); },
   formatBtc: function(btc, decimals) { return (btc || 0).toFixed(decimals || 8); },
+  formatBtcSat: function(sats) { return (sats / 100000000).toFixed(8).replace(/\.?0+$/, '') || '0'; },
   formatSats: function(sats) { return (sats || 0).toLocaleString(); },
   truncateAddress: function(addr, chars) {
     chars = chars || 6;

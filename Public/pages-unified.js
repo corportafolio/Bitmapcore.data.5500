@@ -65,7 +65,7 @@ function UnifiedPage(props) {
   var mins = Math.floor(remaining / 60);
   var secs = remaining % 60;
   var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
-  var floorBtc = floorPrice > 0 ? (floorPrice / 100000000).toFixed(5) : 'N/A';
+  var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
 
   var handleSort = function(sort) { vm.updateSortOrder(sort); };
   var handleRefresh = function() { vm.triggerManualRefresh(); };
@@ -164,7 +164,7 @@ function UnifiedPage(props) {
             ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
-                  var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
+                  var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
                   var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
                   var etiquetas = item.etiquetas || '';
                   var isPerfect = etiquetas.indexOf('Perfect') !== -1;
@@ -476,7 +476,7 @@ function VentasPage(props) {
 
   var renderStatCol = function(label, count, volume) {
     var countStr = count ? BitmapUtils.formatNumber(count) : '0';
-    var volBtc = volume > 0 ? (volume / 100000000).toFixed(5) + ' BTC' : '0 BTC';
+    var volBtc = volume > 0 ? BitmapUtils.formatBtcSat(volume) + ' BTC' : '0 BTC';
     var volUsd = volume > 0 && btcPrice ? '$' + ((volume / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '$0.00';
     return React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },
       React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, label),
@@ -499,7 +499,7 @@ function VentasPage(props) {
           React.createElement('div', { className: 'flex flex-col items-center px-3' },
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Último mes'),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, (d30.count ? BitmapUtils.formatNumber(d30.count) : '0') + ' ventas'),
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, d30.volume > 0 ? (d30.volume / 100000000).toFixed(5) + ' BTC' : '0 BTC'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, d30.volume > 0 ? BitmapUtils.formatBtcSat(d30.volume) + ' BTC' : '0 BTC'),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, d30.volume > 0 && btcPrice ? '$' + ((d30.volume / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '$0.00')
           )
         )
@@ -549,7 +549,7 @@ function VentasPage(props) {
             React.createElement('div', { className: 'flex items-center gap-3 py-2 border-b border-[#333]' },
               React.createElement('span', { className: 'font-alfaslab text-sm text-white' }, formatDayHeader(dayKey)),
               React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
-                group.items.length + ' ventas  \u2022  ' + group.totalBtc.toFixed(5) + ' BTC'
+                group.items.length + ' ventas  \u2022  ' + BitmapUtils.formatBtcSat(group.totalBtc * 100000000) + ' BTC'
               )
             ),
             group.items.map(function(sale, i) {
@@ -610,7 +610,7 @@ function VentasPage(props) {
                       btcPrice ? '$' + ((sale.price / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '$0.00'
                     ),
                     React.createElement('span', { className: 'font-acme text-sm text-white' },
-                      (sale.price / 100000000).toFixed(5) + ' BTC'
+                      BitmapUtils.formatBtcSat(sale.price) + ' BTC'
                     )
                   ),
                     React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },

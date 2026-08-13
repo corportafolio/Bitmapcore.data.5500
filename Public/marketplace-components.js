@@ -80,7 +80,7 @@ function SaleCard(props) {
       React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, (marketplace || '') + ' \u2022 ' + (date || ''))
     ),
     React.createElement('div', { className:'font-acme text-sm font-semibold text-bitmap-orange-light' },
-      (price || 0).toFixed(8) + ' BTC'
+      BitmapUtils.formatBtcSat(price) + ' BTC'
     )
   );
 }
@@ -154,7 +154,7 @@ function SelectorBubble(props) {
     ),
     previews.length > 0 ? React.createElement('div', { className:'flex gap-2' },
       previews.map(function(preview, i) {
-        var priceBtc = preview.listedPrice ? (preview.listedPrice / 100000000).toFixed(5) : 'N/A';
+        var priceBtc = preview.listedPrice ? BitmapUtils.formatBtcSat(preview.listedPrice) : 'N/A';
         return React.createElement('div', {
           key: i,
           className:'flex flex-col items-center bg-bitmap-black rounded-lg p-1 min-w-[60px]'

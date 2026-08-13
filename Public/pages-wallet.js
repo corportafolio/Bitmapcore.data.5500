@@ -33,7 +33,7 @@ function WalletConnectPage(props) {
             ),
             React.createElement('div', { className:'flex justify-between' },
               React.createElement('span', { className:'font-alfaslab text-sm text-bitmap-muted' }, I18n.t('wallet.balance')),
-              React.createElement('span', { className:'font-acme text-sm text-bitmap-orange-light' }, (wallet.balance || 0).toFixed(8) + ' BTC')
+              React.createElement('span', { className:'font-acme text-sm text-bitmap-orange-light' }, BitmapUtils.formatBtcSat(wallet.balance * 100000000) + ' BTC')
             )
           ),
           React.createElement('button', {
@@ -74,7 +74,7 @@ function WalletDashboardPage(props) {
         React.createElement('h2', { className:'font-alfaslab text-xl text-white' }, 'Wallet Dashboard'),
         React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-4' },
           React.createElement('div', { className:'text-center' },
-            React.createElement('div', { className:'font-acme text-3xl text-bitmap-orange-light font-bold' }, (wallet.balance || 0).toFixed(8)),
+            React.createElement('div', { className:'font-acme text-3xl text-bitmap-orange-light font-bold' }, BitmapUtils.formatBtcSat((wallet.balance || 0) * 100000000)),
             React.createElement('div', { className:'font-acme text-sm text-bitmap-muted' }, 'BTC')
           )
         ),
@@ -579,7 +579,7 @@ function DetallePage(props) {
 
   var handleEditPrice = function(listing) {
     setEditingListing(listing);
-    setEditPriceStr((listing.price / 100000000).toFixed(8));
+    setEditPriceStr(BitmapUtils.formatBtcSat(listing.price));
     setEditMenuFor(null);
   };
 
@@ -774,7 +774,7 @@ function DetallePage(props) {
           var tags = etiquetas.split('|').filter(function(t) { return t.trim() !== ''; });
           var listing = myListings[item.id] || null;
           var isListed = !!listing;
-          var listedPriceBtc = isListed ? (listing.price / 100000000).toFixed(8) : '';
+          var listedPriceBtc = isListed ? BitmapUtils.formatBtcSat(listing.price) : '';
           var menuOpen = editMenuFor === item.id;
 
           if (isListed) {
@@ -887,7 +887,7 @@ function DetallePage(props) {
                 className:'w-full bg-bitmap-black border border-bitmap-border rounded px-2 py-1 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
               }),
               item.priceSatoshis > 0 ? React.createElement('div', { className:'font-acme text-[10px] text-bitmap-orange-light mt-1' },
-                (item.priceSatoshis / 100000000).toFixed(8) + ' BTC'
+                BitmapUtils.formatBtcSat(item.priceSatoshis) + ' BTC'
               ) : null
             ) : null
           );
@@ -933,7 +933,7 @@ function DetallePage(props) {
             selectionState.filter(function(it) { return it.isSelected && it.priceSatoshis > 0; }).map(function(item, idx) {
               return React.createElement('div', { key:idx, className:'flex justify-between text-sm' },
                 React.createElement('span', { className:'font-acme text-white' }, item.name || '#' + item.inscriptionNumber),
-                React.createElement('span', { className:'font-alfaslab text-bitmap-orange-light' }, (item.priceSatoshis / 100000000).toFixed(8) + ' BTC')
+                React.createElement('span', { className:'font-alfaslab text-bitmap-orange-light' }, BitmapUtils.formatBtcSat(item.priceSatoshis) + ' BTC')
               );
             })
           ),
@@ -962,7 +962,7 @@ function DetallePage(props) {
             className:'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-4 py-3 font-acme text-sm text-white focus:outline-none focus:border-bitmap-orange mb-1'
           }),
           React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted mb-4' },
-            editPriceStr ? parseFloat(editPriceStr).toFixed(8) + ' BTC' : ''
+            editPriceStr ? BitmapUtils.formatBtcSat(parseFloat(editPriceStr) * 100000000) + ' BTC' : ''
           ),
           React.createElement('div', { className:'flex gap-3' },
             React.createElement('button', {

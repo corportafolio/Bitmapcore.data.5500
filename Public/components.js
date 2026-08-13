@@ -190,7 +190,7 @@ function Sidebar(props) {
         listings.length === 0
           ? React.createElement('div', { className:'text-center py-8 font-acme text-xs text-bitmap-muted' }, 'Cargando...')
           : listings.map(function(item, i) {
-              var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
+              var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
               var tags = (item.etiquetas || '').split('|').filter(function(t) { return t.trim() !== ''; });
               return React.createElement('div', {
                 key: (item.source || '') + '_' + (item.bitmapId || i),

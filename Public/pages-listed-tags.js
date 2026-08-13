@@ -36,7 +36,7 @@ function ListedTagsPage(props) {
     return g.tagName.toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1;
   });
 
-  var floorBtc = floorPrice > 0 ? (floorPrice / 100000000).toFixed(8) + ' BTC' : '0 BTC';
+  var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) + ' BTC' : '0 BTC';
 
   var renderStatCol = function(label, value, isLast) {
     return React.createElement('div', { className: 'flex flex-col items-center px-3' + (isLast ? '' : ' border-r border-[#555]') },
@@ -94,7 +94,7 @@ function ListedTagsPage(props) {
 function BitmapBubble(props) {
   var item = props.item;
   var tagName = props.tagName;
-  var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(8) : '0';
+  var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
   var source = item.source || 'local';
   var logo = source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : source === 'unisat' ? 'unisat_logo.png' : 'logo_bitmapcore_logo.png';
   var etiquetas = item.etiquetas || '';
@@ -129,7 +129,7 @@ function ListedTagRow(props) {
   var onClick = props.onClick;
   var previews = group.previews || [];
 
-  var floorBtc = group.floorPrice > 0 ? (group.floorPrice / 100000000).toFixed(8) : '0';
+  var floorBtc = group.floorPrice > 0 ? BitmapUtils.formatBtcSat(group.floorPrice) : '0';
 
   return React.createElement('button', {
     onClick: onClick,
@@ -270,7 +270,7 @@ function ListedTagDetailPage(props) {
           ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' }, 'No hay listados con esta etiqueta')
           : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
               items.map(function(item, i) {
-                var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(5) : '0';
+                var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
                 var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
                 var etiquetas = item.etiquetas || '';
                 var isPerfect = etiquetas.indexOf('Perfect') !== -1;
