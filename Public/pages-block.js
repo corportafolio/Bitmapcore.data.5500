@@ -1,6 +1,7 @@
 function PantallaDeBloqueEspecifico(props) {
   var navigate = props.navigate;
-  var blockId = props.blockId;
+  var routeParams = ReactRouterDOM.useParams();
+  var blockId = routeParams.id;
   var _a = React.useState(null);
   var currentBlock = _a[0];
   var setCurrentBlock = _a[1];
@@ -84,7 +85,8 @@ function PantallaDeBloqueEspecifico(props) {
 
 function MondrianPreviewPage(props) {
   var navigate = props.navigate;
-  var blockId = props.blockId;
+  var routeParams = ReactRouterDOM.useParams();
+  var blockId = routeParams.id;
 
   return React.createElement('div', { className:'flex items-center justify-center h-full p-4' },
     React.createElement(MondrianCanvas, { blockNumber:Number(blockId), transactions:[], size:500 })

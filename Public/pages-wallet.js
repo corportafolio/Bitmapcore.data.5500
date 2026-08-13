@@ -1001,7 +1001,8 @@ function DetallePage(props) {
 
 function TransactionPage(props) {
   var navigate = props.navigate;
-  var txId = props.txId;
+  var routeParams = ReactRouterDOM.useParams();
+  var txId = routeParams.id;
 
   return React.createElement('div', { className:'p-4 lg:p-6' },
     React.createElement('div', { className:'max-w-md mx-auto space-y-4' },

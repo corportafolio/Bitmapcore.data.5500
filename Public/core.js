@@ -65,7 +65,6 @@
     var params = useParams();
 
     var p = {};
-    try { p = useParams(); } catch(e) {}
 
     var currentPath = location.pathname;
 
@@ -73,7 +72,7 @@
       return React.createElement(React.Fragment, null,
         React.createElement(FloatingMarketplaceMenu, { navigate:navigate }),
         React.createElement(Layout, { navigate:navigate, currentPath:currentPath },
-          React.createElement(PageComponent, Object.assign({ navigate:navigate, currentPath:currentPath }, extraProps, p))
+          React.createElement(PageComponent, Object.assign({ navigate:navigate, currentPath:currentPath }, extraProps))
         )
       );
     };
@@ -88,17 +87,17 @@
       React.createElement(Route, { path:'/local', element:wrapper(LocalPage) }),
       React.createElement(Route, { path:'/discounts', element:wrapper(DescuentosPage) }),
       React.createElement(Route, { path:'/unified', element:wrapper(UnifiedPage) }),
-      React.createElement(Route, { path:'/tag-tables/:tagName', element:wrapper(TagTableScreen, { tagName:p.tagName }) }),
+      React.createElement(Route, { path:'/tag-tables/:tagName', element:wrapper(TagTableScreen) }),
       React.createElement(Route, { path:'/listed-tags', element:wrapper(ListedTagsPage) }),
-      React.createElement(Route, { path:'/listed-tags/:tagName', element:wrapper(ListedTagDetailPage, { tagName:p.tagName }) }),
+      React.createElement(Route, { path:'/listed-tags/:tagName', element:wrapper(ListedTagDetailPage) }),
       React.createElement(Route, { path:'/sales', element:wrapper(VentasPage) }),
-      React.createElement(Route, { path:'/blocks/:id', element:wrapper(PantallaDeBloqueEspecifico, { blockId:p.id }) }),
+      React.createElement(Route, { path:'/blocks/:id', element:wrapper(PantallaDeBloqueEspecifico) }),
       React.createElement(Route, { path:'/wallet', element:wrapper(WalletConnectPage) }),
       React.createElement(Route, { path:'/wallet/dashboard', element:wrapper(WalletDashboardPage) }),
       React.createElement(Route, { path:'/mis-activos', element:wrapper(MisActivosPage) }),
       React.createElement(Route, { path:'/mis-activos/detalle/:collectionName', element:wrapper(DetallePage) }),
-      React.createElement(Route, { path:'/wallet/transaction/:id', element:wrapper(TransactionPage, { txId:p.id }) }),
-      React.createElement(Route, { path:'/mondrian/:id', element:wrapper(MondrianPreviewPage, { blockId:p.id }) }),
+      React.createElement(Route, { path:'/wallet/transaction/:id', element:wrapper(TransactionPage) }),
+      React.createElement(Route, { path:'/mondrian/:id', element:wrapper(MondrianPreviewPage) }),
       React.createElement(Route, { path:'/search', element:wrapper(BlockSearchPage) }),
       React.createElement(Route, { path:'/settings', element:wrapper(SettingsPage) })
     );

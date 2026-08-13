@@ -166,7 +166,8 @@ function ListedTagRow(props) {
 // Pantalla 2: Detalles de etiquetas listadas y agrupadas (lista completa)
 function ListedTagDetailPage(props) {
   var navigate = props.navigate;
-  var tagName = decodeURIComponent(props.tagName || '');
+  var routeParams = ReactRouterDOM.useParams();
+  var tagName = decodeURIComponent(routeParams.tagName || '');
   var _b = React.useState('all');
   var filterSource = _b[0];
   var setFilterSource = _b[1];

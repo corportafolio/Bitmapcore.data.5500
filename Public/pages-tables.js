@@ -98,7 +98,8 @@ function TagPreviewCard(props) {
 
 function TagTableScreen(props) {
   var navigate = props.navigate;
-  var tagName = props.tagName;
+  var routeParams = ReactRouterDOM.useParams();
+  var tagName = routeParams.tagName;
   var _b = React.useState([]);
   var blocks = _b[0];
   var setBlocks = _b[1];
