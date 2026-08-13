@@ -379,10 +379,10 @@ function VentasPage(props) {
   }, []);
 
   React.useEffect(function() {
-    MarketplaceApi.getSalesStats().then(function(data) {
+    MarketplaceApi.getSalesStats(filterSource).then(function(data) {
       setSalesStats((data && data.data) || {});
     }).catch(function() {});
-  }, []);
+  }, [filterSource]);
 
   var fetchSales = function() {
     setIsLoading(true);
@@ -516,9 +516,10 @@ function VentasPage(props) {
             onClick: function() { setFilterSource(src); },
             className: 'px-3 py-1 rounded font-acme text-[11px] transition-colors',
             style: {
-              backgroundColor: isActive ? '#FE3E00' : 'transparent',
-              color: isActive ? '#000' : '#888',
-              border: '1px solid ' + (isActive ? '#FE3E00' : '#444')
+              backgroundColor: isActive ? '#8B2500' : 'transparent',
+              color: isActive ? '#FFD9A0' : '#888',
+              border: '1px solid ' + (isActive ? '#B53D00' : '#444'),
+              boxShadow: isActive ? 'inset 0 2px 6px rgba(0,0,0,0.5)' : 'none'
             }
           }, label);
         })
