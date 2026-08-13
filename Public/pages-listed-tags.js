@@ -90,7 +90,38 @@ function ListedTagsPage(props) {
   );
 }
 
-// Fila: etiqueta + floorPrice + count arriba, una sola línea de bitmaps abajo
+// Burbuja individual de bitmap en la fila
+function BitmapBubble(props) {
+  var item = props.item;
+  var tagName = props.tagName;
+  var btcPrice = item.listedPrice ? (item.listedPrice / 100000000).toFixed(8) : '0';
+  var source = item.source || 'local';
+  var logo = source === 'ordinalswallet' ? 'ordinalswallet_logo.png' : source === 'unisat' ? 'unisat_logo.png' : 'logo_bitmapcore_logo.png';
+  var etiquetas = item.etiquetas || '';
+  var isPerfect = etiquetas.indexOf('Perfect') !== -1;
+  var isPunk = etiquetas.indexOf('Punk') !== -1;
+
+  return React.createElement('div', {
+    className: 'flex flex-col items-center rounded border border-bitmap-border bg-bitmap-black',
+    style: { width: 84, padding: 2, gap: 2, flexShrink: 0 }
+  },
+    // Line 1: price + marketplace icon
+    React.createElement('div', { className: 'flex items-center gap-[2px] w-full justify-center' },
+      React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-orange-light whitespace-nowrap overflow-hidden text-ellipsis', style: { maxWidth: 58 } }, btcPrice),
+      React.createElement('img', { src: logo, style: { width: 8, height: 8, flexShrink: 0 }, alt: '' })
+    ),
+    // Line 2: tag name (truncated)
+    React.createElement('div', { className: 'w-full text-center font-acme text-[8px] text-bitmap-muted whitespace-nowrap overflow-hidden text-ellipsis px-[1px]' }, tagName),
+    // Image 80x80
+    React.createElement('img', {
+      src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+      style: { width: 80, height: 80, borderRadius: 2, imageRendering: 'pixelated', background: '#1a1a1a' },
+      loading: 'lazy', alt: ''
+    })
+  );
+}
+
+// Fila: etiqueta + floorPrice + count arriba, burbujas de bitmaps abajo
 function ListedTagRow(props) {
   var group = props.group;
   var onClick = props.onClick;
@@ -100,30 +131,29 @@ function ListedTagRow(props) {
 
   return React.createElement('button', {
     onClick: onClick,
-    className: 'w-full bg-bitmap-surface border border-bitmap-border rounded-xl p-3 hover:border-bitmap-orange transition-all text-left'
+    className: 'w-full bg-bitmap-surface border border-bitmap-border rounded-xl p-2 hover:border-bitmap-orange transition-all text-left',
+    style: { gap: 2 }
   },
-    // Fila 1: etiqueta (izq) | floor price (centro) | count (der)
-    React.createElement('div', { className: 'flex items-center justify-between gap-2 mb-2' },
+    // Header: tag (izq) | floor price + count (der)
+    React.createElement('div', { className: 'flex items-center justify-between', style: { gap: 2, marginBottom: 2 } },
       React.createElement(UniversalTag, { text: group.tagName, fontSize: 11 }),
-      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold whitespace-nowrap' },
-        floorBtc + ' BTC'
-      ),
-      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted whitespace-nowrap' },
-        group.count + ' listados'
+      React.createElement('div', { className: 'flex items-center', style: { gap: 4 } },
+        React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold whitespace-nowrap' },
+          floorBtc + ' BTC'
+        ),
+        React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted whitespace-nowrap' },
+          group.count + ' listados'
+        )
       )
     ),
-    // Fila 2: una sola línea de bitmaps
+    // Bitmaps: fila horizontal de burbujas
     previews.length > 0
-      ? React.createElement('div', { className: 'flex gap-1 overflow-hidden' },
+      ? React.createElement('div', { className: 'flex overflow-hidden', style: { gap: 2 } },
           previews.map(function(item, i) {
-            var etiquetas = item.etiquetas || '';
-            var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-            var isPunk = etiquetas.indexOf('Punk') !== -1;
-            return React.createElement('img', {
+            return React.createElement(BitmapBubble, {
               key: i,
-              src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=40&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
-              style: { width: 60, height: 60, borderRadius: 3, imageRendering: 'pixelated', background: '#1a1a1a', flexShrink: 0 },
-              loading: 'lazy', alt: ''
+              item: item,
+              tagName: group.tagName
             });
           })
         )
