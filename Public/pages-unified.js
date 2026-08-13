@@ -1,3 +1,24 @@
+var sourceLabel = function(s) {
+  if (s === 'ordinalswallet') return 'Ordinalswallet';
+  if (s === 'unisat') return 'Unisat';
+  if (s === 'local') return 'BitmapCore';
+  return s;
+};
+
+var sourceLogo = function(s) {
+  if (s === 'ordinalswallet') return 'ordinalswallet_logo.png';
+  if (s === 'unisat') return 'unisat_logo.png';
+  if (s === 'local') return 'logo_bitmapcore_logo.png';
+  return '';
+};
+
+var sourceColor = function(s) {
+  if (s === 'ordinalswallet') return '#8B5CF6';
+  if (s === 'unisat') return '#F59E0B';
+  if (s === 'local') return '#FE3E00';
+  return '#888';
+};
+
 function UnifiedPage(props) {
   var navigate = props.navigate;
   var vm = UnifiedViewModel;
@@ -400,27 +421,6 @@ function VentasPage(props) {
   };
 
   React.useEffect(function() { fetchSales(); }, [filterSource]);
-
-  var sourceLabel = function(s) {
-    if (s === 'ordinalswallet') return 'Ordinalswallet';
-    if (s === 'unisat') return 'Unisat';
-    if (s === 'local') return 'BitmapCore';
-    return s;
-  };
-
-  var sourceLogo = function(s) {
-    if (s === 'ordinalswallet') return 'ordinalswallet_logo.png';
-    if (s === 'unisat') return 'unisat_logo.png';
-    if (s === 'local') return 'logo_bitmapcore_logo.png';
-    return '';
-  };
-
-  var sourceColor = function(s) {
-    if (s === 'ordinalswallet') return '#8B5CF6';
-    if (s === 'unisat') return '#F59E0B';
-    if (s === 'local') return '#FE3E00';
-    return '#888';
-  };
 
   var timeAgo = function(ts) {
     if (!ts) return '';
