@@ -221,7 +221,7 @@ function Sidebar(props) {
                   tags.slice(0, 3).map(function(tag, ti) {
                     return React.createElement('span', {
                       key: ti,
-                      style:{ display:'inline-block', backgroundColor:'#8B2500', color:'#FE3E00', border:'1px solid #B53D00', boxShadow:'inset 0 2px 6px rgba(0,0,0,0.5)', fontSize:'7px', borderRadius:'8px', padding:'1px 4px', whiteSpace:'nowrap', fontFamily:'Alfa Slab One, serif', fontWeight:'bold', lineHeight:'1.2' }
+                      style:{ display:'inline-block', backgroundColor:'#8B2500', color:'#000', textShadow:'-1px 0 #FE3E00, 0 1px #FE3E00, 1px 0 #FE3E00, 0 -1px #FE3E00', border:'1px solid #B53D00', boxShadow:'inset 0 2px 6px rgba(0,0,0,0.5)', fontSize:'7px', borderRadius:'8px', padding:'1px 4px', whiteSpace:'nowrap', fontFamily:'Alfa Slab One, serif', fontWeight:'bold', lineHeight:'1.2' }
                     }, tag.trim());
                   })
                 ),
