@@ -122,7 +122,7 @@ function ListedTagRow(props) {
             return React.createElement('img', {
               key: i,
               src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=40&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
-              style: { width: 40, height: 40, borderRadius: 3, imageRendering: 'pixelated', background: '#1a1a1a', flexShrink: 0 },
+              style: { width: 60, height: 60, borderRadius: 3, imageRendering: 'pixelated', background: '#1a1a1a', flexShrink: 0 },
               loading: 'lazy', alt: ''
             });
           })
