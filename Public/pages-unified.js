@@ -173,11 +173,13 @@ function UnifiedPage(props) {
                     key: (item.source || '') + '_' + (item.bitmapId || i),
                     className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
                   },
-                    React.createElement('div', { className: 'flex items-center gap-3' },
-                      React.createElement('div', { className: 'flex-shrink-0', style: { width: 80, height: 80 } },
+                    React.createElement('div', { className: 'flex items-center gap-2' },
+                      React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                         React.createElement('img', {
-                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
-                          width: 80, height: 80, loading: 'lazy',
+                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                          width: 55,
+                          height: 55,
+                          loading: 'lazy',
                           style: { imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: 4 }, alt: ''
                         })
                       ),
