@@ -103,12 +103,12 @@ function BitmapBubble(props) {
 
   return React.createElement('div', {
     className: 'flex flex-col items-center rounded border border-bitmap-border',
-    style: { width: 84, padding: 2, gap: 2, flexShrink: 0, backgroundColor: '#1A1A1A' }
+    style: { width: 84, padding: 2, gap: 2, flexShrink: 0, backgroundColor: '#0a0a0a' }
   },
     // Line 1: price + marketplace icon
     React.createElement('div', { className: 'flex items-center gap-[2px] w-full justify-center' },
-      React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-orange-light whitespace-nowrap overflow-hidden text-ellipsis', style: { maxWidth: 58 } }, btcPrice),
-      React.createElement('img', { src: logo, style: { width: 8, height: 8, flexShrink: 0 }, alt: '' })
+      React.createElement('span', { className: 'font-acme text-[11px] text-bitmap-orange-light whitespace-nowrap overflow-hidden text-ellipsis', style: { maxWidth: 58 } }, btcPrice),
+      React.createElement('img', { src: logo, style: { width: 10, height: 10, flexShrink: 0 }, alt: '' })
     ),
     // Line 2: tag name (UniversalTag truncated)
     React.createElement('div', { className: 'w-full flex justify-center overflow-hidden', style: { maxHeight: 14 } },
