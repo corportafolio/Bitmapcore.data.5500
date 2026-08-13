@@ -1,5 +1,5 @@
-// Pantalla 1: Agrupar Etiquetas Listadas (vistas previas)
-// Grid de burbujas, cada burbuja = una etiqueta agrupada de los listings unificados
+// Pantalla 1: Listados Agrupados por Etiquetas (vistas previas)
+// Filas horizontales: burbuja + bitmaps en fila, SOLO las 55 tablas canónicas
 function ListedTagsPage(props) {
   var navigate = props.navigate;
   var _b = React.useState([]);
@@ -11,13 +11,36 @@ function ListedTagsPage(props) {
   var _d = React.useState('');
   var searchQuery = _d[0];
   var setSearchQuery = _d[1];
+  var _e = React.useState(0);
+  var floorPrice = _e[0];
+  var setFloorPrice = _e[1];
+  var _f = React.useState(0);
+  var totalListings = _f[0];
+  var setTotalListings = _f[1];
+
+  // Lista canónica de las 55 tablas (de classification-tables.js)
+  var canonicalNames = {};
+  if (typeof CLASSIFICATION_TABLES !== 'undefined') {
+    CLASSIFICATION_TABLES.forEach(function(t) { canonicalNames[t.tagName.toLowerCase()] = t.tagName; });
+  }
 
   React.useEffect(function() {
+    // Cargar datos de unificados (precio piso, total listados)
+    UnifiedViewModel.loadStats();
+    var unsub1 = UnifiedViewModel.subscribe('stats', function() {
+      setFloorPrice(UnifiedViewModel.getFloorPrice());
+      setTotalListings(UnifiedViewModel.getTotalListings());
+    });
+    // Cargar grupos de etiquetas
     setIsLoading(true);
     ListedTagViewModel.loadTagGroups().then(function(groups) {
-      setTagGroups(groups);
+      var filtered = groups.filter(function(g) {
+        return canonicalNames[g.tagName.toLowerCase()];
+      });
+      setTagGroups(filtered);
       setIsLoading(false);
     });
+    return function() { if (unsub1) unsub1(); };
   }, []);
 
   var filtered = tagGroups.filter(function(g) {
@@ -25,69 +48,97 @@ function ListedTagsPage(props) {
     return g.tagName.toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1;
   });
 
-  return React.createElement('div', { className: 'p-4 lg:p-6' },
-    React.createElement('div', { className: 'max-w-5xl mx-auto space-y-6' },
-      React.createElement('div', { className: 'flex items-center justify-between' },
-        React.createElement('h1', { className: 'font-alfaslab text-2xl text-white' }, 'Etiquetas Listadas'),
-        React.createElement('span', { className: 'font-acme text-sm text-bitmap-muted' }, filtered.length + ' etiquetas agrupadas')
-      ),
-      React.createElement('div', { className: 'bg-bitmap-surface border border-bitmap-border rounded-xl p-4' },
-        React.createElement('input', {
-          type: 'text',
-          value: searchQuery,
-          onChange: function(e) { setSearchQuery(e.target.value); },
-          placeholder: 'Buscar etiqueta...',
-          className: 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors h-10'
-        })
-      ),
+  var floorBtc = floorPrice > 0 ? (floorPrice / 100000000).toFixed(8) + ' BTC' : '0 BTC';
+
+  var renderStatCol = function(label, value, isLast) {
+    return React.createElement('div', { className: 'flex flex-col items-center px-3' + (isLast ? '' : ' border-r border-[#555]') },
+      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, label),
+      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, value)
+    );
+  };
+
+  return React.createElement('div', { className: 'flex flex-col h-full' },
+    // Barra de título con stats
+    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
+      React.createElement('div', { className: 'flex items-stretch justify-between' },
+        React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
+          React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[45px] w-[45px] object-contain rounded my-[2px]' }),
+          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Listados Agrupados por Etiquetas')
+        ),
+        React.createElement('div', { className: 'flex items-stretch' },
+          renderStatCol('Piso', floorBtc, false),
+          renderStatCol('Listados', totalListings ? BitmapUtils.formatNumber(totalListings) : '0', false),
+          React.createElement('div', { className: 'flex flex-col items-center px-3' },
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Tablas'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, (tagGroups.length || 0) + ' tablas')
+          )
+        )
+      )
+    ),
+    // Barra de búsqueda
+    React.createElement('div', { className: 'pl-14 pr-4 py-2 border-b border-bitmap-border', style: { backgroundColor: '#080008' } },
+      React.createElement('input', {
+        type: 'text',
+        value: searchQuery,
+        onChange: function(e) { setSearchQuery(e.target.value); },
+        placeholder: 'Buscar etiqueta...',
+        className: 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors h-9'
+      })
+    ),
+    // Lista de filas
+    React.createElement('div', { className: 'flex-1 overflow-y-auto pl-14 pr-4 py-3' },
       isLoading ? React.createElement('div', { className: 'flex items-center justify-center h-64 font-acme text-bitmap-muted' }, 'Cargando etiquetas listadas...') :
-      React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3' },
+      React.createElement('div', { className: 'space-y-3' },
         filtered.map(function(group, i) {
-          return React.createElement(ListedTagBubble, {
+          return React.createElement(ListedTagRow, {
             key: group.tagName + '-' + i,
             group: group,
             onClick: function() { navigate('/listed-tags/' + encodeURIComponent(group.tagName)); }
           });
         })
       ),
-      !isLoading && filtered.length === 0 ? React.createElement('div', { className: 'text-center py-8 font-acme text-bitmap-muted' }, 'No se encontraron etiquetas listadas') : null
+      !isLoading && filtered.length === 0 ? React.createElement('div', { className: 'text-center py-8 font-acme text-bitmap-muted' }, 'No hay tablas con listados en unificados') : null
     )
   );
 }
 
-// Burbuja de cada etiqueta agrupada con vistas previas (solo primeros bloques)
-function ListedTagBubble(props) {
+// Fila horizontal: burbuja a la izquierda + bitmaps en fila a la derecha
+function ListedTagRow(props) {
   var group = props.group;
   var onClick = props.onClick;
-  var previews = (group.previews || []).slice(0, 6);
+  var previews = (group.previews || []).slice(0, 12);
 
   return React.createElement('button', {
     onClick: onClick,
-    className: 'bg-bitmap-surface border border-bitmap-border rounded-xl p-3 hover:border-bitmap-orange transition-all text-left h-full flex flex-col'
+    className: 'w-full bg-bitmap-surface border border-bitmap-border rounded-xl p-3 hover:border-bitmap-orange transition-all text-left'
   },
-    React.createElement('div', { className: 'flex flex-col items-center text-center mb-2' },
-      React.createElement(UniversalTag, { text: group.tagName, fontSize: 12 }),
-      React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted mt-1' },
-        group.count + ' listados'
-      )
-    ),
-    previews.length > 0
-      ? React.createElement('div', { className: 'grid grid-cols-3 gap-1' },
-          previews.map(function(item, i) {
-            var etiquetas = item.etiquetas || '';
-            var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-            var isPunk = etiquetas.indexOf('Punk') !== -1;
-            return React.createElement('img', {
-              key: i,
-              src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
-              style: { width: '100%', aspectRatio: '1', borderRadius: 4, imageRendering: 'pixelated', background: '#1a1a1a' },
-              loading: 'lazy', alt: ''
-            });
-          })
+    React.createElement('div', { className: 'flex items-start gap-3' },
+      // Izquierda: burbuja + count
+      React.createElement('div', { className: 'flex flex-col items-center flex-shrink-0 gap-1' },
+        React.createElement(UniversalTag, { text: group.tagName, fontSize: 11 }),
+        React.createElement('div', { className: 'font-acme text-[10px] text-bitmap-muted' },
+          group.count + ' listados'
         )
-      : React.createElement('div', { className: 'w-full aspect-square rounded-lg bg-bitmap-black flex items-center justify-center' },
-          React.createElement('span', { className: 'text-3xl' }, '\uD83C\uDFF7\uFE0F')
-        )
+      ),
+      // Derecha: bitmaps en fila horizontal
+      previews.length > 0
+        ? React.createElement('div', { className: 'flex items-center gap-1 flex-wrap min-w-0' },
+            previews.map(function(item, i) {
+              var etiquetas = item.etiquetas || '';
+              var isPerfect = etiquetas.indexOf('Perfect') !== -1;
+              var isPunk = etiquetas.indexOf('Punk') !== -1;
+              return React.createElement('img', {
+                key: i,
+                src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=40&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                style: { width: 40, height: 40, borderRadius: 3, imageRendering: 'pixelated', background: '#1a1a1a', flexShrink: 0 },
+                loading: 'lazy', alt: ''
+              });
+            })
+          )
+        : React.createElement('div', { className: 'w-10 h-10 rounded bg-bitmap-black flex items-center justify-center flex-shrink-0' },
+            React.createElement('span', { className: 'text-lg' }, '\uD83C\uDFF7\uFE0F')
+          )
+    )
   );
 }
 
@@ -162,10 +213,6 @@ function ListedTagDetailPage(props) {
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2' },
-          React.createElement('button', {
-            onClick: function() { navigate('/listed-tags'); },
-            className: 'font-acme text-xs text-bitmap-orange hover:underline'
-          }, '\u2190 Volver'),
           React.createElement(UniversalTag, { text: tagName, fontSize: 13 }),
           React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, total + ' listados')
         ),
