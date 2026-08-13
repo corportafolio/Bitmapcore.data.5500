@@ -10,7 +10,7 @@ function UniversalTag(props) {
     style: {
       display: 'inline-block',
       backgroundColor: '#8B2500',
-      color: '#FFD9A0',
+      color: '#000000',
       fontFamily: "'Alfa Slab One', serif",
       fontWeight: 'bold',
       fontSize: fontSize + 'px',
