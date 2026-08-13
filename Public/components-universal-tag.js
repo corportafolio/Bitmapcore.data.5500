@@ -2,8 +2,8 @@ function UniversalTag(props) {
   var text = props.text;
   var fontSize = props.fontSize || 12;
   var onPress = props.onPress;
-  var paddingH = Math.round(fontSize * 0.20);
-  var paddingV = Math.round(fontSize * 0.10);
+  var paddingH = Math.round(fontSize * 0.28);
+  var paddingV = Math.round(fontSize * 0.16);
 
   return React.createElement('span', {
     onClick: onPress,
@@ -11,7 +11,7 @@ function UniversalTag(props) {
       display: 'inline-block',
       backgroundColor: '#8B2500',
       color: '#000000',
-      textShadow: '-1px 0 #FFFFFF, 0 1px #FFFFFF, 1px 0 #FFFFFF, 0 -1px #FFFFFF',
+      textShadow: '-1px 0 #FE3E00, 0 1px #FE3E00, 1px 0 #FE3E00, 0 -1px #FE3E00',
       fontFamily: "'Alfa Slab One', serif",
       fontWeight: 'bold',
       fontSize: fontSize + 'px',
