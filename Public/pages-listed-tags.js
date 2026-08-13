@@ -102,8 +102,8 @@ function BitmapBubble(props) {
   var isPunk = etiquetas.indexOf('Punk') !== -1;
 
   return React.createElement('div', {
-    className: 'flex flex-col items-center rounded border border-bitmap-border bg-bitmap-black',
-    style: { width: 84, padding: 2, gap: 2, flexShrink: 0 }
+    className: 'flex flex-col items-center rounded border border-bitmap-border',
+    style: { width: 84, padding: 2, gap: 2, flexShrink: 0, backgroundColor: '#1A1A1A' }
   },
     // Line 1: price + marketplace icon
     React.createElement('div', { className: 'flex items-center gap-[2px] w-full justify-center' },
