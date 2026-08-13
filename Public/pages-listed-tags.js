@@ -110,8 +110,10 @@ function BitmapBubble(props) {
       React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-orange-light whitespace-nowrap overflow-hidden text-ellipsis', style: { maxWidth: 58 } }, btcPrice),
       React.createElement('img', { src: logo, style: { width: 8, height: 8, flexShrink: 0 }, alt: '' })
     ),
-    // Line 2: tag name (truncated)
-    React.createElement('div', { className: 'w-full text-center font-acme text-[8px] text-bitmap-muted whitespace-nowrap overflow-hidden text-ellipsis px-[1px]' }, tagName),
+    // Line 2: tag name (UniversalTag truncated)
+    React.createElement('div', { className: 'w-full flex justify-center overflow-hidden', style: { maxHeight: 14 } },
+      React.createElement(UniversalTag, { text: tagName, fontSize: 7 })
+    ),
     // Image 80x80
     React.createElement('img', {
       src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
@@ -131,8 +133,8 @@ function ListedTagRow(props) {
 
   return React.createElement('button', {
     onClick: onClick,
-    className: 'w-full bg-bitmap-surface border border-bitmap-border rounded-xl p-2 hover:border-bitmap-orange transition-all text-left',
-    style: { gap: 2 }
+    className: 'w-full border border-bitmap-border rounded-xl p-2 hover:border-bitmap-orange transition-all text-left',
+    style: { gap: 2, backgroundColor: '#1A1A1A' }
   },
     // Header: tag (izq) | floor price + count (der)
     React.createElement('div', { className: 'flex items-center justify-between', style: { gap: 2, marginBottom: 2 } },
