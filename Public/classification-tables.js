@@ -68,4 +68,4 @@ const CLASSIFICATION_TABLES = [
   { tagName: 'pizza day', query: "WHERE bloque BETWEEN 56899 AND 57093" }
 ];
 
-module.exports = CLASSIFICATION_TABLES;
+if (typeof module !== 'undefined') module.exports = CLASSIFICATION_TABLES;
