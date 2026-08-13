@@ -89,6 +89,8 @@
       React.createElement(Route, { path:'/discounts', element:wrapper(DescuentosPage) }),
       React.createElement(Route, { path:'/unified', element:wrapper(UnifiedPage) }),
       React.createElement(Route, { path:'/tag-tables/:tagName', element:wrapper(TagTableScreen, { tagName:p.tagName }) }),
+      React.createElement(Route, { path:'/listed-tags', element:wrapper(ListedTagsPage) }),
+      React.createElement(Route, { path:'/listed-tags/:tagName', element:wrapper(ListedTagDetailPage, { tagName:p.tagName }) }),
       React.createElement(Route, { path:'/sales', element:wrapper(VentasPage) }),
       React.createElement(Route, { path:'/blocks/:id', element:wrapper(PantallaDeBloqueEspecifico, { blockId:p.id }) }),
       React.createElement(Route, { path:'/wallet', element:wrapper(WalletConnectPage) }),

@@ -309,6 +309,7 @@ function FloatingMarketplaceMenu(props) {
     { id:'discounts', label:'Descuentos', path:'/discounts', icon:'\uD83D\uDFE2', isImage:false },
     { id:'unified', label:'Unified', path:'/unified', icon:'\uD83D\uDD35', isImage:false },
     { id:'tags', label:'Etiquetas por Precio', path:'/tag-tables', icon:'\uD83C\uDFF7\uFE0F', isImage:false },
+    { id:'listed-tags', label:'Etiquetas Listadas', path:'/listed-tags', isTagIcon:true },
     { id:'sales', label:'Ventas', path:'/sales', icon:'\uD83D\uDCB0', isImage:false }
   ];
 
@@ -332,7 +333,11 @@ function FloatingMarketplaceMenu(props) {
           onClick:function() { navigate(item.path); },
           title:item.label
         },
-          item.isImage ? React.createElement('img', { src:item.icon, alt:item.label }) : React.createElement('span', { style:{fontSize:'16px'} }, item.icon)
+          item.isImage ? React.createElement('img', { src:item.icon, alt:item.label }) :
+          item.isTagIcon ? React.createElement('svg', { width:'16', height:'16', viewBox:'0 0 24 24', fill:'none', stroke:'var(--bitmap-orange)', strokeWidth:'2', strokeLinecap:'round', strokeLinejoin:'round' },
+            React.createElement('path', { d:'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z' }),
+            React.createElement('line', { x1:'7', y1:'7', x2:'7.01', y2:'7' })
+          ) : React.createElement('span', { style:{fontSize:'16px'} }, item.icon)
         );
       })
     ) : null
