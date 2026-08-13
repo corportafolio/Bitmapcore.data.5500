@@ -278,7 +278,7 @@ function ListedTagDetailPage(props) {
                 var isPunk = etiquetas.indexOf('Punk') !== -1;
                 return React.createElement('div', {
                   key: (item.source || '') + '_' + (item.bitmapId || i),
-                  className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer',
+                  className: 'px-4 py-0.5 hover:bg-bitmap-surface transition-colors cursor-pointer',
                   onClick: function() { navigate('/blocks/' + (item.bitmapNumber || 0)); }
                 },
                     React.createElement('div', { className: 'flex items-center gap-2' },

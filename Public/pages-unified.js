@@ -171,7 +171,7 @@ function UnifiedPage(props) {
                   var isPunk = etiquetas.indexOf('Punk') !== -1;
                   return React.createElement('div', {
                     key: (item.source || '') + '_' + (item.bitmapId || i),
-                    className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
+                    className: 'px-4 py-1.5 hover:bg-bitmap-surface transition-colors cursor-pointer'
                   },
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
@@ -189,7 +189,18 @@ function UnifiedPage(props) {
                             React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
                               '#' + (item.bitmapNumber || '?') + '.bitmap'
                             ),
-                            React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
+                            React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt)),
+                            React.createElement('span', {
+                              className: 'px-1.5 py-0.5 rounded text-[9px] font-acme flex-shrink-0',
+                              style: { backgroundColor: sourceColor(item.source) + '22', color: sourceColor(item.source) }
+                            }, sourceLabel(item.source)),
+                            React.createElement('img', {
+                              src: item.source === 'ordinalswallet' 
+                                ? 'ordinalswallet_logo.png' 
+                                : (item.source === 'local' ? 'logo_bitmapcore_logo.png' : 'unisat_logo.png'),
+                              style: { width: 10, height: 10, flexShrink: 0 },
+                              alt: ''
+                            })
                           ),
                           React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
                             btcPrice + ' BTC'
@@ -201,16 +212,7 @@ function UnifiedPage(props) {
                               ? React.createElement(UniversalTagList, { etiquetas: etiquetas, fontSize: 10 })
                               : null
                           ),
-                          React.createElement('span', { className: 'flex items-center flex-shrink-0 ml-2 gap-1' },
-                            React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted truncate' }, addr),
-                            React.createElement('img', {
-                              src: item.source === 'ordinalswallet' 
-                                ? 'ordinalswallet_logo.png' 
-                                : (item.source === 'local' ? 'logo_bitmapcore_logo.png' : 'unisat_logo.png'),
-                              style: { width: 16, height: 16, flexShrink: 0 },
-                              alt: ''
-                            })
-                          )
+                          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr)
                         )
                       )
                     )

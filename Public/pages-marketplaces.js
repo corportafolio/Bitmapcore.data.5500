@@ -178,7 +178,7 @@ function OrdinalswalletPage(props) {
                   var isPunk = etiquetas.indexOf('Punk') !== -1;
                   return React.createElement('div', {
                     key: item.bitmapId || i,
-                    className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
+                    className: 'px-4 py-0.5 hover:bg-bitmap-surface transition-colors cursor-pointer'
                   },
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
@@ -401,7 +401,7 @@ function UnisatPage(props) {
                   var isPunk = etiquetas.indexOf('Punk') !== -1;
                   return React.createElement('div', {
                     key: item.bitmapId || i,
-                    className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
+                    className: 'px-4 py-0.5 hover:bg-bitmap-surface transition-colors cursor-pointer'
                   },
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
@@ -630,7 +630,7 @@ function SatflowPage(props) {
                   var isPunk = etiquetas.indexOf('Punk') !== -1;
                   return React.createElement('div', {
                     key: item.bitmapId || i,
-                    className: 'px-4 py-3 hover:bg-bitmap-surface transition-colors cursor-pointer'
+                    className: 'px-4 py-0.5 hover:bg-bitmap-surface transition-colors cursor-pointer'
                   },
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
