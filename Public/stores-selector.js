@@ -36,8 +36,8 @@ var SelectorScreenViewModel = {
           listings: store.listings ? store.listings.length : 0,
           floorPrice: store.floorPrice || 0,
           sold: store.soldCount || 0,
-          previews: (store.listings || []).slice(0, 4).map(function(l) {
-            return { blockNumber: l.blockNumber || l.metaNumber, listedPrice: l.listedPrice, source: id };
+          previews: (store.listings || []).slice(0, 14).map(function(l) {
+            return { blockNumber: l.blockNumber || l.metaNumber, listedPrice: l.listedPrice, source: id, etiquetas: l.etiquetas || '', hash: l.hash || '', totalTransacciones: l.totalTransacciones || 0 };
           })
         };
       case 'unified':
@@ -45,8 +45,8 @@ var SelectorScreenViewModel = {
           listings: store.allListings ? store.allListings.length : 0,
           floorPrice: 0,
           sold: 0,
-          previews: (store.allListings || []).slice(0, 4).map(function(l) {
-            return { blockNumber: l.metaNumber, listedPrice: l.listedPrice, source: l.source };
+          previews: (store.allListings || []).slice(0, 14).map(function(l) {
+            return { blockNumber: l.metaNumber, listedPrice: l.listedPrice, source: l.source, etiquetas: l.etiquetas || '', hash: l.hash || '', totalTransacciones: l.totalTransacciones || 0 };
           })
         };
       case 'tags':
@@ -63,8 +63,8 @@ var SelectorScreenViewModel = {
           listings: store.sales ? store.sales.length : 0,
           floorPrice: 0,
           sold: store.totalSold || 0,
-          previews: (store.sales || []).slice(0, 4).map(function(s) {
-            return { blockNumber: s.bitmapNumber, listedPrice: s.listedPrice };
+          previews: (store.sales || []).slice(0, 14).map(function(s) {
+            return { blockNumber: s.bitmapNumber, listedPrice: s.listedPrice, etiquetas: s.etiquetas || '', hash: s.hash || '', totalTransacciones: s.totalTransacciones || 0 };
           })
         };
       case 'discounts':
@@ -72,8 +72,8 @@ var SelectorScreenViewModel = {
           listings: store.discounts ? store.discounts.length : 0,
           floorPrice: 0,
           sold: 0,
-          previews: (store.discounts || []).slice(0, 4).map(function(d) {
-            return { blockNumber: d.bitmapNumber, listedPrice: d.listedPrice, discountPercentage: d.discountPercentage };
+          previews: (store.discounts || []).slice(0, 14).map(function(d) {
+            return { blockNumber: d.bitmapNumber, listedPrice: d.listedPrice, discountPercentage: d.discountPercentage, etiquetas: d.etiquetas || '', hash: d.hash || '', totalTransacciones: d.totalTransacciones || 0 };
           })
         };
       default:

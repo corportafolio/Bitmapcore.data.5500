@@ -131,14 +131,37 @@ function SelectorBubble(props) {
   var previews = props.previews || [];
   var onClick = props.onClick;
 
+  var _off = React.useState(0);
+  var offset = _off[0];
+  var setOffset = _off[1];
+
   var floorBtc = floorPrice > 0 && floorPrice !== 0x7fffffffffffffff ? BitmapUtils.formatBtc(floorPrice) : 'N/A';
   var listingsFmt = listings > 0 ? listings.toLocaleString() : 'N/A';
 
-  return React.createElement('button', {
-    onClick: onClick,
-    className:'w-full bg-bitmap-surface border border-bitmap-border rounded-xl p-3 hover:border-bitmap-orange transition-all text-left'
+  var hasArrow = previews.length > 1;
+  var visible = previews.length > 0
+    ? previews.slice(offset).concat(previews.slice(0, offset))
+    : [];
+
+  function handleArrow(e) {
+    e.stopPropagation();
+    setOffset(previews.length > 0 ? (offset + 1) % previews.length : 0);
+  }
+
+  function buildImageUrl(p) {
+    var bn = p.blockNumber || 0;
+    var et = encodeURIComponent(p.etiquetas || '');
+    var tx = p.totalTransacciones || 0;
+    var h = encodeURIComponent(p.hash || '');
+    var isPerfect = (p.etiquetas || '').indexOf('Perfect') !== -1;
+    var isPunk = (p.etiquetas || '').indexOf('Punk') !== -1;
+    return '/api/v1/block-image/' + bn + '?size=80&etiquetas=' + et + '&tx=' + tx + '&hash=' + h + '&perfect=' + isPerfect + '&punk=' + isPunk;
+  }
+
+  return React.createElement('div', {
+    className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3 hover:border-bitmap-orange transition-all'
   },
-    React.createElement('div', { className:'flex items-center justify-between mb-2' },
+    React.createElement('div', { className:'flex items-center justify-between mb-2 cursor-pointer', onClick: onClick },
       React.createElement('span', { className:'font-alfaslab text-sm text-white tracking-wide' }, name),
       logo ? React.createElement('img', { src:logo, alt:name, className:'h-8 w-8 object-contain' }) :
       icon ? React.createElement('span', { className:'text-xl' }, icon) : null
@@ -152,21 +175,36 @@ function SelectorBubble(props) {
         React.createElement('span', { className:'text-bitmap-orange' }, 'Piso: '), floorBtc
       )
     ),
-    previews.length > 0 ? React.createElement('div', { className:'flex gap-2' },
-      previews.map(function(preview, i) {
-        var priceBtc = preview.listedPrice ? BitmapUtils.formatBtcSat(preview.listedPrice) : 'N/A';
-        return React.createElement('div', {
-          key: i,
-          className:'flex flex-col items-center bg-bitmap-black rounded-lg p-1 min-w-[60px]'
-        },
-          React.createElement('span', { className:'font-acme text-[10px] text-bitmap-orange-light' }, priceBtc),
-          preview.tagName ? React.createElement('span', { className:'font-acme text-[8px] text-bitmap-muted truncate max-w-[56px]' }, preview.tagName) : null,
-          React.createElement('div', { className:'w-12 h-12 rounded bg-bitmap-surface flex items-center justify-center mt-1' },
-            React.createElement('span', { className:'font-alfaslab text-[10px] text-bitmap-orange' }, '#' + (preview.blockNumber || '?'))
-          ),
-          preview.source ? React.createElement('span', { className:'font-acme text-[8px] text-bitmap-muted mt-0.5' }, preview.source) : null
-        );
-      })
+    visible.length > 0 ? React.createElement('div', { className:'flex items-center gap-[2px]' },
+      React.createElement('div', { className:'flex gap-[2px] overflow-x-hidden flex-1' },
+        visible.map(function(preview, i) {
+          var priceBtc = preview.listedPrice ? BitmapUtils.formatBtcSat(preview.listedPrice) : 'N/A';
+          return React.createElement('div', {
+            key: preview.blockNumber + '-' + offset + '-' + i,
+            className:'flex flex-col items-center bg-bitmap-black rounded-lg p-1 flex-shrink-0',
+            style: { minWidth: 82 }
+          },
+            React.createElement('span', { className:'font-acme text-[10px] text-bitmap-orange-light whitespace-nowrap' }, priceBtc),
+            React.createElement('img', {
+              src: buildImageUrl(preview),
+              alt: '#' + (preview.blockNumber || '?'),
+              className:'w-[80px] h-[80px] rounded mt-1',
+              style: { imageRendering: 'pixelated', background: '#1a1a1a' },
+              loading: 'lazy'
+            }),
+            React.createElement('span', { className:'font-alfaslab text-[9px] text-bitmap-orange mt-1' }, '#' + (preview.blockNumber || '?')),
+            preview.source ? React.createElement('span', { className:'font-acme text-[7px] text-bitmap-muted mt-0.5' }, preview.source) : null
+          );
+        })
+      ),
+      hasArrow ? React.createElement('button', {
+        onClick: handleArrow,
+        className:'flex items-center justify-center w-[28px] h-[80px] bg-bitmap-black border border-bitmap-border rounded-lg flex-shrink-0 hover:border-bitmap-orange transition-colors cursor-pointer'
+      },
+        React.createElement('svg', { width:'14', height:'14', viewBox:'0 0 24 24', fill:'none', stroke:'var(--bitmap-orange)', strokeWidth:'2.5', strokeLinecap:'round', strokeLinejoin:'round' },
+          React.createElement('polyline', { points:'9 18 15 12 9 6' })
+        )
+      ) : null
     ) : React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' }, 'Sin previsualizaciones')
   );
 }
