@@ -244,9 +244,9 @@ function ListedTagDetailPage(props) {
       React.createElement('div', { className: 'flex items-center justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2' },
           React.createElement('img', {
-            src: items.length > 0 ? '/api/v1/block-image/' + (items[0].bitmapNumber || 0) + '?size=30&etiquetas=' + encodeURIComponent(items[0].etiquetas || '') + '&tx=' + (items[0].totalTransacciones || 0) + '&hash=' + encodeURIComponent(items[0].hash || '') : '',
-            style: { width: 30, height: 30, imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: 4, flexShrink: 0 },
-            alt: ''
+            src: 'BITMAP.png',
+            style: { width: 30, height: 30, objectFit: 'contain', borderRadius: 4, flexShrink: 0 },
+            alt: 'BitmapCore'
           }),
           React.createElement(UniversalTag, { text: tagName, fontSize: 13 }),
           React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' },
