@@ -1586,7 +1586,7 @@ function DescuentosPage(props) {
                       ),
                       floorUsd ? React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, floorUsd) : null,
                       React.createElement('span', { className: 'px-1.5 py-0.5 rounded font-acme text-[10px] font-bold', style: { backgroundColor: '#166534', color: '#4ade80' } },
-                        '-' + d.discountPercentage + '%'
+                        d.discountPercentage + '%'
                       )
                     )
                   ),
