@@ -186,6 +186,9 @@ function ListedTagDetailPage(props) {
   var _g = React.useState(false);
   var isLoadingMore = _g[0];
   var setIsLoadingMore = _g[1];
+  var _h = React.useState(0);
+  var floorPrice = _h[0];
+  var setFloorPrice = _h[1];
   var limit = 100;
 
   React.useEffect(function() {
@@ -202,6 +205,11 @@ function ListedTagDetailPage(props) {
       setOffset(nextOffset);
       setIsLoading(false);
       setIsLoadingMore(false);
+      if (reset && newItems.length > 0) {
+        var minPrice = Infinity;
+        newItems.forEach(function(it) { if (it.listedPrice && it.listedPrice < minPrice) minPrice = it.listedPrice; });
+        setFloorPrice(minPrice === Infinity ? 0 : minPrice);
+      }
     }).catch(function() {
       setIsLoading(false);
       setIsLoadingMore(false);
@@ -235,8 +243,15 @@ function ListedTagDetailPage(props) {
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2' },
+          React.createElement('img', {
+            src: items.length > 0 ? '/api/v1/block-image/' + (items[0].bitmapNumber || 0) + '?size=30&etiquetas=' + encodeURIComponent(items[0].etiquetas || '') + '&tx=' + (items[0].totalTransacciones || 0) + '&hash=' + encodeURIComponent(items[0].hash || '') : '',
+            style: { width: 30, height: 30, imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: 4, flexShrink: 0 },
+            alt: ''
+          }),
           React.createElement(UniversalTag, { text: tagName, fontSize: 13 }),
-          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' }, total + ' listados')
+          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' },
+            total + ' listados' + (floorPrice > 0 ? ' / piso ' + BitmapUtils.formatBtcSat(floorPrice) + ' BTC' : '')
+          )
         ),
         React.createElement('div', { className: 'flex gap-1 ml-2' },
           ['all', 'ordinalswallet', 'unisat', 'local'].map(function(src) {
@@ -294,6 +309,9 @@ function ListedTagDetailPage(props) {
                         React.createElement('div', { className: 'flex items-center gap-2' },
                           React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
                             '#' + (item.bitmapNumber || '?') + '.bitmap'
+                          ),
+                          React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
+                            item.listedAt ? BitmapUtils.timeAgo(item.listedAt) : ''
                           ),
                           React.createElement('span', {
                             className: 'px-1.5 py-0.5 rounded text-[9px] font-acme flex-shrink-0',
