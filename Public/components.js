@@ -54,7 +54,7 @@ function HeaderBar(props) {
       title: collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'
     }, collapsed ? '\u25B6' : '\u25C0') : null,
     !showBackButton ? React.createElement('div', { className:'flex items-center gap-2 cursor-pointer', onClick: function() { navigate('/'); } },
-      React.createElement('img', { src:'logo_bitmapcore_logo.png', alt:'BitmapCore', className:'h-6 w-6 object-contain', style:{ border:'1px solid #555', borderRadius:'4px' } }),
+      React.createElement('img', { src:'logo_bitmapcore_logo.png', alt:'BitmapCore', className:'h-6 w-6 object-contain', style:{ background:'#555', borderRadius:'4px', padding:'1px' } }),
       React.createElement('span', { className:'font-howdybun text-bitmap-orange text-lg tracking-wide hidden sm:block' }, 'Bitmapcore'),
       btcPrice ? React.createElement('span', { className:'font-acme text-xs text-bitmap-text ml-2' }, 'BTC $' + Number(btcPrice).toLocaleString()) : null
     ) : null,
