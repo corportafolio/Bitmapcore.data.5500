@@ -85,7 +85,7 @@ function HeaderBar(props) {
     React.createElement('div', { className:'relative' },
       React.createElement('button', {
         onClick: function(e) { e.stopPropagation(); setShowHamburgerMenu(!showHamburgerMenu); },
-        className:'font-alfaslab text-white text-[25px]'
+        className:'font-alfaslab text-white text-[30px]'
       }, '\u2261'),
       showHamburgerMenu ? React.createElement('div', {
         className:'absolute right-0 top-full mt-1 w-56 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1',
