@@ -730,41 +730,25 @@ app.get('/api/v1/descuentos', (req, res) => {
   if (!dbUnified) return sendSuccess(res, []);
   try {
     const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
-    try { dbUnified.prepare('ATTACH DATABASE ? AS maindb').run(mainDbPath); } catch (e) {}
+    try { dbUnified.prepare('ATTACH DATABASE ? AS corp').run(mainDbPath); } catch (e) {}
 
-    let rows = [];
-    if (tableExists('blocks')) {
-      rows = dbUnified.prepare(`
-        SELECT ul.bitmapNumber, ul.bitmapId, ul.listedPrice, ul.listedAt,
-               ul.ownerAddress, ul.source, ul.extraData,
-               b.hash, b.etiquetas, b.totalTransacciones
-        FROM unified_listings ul
-        LEFT JOIN maindb.blocks b ON ul.bitmapNumber = b.bloque
-        WHERE ul.listedPrice > 0
-        ORDER BY ul.listedPrice ASC
-      `).all();
-    } else {
-      rows = dbUnified.prepare(`
-        SELECT bitmapNumber, bitmapId, listedPrice, listedAt,
-               ownerAddress, source, extraData, '' as hash,
-               '' as etiquetas, 0 as totalTransacciones
-        FROM unified_listings
-        WHERE listedPrice > 0
-        ORDER BY listedPrice ASC
-      `).all();
-    }
+    const rows = dbUnified.prepare(`
+      SELECT ul.bitmapNumber, ul.bitmapId, ul.listedPrice, ul.listedAt,
+             ul.ownerAddress, ul.source, ul.extraData,
+             tb.tagName, tb.etiquetas, tb.hash, tb.totalTransacciones
+      FROM unified_listings ul
+      JOIN corp.tagged_blocks tb ON ul.bitmapNumber = tb.bloque
+      WHERE ul.listedPrice > 0
+      ORDER BY ul.listedPrice ASC
+    `).all();
 
     const tagGroups = {};
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const etiquetas = row.etiquetas || '';
-      if (!etiquetas) continue;
-      const tags = etiquetas.split('|').map(t => t.trim()).filter(t => t !== '');
-      for (let j = 0; j < tags.length; j++) {
-        const tag = tags[j];
-        if (!tagGroups[tag]) tagGroups[tag] = [];
-        tagGroups[tag].push(row);
-      }
+      const tag = row.tagName;
+      if (!tag) continue;
+      if (!tagGroups[tag]) tagGroups[tag] = [];
+      tagGroups[tag].push(row);
     }
 
     const discounts = [];
@@ -783,7 +767,7 @@ app.get('/api/v1/descuentos', (req, res) => {
       }
 
       const uniqueBitmaps = Object.values(bestByBitmap);
-      if (uniqueBitmaps.length < 2) continue;
+      if (uniqueBitmaps.length < 3) continue;
 
       uniqueBitmaps.sort((a, b) => a.listedPrice - b.listedPrice);
 
