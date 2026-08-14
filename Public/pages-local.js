@@ -1468,31 +1468,173 @@ function DescuentosPage(props) {
   var _b = React.useState(true);
   var isLoading = _b[0];
   var setIsLoading = _b[1];
+  var _c = React.useState('');
+  var searchQuery = _c[0];
+  var setSearchQuery = _c[1];
+  var _d = React.useState(null);
+  var btcPrice = _d[0];
+  var setBtcPrice = _d[1];
+
+  React.useEffect(function() {
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { setBtcPrice(d.bitcoin.usd); })
+      .catch(function() {});
+  }, []);
 
   React.useEffect(function() {
     setIsLoading(true);
-    MarketplaceApi.getDescuentos().then(function(data) {
-      var items = data.data || data || [];
-      setDiscounts(Array.isArray(items) ? items : []);
-      setIsLoading(false);
-    }).catch(function() { setIsLoading(false); });
+    fetch('/api/v1/descuentos')
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        var items = (res && res.data) || [];
+        setDiscounts(Array.isArray(items) ? items : []);
+        setIsLoading(false);
+      })
+      .catch(function() { setIsLoading(false); });
   }, []);
 
-  return React.createElement('div', { className:'p-4 lg:p-6' },
-    React.createElement('div', { className:'max-w-4xl mx-auto space-y-4' },
-      React.createElement('h2', { className:'font-alfaslab text-xl text-white' }, I18n.t('descuentos.title')),
-      isLoading ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('app.loading')) :
-      discounts.length === 0 ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('descuentos.noDiscounts')) :
-      React.createElement('div', { className:'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' },
-        discounts.map(function(d, i) {
-          return React.createElement(DiscountBadge, {
-            key:i,
-            percentage: d.percentage || 10,
-            originalPrice: d.originalPrice || 0.01,
-            discountPrice: d.discountPrice || 0.005
-          });
-        })
+  var filtered = discounts.filter(function(d) {
+    if (!searchQuery) return true;
+    return d.tagName.toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1;
+  });
+
+  var avgDiscount = discounts.length > 0
+    ? Math.round(discounts.reduce(function(s, d) { return s + d.discountPercentage; }, 0) / discounts.length)
+    : 0;
+
+  var totalFloorItems = discounts.reduce(function(s, d) { return s + (d.floorItemCount || 0); }, 0);
+
+  var usd = function(sats) {
+    if (!btcPrice) return '';
+    return '$' + ((sats / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  };
+
+  var sourceLogo = function(source) {
+    if (source === 'ordinalswallet') return 'ordinalswallet_logo.png';
+    if (source === 'unisat') return 'unisat_logo.png';
+    return 'logo_bitmapcore_logo.png';
+  };
+
+  var sourceColor = function(source) {
+    if (source === 'ordinalswallet') return '#8B5CF6';
+    if (source === 'unisat') return '#F59E0B';
+    return '#FE3E00';
+  };
+
+  return React.createElement('div', { className: 'flex flex-col h-full' },
+    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
+      React.createElement('div', { className: 'flex items-stretch justify-between' },
+        React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
+          React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[45px] w-[45px] object-contain rounded my-[2px]' }),
+          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Descuentos')
+        ),
+        React.createElement('div', { className: 'flex items-stretch' },
+          React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Etiquetas'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, discounts.length)
+          ),
+          React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Promedio'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-green-400 font-bold leading-tight' }, '-' + avgDiscount + '%')
+          ),
+          React.createElement('div', { className: 'flex flex-col items-center px-3' },
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Bitmaps baratos'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, totalFloorItems)
+          )
+        )
       )
+    ),
+    React.createElement('div', { className: 'pl-14 pr-4 py-2 border-b border-bitmap-border', style: { backgroundColor: '#080008' } },
+      React.createElement('input', {
+        type: 'text',
+        value: searchQuery,
+        onChange: function(e) { setSearchQuery(e.target.value); },
+        placeholder: 'Buscar etiqueta...',
+        className: 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors h-9'
+      })
+    ),
+    React.createElement('div', { className: 'flex-1 overflow-y-auto pl-14 pr-4 py-3' },
+      isLoading
+        ? React.createElement('div', { className: 'flex items-center justify-center h-64' },
+            React.createElement('div', { className: 'w-8 h-8 border-2 border-bitmap-orange border-t-transparent rounded-full animate-spin' })
+          )
+        : filtered.length === 0
+          ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' },
+              discounts.length === 0 ? 'No hay descuentos disponibles' : 'No se encontraron resultados'
+            )
+          : React.createElement('div', { className: 'space-y-3' },
+              filtered.map(function(d, i) {
+                var floorBtc = BitmapUtils.formatBtcSat(d.floorPrice);
+                var secondBtc = BitmapUtils.formatBtcSat(d.secondPrice);
+                var floorUsd = usd(d.floorPrice);
+                var secondUsd = usd(d.secondPrice);
+
+                return React.createElement('div', {
+                  key: d.tagName + '-' + i,
+                  className: 'border border-bitmap-border rounded-xl overflow-hidden',
+                  style: { backgroundColor: '#1A1A1A' }
+                },
+                  React.createElement('div', { className: 'flex items-center justify-between px-3 py-2 border-b border-bitmap-border' },
+                    React.createElement('div', { className: 'flex items-center gap-2' },
+                      React.createElement(UniversalTag, { text: d.tagName, fontSize: 11 }),
+                      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
+                        d.totalItems + ' listados'
+                      )
+                    ),
+                    React.createElement('div', { className: 'flex items-center gap-2' },
+                      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted line-through' }, secondBtc + ' BTC'),
+                      React.createElement('span', { className: 'font-acme text-xs text-green-400 font-bold' }, '-' + d.discountPercentage + '%'),
+                      React.createElement('span', { className: 'px-2 py-0.5 rounded font-acme text-[10px] font-bold', style: { backgroundColor: '#0a4a2a', color: '#4ade80', border: '1px solid #166534' } },
+                        floorBtc + ' BTC'
+                      )
+                    )
+                  ),
+                  React.createElement('div', { className: 'px-3 py-2' },
+                    React.createElement('div', { className: 'mb-1' },
+                      React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, 'Mas baratos (' + d.floorItemCount + '):')
+                    ),
+                    React.createElement('div', { className: 'flex gap-2 overflow-x-auto pb-2', style: { scrollbarWidth: 'thin' } },
+                      d.floorItems.map(function(item, j) {
+                        var isPerfect = (item.etiquetas || '').indexOf('Perfect') !== -1;
+                        var isPunk = (item.etiquetas || '').indexOf('Punk') !== -1;
+                        return React.createElement('div', {
+                          key: (item.bitmapId || '') + '-' + j,
+                          onClick: function() { navigate('/blocks/' + item.bitmapNumber); },
+                          className: 'flex flex-col items-center rounded border border-green-900 cursor-pointer hover:border-green-500 transition-colors',
+                          style: { minWidth: 84, padding: 2, gap: 2, flexShrink: 0, backgroundColor: '#0a1a0a' }
+                        },
+                          React.createElement('div', { className: 'flex items-center gap-[2px] w-full justify-center' },
+                            React.createElement('span', { className: 'font-acme text-[11px] text-green-400 whitespace-nowrap overflow-hidden text-ellipsis', style: { maxWidth: 58 } },
+                              BitmapUtils.formatBtcSat(item.listedPrice)
+                            ),
+                            React.createElement('img', { src: sourceLogo(item.source), style: { width: 10, height: 10, flexShrink: 0 }, alt: '' })
+                          ),
+                          React.createElement('img', {
+                            src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                            style: { width: 80, height: 80, borderRadius: 2, imageRendering: 'pixelated', background: '#1a1a1a' },
+                            loading: 'lazy', alt: ''
+                          }),
+                          React.createElement('span', { className: 'font-alfaslab text-[9px] text-bitmap-orange' },
+                            '#' + (item.bitmapNumber || '?')
+                          )
+                        );
+                      })
+                    ),
+                    d.secondItem ? React.createElement('div', { className: 'mt-1 pt-1 border-t border-bitmap-border/50' },
+                      React.createElement('div', { className: 'flex items-center justify-between' },
+                        React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, 'Siguiente precio:'),
+                        React.createElement('div', { className: 'flex items-center gap-1' },
+                          React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted line-through' }, secondBtc + ' BTC'),
+                          secondUsd ? React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, '(' + secondUsd + ')') : null,
+                          React.createElement('img', { src: sourceLogo(d.secondItem.source), style: { width: 10, height: 10 }, alt: '' })
+                        )
+                      )
+                    ) : null
+                  )
+                );
+              })
+            )
     )
   );
 }

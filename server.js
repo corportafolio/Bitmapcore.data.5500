@@ -727,9 +727,102 @@ app.post('/api/v1/transaction/psbt/broadcast', (req, res) => {
 
 // ===== MARKETPLACE =====
 app.get('/api/v1/descuentos', (req, res) => {
-  if (!db) return sendSuccess(res, []);
+  if (!dbUnified) return sendSuccess(res, []);
   try {
-    sendSuccess(res, []);
+    const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
+    try { dbUnified.prepare('ATTACH DATABASE ? AS maindb').run(mainDbPath); } catch (e) {}
+
+    let rows = [];
+    if (tableExists('blocks')) {
+      rows = dbUnified.prepare(`
+        SELECT ul.bitmapNumber, ul.bitmapId, ul.listedPrice, ul.listedAt,
+               ul.ownerAddress, ul.source, ul.extraData,
+               b.hash, b.etiquetas, b.totalTransacciones
+        FROM unified_listings ul
+        LEFT JOIN maindb.blocks b ON ul.bitmapNumber = b.bloque
+        WHERE ul.listedPrice > 0
+        ORDER BY ul.listedPrice ASC
+      `).all();
+    } else {
+      rows = dbUnified.prepare(`
+        SELECT bitmapNumber, bitmapId, listedPrice, listedAt,
+               ownerAddress, source, extraData, '' as hash,
+               '' as etiquetas, 0 as totalTransacciones
+        FROM unified_listings
+        WHERE listedPrice > 0
+        ORDER BY listedPrice ASC
+      `).all();
+    }
+
+    const tagGroups = {};
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const etiquetas = row.etiquetas || '';
+      if (!etiquetas) continue;
+      const tags = etiquetas.split('|').map(t => t.trim()).filter(t => t !== '');
+      for (let j = 0; j < tags.length; j++) {
+        const tag = tags[j];
+        if (!tagGroups[tag]) tagGroups[tag] = [];
+        tagGroups[tag].push(row);
+      }
+    }
+
+    const discounts = [];
+    const tagNames = Object.keys(tagGroups);
+    for (let t = 0; t < tagNames.length; t++) {
+      const tagName = tagNames[t];
+      const items = tagGroups[tagName];
+      if (items.length < 2) continue;
+
+      items.sort((a, b) => a.listedPrice - b.listedPrice);
+
+      const floorPrice = items[0].listedPrice;
+      const floorItems = [items[0]];
+      let k = 1;
+      while (k < items.length && Math.abs(items[k].listedPrice - floorPrice) / floorPrice <= 0.01) {
+        floorItems.push(items[k]);
+        k++;
+      }
+
+      if (k >= items.length) continue;
+
+      const secondPrice = items[k].listedPrice;
+      const discountPct = Math.round(((secondPrice - floorPrice) / secondPrice) * 100);
+
+      if (discountPct <= 0 || discountPct >= 100) continue;
+
+      discounts.push({
+        tagName,
+        discountPercentage: discountPct,
+        floorPrice,
+        secondPrice,
+        totalItems: items.length,
+        floorItemCount: floorItems.length,
+        floorItems: floorItems.map(item => ({
+          bitmapNumber: item.bitmapNumber,
+          bitmapId: item.bitmapId,
+          listedPrice: item.listedPrice,
+          listedAt: item.listedAt,
+          source: item.source,
+          ownerAddress: item.ownerAddress,
+          hash: item.hash || '',
+          etiquetas: item.etiquetas || '',
+          totalTransacciones: item.totalTransacciones || 0
+        })),
+        secondItem: {
+          bitmapNumber: items[k].bitmapNumber,
+          bitmapId: items[k].bitmapId,
+          listedPrice: items[k].listedPrice,
+          source: items[k].source,
+          hash: items[k].hash || '',
+          etiquetas: items[k].etiquetas || '',
+          totalTransacciones: items[k].totalTransacciones || 0
+        }
+      });
+    }
+
+    discounts.sort((a, b) => b.discountPercentage - a.discountPercentage);
+    sendSuccess(res, discounts);
   } catch (err) {
     sendError(res, err.message);
   }
