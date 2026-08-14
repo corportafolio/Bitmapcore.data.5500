@@ -140,10 +140,10 @@ function ListedTagRow(props) {
     React.createElement('div', { className: 'flex items-center justify-between', style: { gap: 2, marginBottom: 2 } },
       React.createElement(UniversalTag, { text: group.tagName, fontSize: 11 }),
       React.createElement('div', { className: 'flex items-center', style: { gap: 4 } },
-        React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold whitespace-nowrap' },
+        React.createElement('span', { className: 'font-acme text-[12px] text-bitmap-orange font-bold whitespace-nowrap' },
           floorBtc + ' BTC'
         ),
-        React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted whitespace-nowrap' },
+        React.createElement('span', { className: 'font-acme text-[12px] text-bitmap-muted whitespace-nowrap' },
           group.count + ' listados'
         )
       )
