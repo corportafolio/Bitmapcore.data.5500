@@ -772,21 +772,32 @@ app.get('/api/v1/descuentos', (req, res) => {
     for (let t = 0; t < tagNames.length; t++) {
       const tagName = tagNames[t];
       const items = tagGroups[tagName];
-      if (items.length < 2) continue;
 
-      items.sort((a, b) => a.listedPrice - b.listedPrice);
+      const bestByBitmap = {};
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const bNum = item.bitmapNumber;
+        if (!bestByBitmap[bNum] || item.listedPrice < bestByBitmap[bNum].listedPrice) {
+          bestByBitmap[bNum] = item;
+        }
+      }
 
-      const floorPrice = items[0].listedPrice;
-      const floorItems = [items[0]];
+      const uniqueBitmaps = Object.values(bestByBitmap);
+      if (uniqueBitmaps.length < 2) continue;
+
+      uniqueBitmaps.sort((a, b) => a.listedPrice - b.listedPrice);
+
+      const floorPrice = uniqueBitmaps[0].listedPrice;
+      const floorItems = [uniqueBitmaps[0]];
       let k = 1;
-      while (k < items.length && Math.abs(items[k].listedPrice - floorPrice) / floorPrice <= 0.01) {
-        floorItems.push(items[k]);
+      while (k < uniqueBitmaps.length && Math.abs(uniqueBitmaps[k].listedPrice - floorPrice) / floorPrice <= 0.01) {
+        floorItems.push(uniqueBitmaps[k]);
         k++;
       }
 
-      if (k >= items.length) continue;
+      if (k >= uniqueBitmaps.length) continue;
 
-      const secondPrice = items[k].listedPrice;
+      const secondPrice = uniqueBitmaps[k].listedPrice;
       const discountPct = Math.round(((secondPrice - floorPrice) / secondPrice) * 100);
 
       if (discountPct <= 0 || discountPct >= 100) continue;
@@ -796,7 +807,7 @@ app.get('/api/v1/descuentos', (req, res) => {
         discountPercentage: discountPct,
         floorPrice,
         secondPrice,
-        totalItems: items.length,
+        totalItems: uniqueBitmaps.length,
         floorItemCount: floorItems.length,
         floorItems: floorItems.map(item => ({
           bitmapNumber: item.bitmapNumber,
@@ -808,16 +819,7 @@ app.get('/api/v1/descuentos', (req, res) => {
           hash: item.hash || '',
           etiquetas: item.etiquetas || '',
           totalTransacciones: item.totalTransacciones || 0
-        })),
-        secondItem: {
-          bitmapNumber: items[k].bitmapNumber,
-          bitmapId: items[k].bitmapId,
-          listedPrice: items[k].listedPrice,
-          source: items[k].source,
-          hash: items[k].hash || '',
-          etiquetas: items[k].etiquetas || '',
-          totalTransacciones: items[k].totalTransacciones || 0
-        }
+        }))
       });
     }
 

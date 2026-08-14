@@ -1566,9 +1566,7 @@ function DescuentosPage(props) {
           : React.createElement('div', { className: 'space-y-3' },
               filtered.map(function(d, i) {
                 var floorBtc = BitmapUtils.formatBtcSat(d.floorPrice);
-                var secondBtc = BitmapUtils.formatBtcSat(d.secondPrice);
                 var floorUsd = usd(d.floorPrice);
-                var secondUsd = usd(d.secondPrice);
 
                 return React.createElement('div', {
                   key: d.tagName + '-' + i,
@@ -1579,22 +1577,21 @@ function DescuentosPage(props) {
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement(UniversalTag, { text: d.tagName, fontSize: 11 }),
                       React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
-                        d.totalItems + ' listados'
+                        d.floorItemCount + ' de ' + d.totalItems + ' listados'
                       )
                     ),
                     React.createElement('div', { className: 'flex items-center gap-2' },
-                      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted line-through' }, secondBtc + ' BTC'),
-                      React.createElement('span', { className: 'font-acme text-xs text-green-400 font-bold' }, '-' + d.discountPercentage + '%'),
-                      React.createElement('span', { className: 'px-2 py-0.5 rounded font-acme text-[10px] font-bold', style: { backgroundColor: '#0a4a2a', color: '#4ade80', border: '1px solid #166534' } },
+                      React.createElement('span', { className: 'px-2 py-0.5 rounded font-acme text-[11px] font-bold', style: { backgroundColor: '#0a4a2a', color: '#4ade80', border: '1px solid #166534' } },
                         floorBtc + ' BTC'
+                      ),
+                      floorUsd ? React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, floorUsd) : null,
+                      React.createElement('span', { className: 'px-1.5 py-0.5 rounded font-acme text-[10px] font-bold', style: { backgroundColor: '#166534', color: '#4ade80' } },
+                        '-' + d.discountPercentage + '%'
                       )
                     )
                   ),
                   React.createElement('div', { className: 'px-3 py-2' },
-                    React.createElement('div', { className: 'mb-1' },
-                      React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, 'Mas baratos (' + d.floorItemCount + '):')
-                    ),
-                    React.createElement('div', { className: 'flex gap-2 overflow-x-auto pb-2', style: { scrollbarWidth: 'thin' } },
+                    React.createElement('div', { className: 'flex gap-2 overflow-x-auto pb-1', style: { scrollbarWidth: 'thin' } },
                       d.floorItems.map(function(item, j) {
                         var isPerfect = (item.etiquetas || '').indexOf('Perfect') !== -1;
                         var isPunk = (item.etiquetas || '').indexOf('Punk') !== -1;
@@ -1620,17 +1617,7 @@ function DescuentosPage(props) {
                           )
                         );
                       })
-                    ),
-                    d.secondItem ? React.createElement('div', { className: 'mt-1 pt-1 border-t border-bitmap-border/50' },
-                      React.createElement('div', { className: 'flex items-center justify-between' },
-                        React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, 'Siguiente precio:'),
-                        React.createElement('div', { className: 'flex items-center gap-1' },
-                          React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted line-through' }, secondBtc + ' BTC'),
-                          secondUsd ? React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, '(' + secondUsd + ')') : null,
-                          React.createElement('img', { src: sourceLogo(d.secondItem.source), style: { width: 10, height: 10 }, alt: '' })
-                        )
-                      )
-                    ) : null
+                    )
                   )
                 );
               })
