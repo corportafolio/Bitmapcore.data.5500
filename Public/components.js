@@ -68,10 +68,10 @@ function HeaderBar(props) {
     }, React.createElement('img', { src:'x-icon.webp', alt:'X', style:{ width:'25px', height:'25px', borderRadius:'50%', objectFit:'contain', border:'1px solid #555' } })) : null,
     !showBackButton && onInfoClick ? React.createElement('button', {
       onClick: onInfoClick,
-      className:'text-bitmap-orange hover:text-bitmap-orange-light transition-colors mr-2 text-lg cursor-pointer',
+        className:'text-bitmap-orange hover:text-bitmap-orange-light transition-colors mr-2 text-[25px] cursor-pointer',
       title:'Informacion de Etiquetas'
     }, React.createElement('svg', {
-  className: 'w-5 h-5',
+  className: 'w-[25px] h-[25px]',
   fill: 'currentColor',
   viewBox: '0 0 24 24',
   xmlns: 'http://www.w3.org/2000/svg'
@@ -85,7 +85,7 @@ function HeaderBar(props) {
     React.createElement('div', { className:'relative' },
       React.createElement('button', {
         onClick: function(e) { e.stopPropagation(); setShowHamburgerMenu(!showHamburgerMenu); },
-        className:'font-alfaslab text-white text-xl'
+        className:'font-alfaslab text-white text-[25px]'
       }, '\u2261'),
       showHamburgerMenu ? React.createElement('div', {
         className:'absolute right-0 top-full mt-1 w-56 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1',
