@@ -59,6 +59,13 @@ function HeaderBar(props) {
       btcPrice ? React.createElement('span', { className:'font-acme text-xs text-bitmap-text ml-2' }, 'BTC $' + Number(btcPrice).toLocaleString()) : null
     ) : null,
     title ? React.createElement('span', { className: showBackButton ? 'font-alfaslab text-white text-lg flex-1 text-center' : 'font-alfaslab text-white text-lg flex-1' }, title) : React.createElement('div', { className:'flex-1' }),
+    !showBackButton ? React.createElement('a', {
+      href:'https://x.com/BitmapCorp',
+      target:'_blank',
+      rel:'noopener noreferrer',
+      className:'text-bitmap-text hover:text-white transition-colors mr-2 cursor-pointer',
+      title:'@BitmapCorp'
+    }, React.createElement('img', { src:'x-icon.webp', alt:'X', style:{ width:'20px', height:'20px', borderRadius:'50%', objectFit:'contain' } })) : null,
     !showBackButton && onInfoClick ? React.createElement('button', {
       onClick: onInfoClick,
       className:'text-bitmap-orange hover:text-bitmap-orange-light transition-colors mr-2 text-lg cursor-pointer',
