@@ -54,7 +54,7 @@ function HeaderBar(props) {
       title: collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'
     }, collapsed ? '\u25B6' : '\u25C0') : null,
     !showBackButton ? React.createElement('div', { className:'flex items-center gap-2 cursor-pointer', onClick: function() { navigate('/'); } },
-      React.createElement('img', { src:'logo_bitmapcore_logo.png', alt:'BitmapCore', className:'h-6 w-6 object-contain' }),
+      React.createElement('img', { src:'logo_bitmapcore_logo.png', alt:'BitmapCore', className:'h-6 w-6 object-contain', style:{ border:'1px solid #555', borderRadius:'4px' } }),
       React.createElement('span', { className:'font-howdybun text-bitmap-orange text-lg tracking-wide hidden sm:block' }, 'Bitmapcore'),
       btcPrice ? React.createElement('span', { className:'font-acme text-xs text-bitmap-text ml-2' }, 'BTC $' + Number(btcPrice).toLocaleString()) : null
     ) : null,
@@ -65,7 +65,7 @@ function HeaderBar(props) {
       rel:'noopener noreferrer',
       className:'text-bitmap-text hover:text-white transition-colors mr-2 cursor-pointer',
       title:'@BitmapCorp'
-    }, React.createElement('img', { src:'x-icon.webp', alt:'X', style:{ width:'20px', height:'20px', borderRadius:'50%', objectFit:'contain' } })) : null,
+    }, React.createElement('img', { src:'x-icon.webp', alt:'X', style:{ width:'25px', height:'25px', borderRadius:'50%', objectFit:'contain' } })) : null,
     !showBackButton && onInfoClick ? React.createElement('button', {
       onClick: onInfoClick,
       className:'text-bitmap-orange hover:text-bitmap-orange-light transition-colors mr-2 text-lg cursor-pointer',
