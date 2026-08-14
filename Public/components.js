@@ -306,8 +306,8 @@ function FloatingMarketplaceMenu(props) {
     { id:'unisat', label:'Unisat', path:'/unisat', icon:'unisat_logo.png', isImage:true },
     { id:'satflow', label:'Satflow', path:'/satflow', icon:'satflow-logo.png', isImage:true },
     { id:'local', label:'BitmapCore', path:'/local', icon:'logo_bitmapcore_logo.png', isImage:true },
-    { id:'discounts', label:'Descuentos', path:'/discounts', icon:'\uD83D\uDFE2', isImage:false },
-    { id:'unified', label:'Unified', path:'/unified', icon:'\uD83D\uDD35', isImage:false },
+    { id:'discounts', label:'Descuentos', path:'/discounts', icon:'discount.svg', isImage:true },
+    { id:'unified', label:'Unified', path:'/unified', icon:'layers.svg', isImage:true },
     { id:'tags', label:'Etiquetas Listadas', path:'/listed-tags', icon:'\uD83C\uDFF7\uFE0F', isImage:false },
     { id:'sales', label:'Ventas', path:'/sales', icon:'\uD83D\uDCB0', isImage:false }
   ];
