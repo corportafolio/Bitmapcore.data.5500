@@ -24,6 +24,34 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// ===== RATE LIMITER PARA ENDPOINTS PROXY =====
+const proxyRateLimit = {};
+const PROXY_MAX = 30;
+const PROXY_WINDOW = 60000;
+
+function proxyLimiter(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  if (!proxyRateLimit[ip] || now - proxyRateLimit[ip].start > PROXY_WINDOW) {
+    proxyRateLimit[ip] = { start: now, count: 1 };
+    return next();
+  }
+  proxyRateLimit[ip].count++;
+  if (proxyRateLimit[ip].count > PROXY_MAX) {
+    return res.status(429).json({
+      error: 'Demasiadas requests. Espera 1 minuto.',
+      retryAfter: Math.ceil((proxyRateLimit[ip].start + PROXY_WINDOW - now) / 1000)
+    });
+  }
+  next();
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const ip in proxyRateLimit) {
+    if (now - proxyRateLimit[ip].start > PROXY_WINDOW) delete proxyRateLimit[ip];
+  }
+}, 300000);
+
 const publicDir = path.join(__dirname, 'Public');
 app.use(express.static(publicDir, {
   setHeaders: function(res, filePath) {
@@ -38,6 +66,13 @@ app.use(express.static(publicDir, {
 let db = null;
 try {
   db = new Database(path.join(__dirname, 'data/bitmapcorp_database.db'), { readonly: false });
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS live_stats (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updatedAt INTEGER
+    );
+  `);
   console.log('Database connected');
 } catch (err) {
   console.error('Database not found, API routes will return empty data:', err.message);
@@ -243,6 +278,8 @@ app.post('/api/v1/classify', async (req, res) => {
       );
       CREATE INDEX IF NOT EXISTS idx_tagged_blocks_tag ON tagged_blocks(tagName);
       CREATE INDEX IF NOT EXISTS idx_tagged_blocks_bloque ON tagged_blocks(bloque);
+      DELETE FROM tagged_blocks WHERE id NOT IN (SELECT MIN(id) FROM tagged_blocks GROUP BY tagName, bloque);
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_tagged_blocks_unique ON tagged_blocks(tagName, bloque);
     `);
 
     const CLASSIFICATION_TABLES = require('./classification-tables.js');
@@ -255,7 +292,7 @@ app.post('/api/v1/classify', async (req, res) => {
       
       if (blocks.length > 0) {
         const insert = db.prepare(`
-          INSERT INTO tagged_blocks (bloque, tagName, etiquetaIndividual, totalBtc, totalTransacciones, etiquetas, mempool, hash, total_etiquetas_en_bloque)
+          INSERT OR IGNORE INTO tagged_blocks (bloque, tagName, etiquetaIndividual, totalBtc, totalTransacciones, etiquetas, mempool, hash, total_etiquetas_en_bloque)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 
             CASE WHEN ? IS NULL OR ? = '' THEN 0 
                  ELSE (LENGTH(?) - LENGTH(REPLACE(?, '|', ''))) + 1 END
@@ -363,6 +400,63 @@ app.get('/api/v1/blocks/:id', (req, res) => {
     }
 
     sendSuccess(res, block);
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+// ===== LISTINGS DE UN BITMAP ESPECIFICO (para pantalla de bloque) =====
+app.get('/api/v1/bitmap/:id/listings', (req, res) => {
+  try {
+    const num = parseInt(req.params.id);
+    const results = [];
+
+    // 1) Marketplaces externos (ordinalswallet + unisat) desde unified_listings
+    if (dbUnified) {
+      try {
+        const rows = dbUnified.prepare('SELECT * FROM unified_listings WHERE bitmapNumber = ? ORDER BY listedPrice ASC').all(num);
+        for (const r of rows) {
+          results.push({
+            source: r.source || 'unknown',
+            listedPrice: r.listedPrice,
+            bitmapId: r.bitmapId,
+            ownerAddress: r.ownerAddress,
+            listedAt: r.listedAt,
+            sellerAddress: r.ownerAddress,
+            sellerPaymentAddress: null
+          });
+        }
+      } catch (e) {}
+    }
+
+    // 2) Marketplace local (bitmapcore-server, puerto 3000)
+    const localDbPath = path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db');
+    const altLocalDbPath = '/root/bitmapcore-server/data/bitmapcorp.db';
+    let localDb = null;
+    try {
+      localDb = new Database(localDbPath, { readonly: true });
+    } catch (e) {
+      try { localDb = new Database(altLocalDbPath, { readonly: true }); } catch (e2) { localDb = null; }
+    }
+    if (localDb) {
+      try {
+        const localRows = localDb.prepare('SELECT * FROM listings WHERE bitmap_number = ? AND is_active = 1 AND price > 0').all(num);
+        for (const r of localRows) {
+          results.push({
+            source: 'local',
+            listedPrice: r.price,
+            bitmapId: r.inscription_id,
+            ownerAddress: r.seller_address,
+            listedAt: r.listed_at,
+            sellerAddress: r.seller_address,
+            sellerPaymentAddress: r.seller_payment_address
+          });
+        }
+      } catch (e) {}
+      localDb.close();
+    }
+
+    sendSuccess(res, results);
   } catch (err) {
     sendError(res, err.message);
   }
@@ -504,9 +598,11 @@ app.get('/api/v1/tags/:tagName', (req, res) => {
   if (!db) return sendSuccess(res, []);
   try {
     const tagName = req.params.tagName;
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const offset = parseInt(req.query.offset) || 0;
     let blocks = [];
     if (tableExists('tagged_blocks')) {
-      blocks = db.prepare('SELECT * FROM tagged_blocks WHERE tagName = ?').all(tagName);
+      blocks = db.prepare('SELECT * FROM tagged_blocks WHERE tagName = ? ORDER BY rowid LIMIT ? OFFSET ?').all(tagName, limit, offset);
     }
     sendSuccess(res, blocks);
   } catch (err) {
@@ -934,8 +1030,50 @@ app.get('/api/v1/local/stats', (req, res) => {
   }
 });
 
+// ===== LOCAL CACHE LISTINGS =====
+app.get('/api/v1/local/cache/listings', (req, res) => {
+  try {
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 100;
+    const localDbPath = path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db');
+    const localDb = new Database(localDbPath, { readonly: true });
+
+    const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
+    try { localDb.prepare('ATTACH DATABASE ? AS maindb').run(mainDbPath); } catch (e) { /* already attached */ }
+
+    let rows;
+    try {
+      rows = localDb.prepare(`
+        SELECT l.id, l.name, l.price as listedPrice, l.bitmap_number as bitmapNumber,
+               l.bitmap_hash as bitmapHash, l.seller_address, l.is_active,
+               l.listed_at as listedAt, l.inscription_id as inscriptionId,
+               b.hash, b.etiquetas, b.totalTransacciones, b.totalBtc
+        FROM listings l
+        LEFT JOIN maindb.blocks b ON l.bitmap_number = b.bloque
+        WHERE l.is_active = 1 AND l.price > 0
+        ORDER BY l.listed_at DESC
+        LIMIT ? OFFSET ?
+      `).all(limit, offset);
+    } catch (e) {
+      rows = localDb.prepare(`
+        SELECT id, name, price as listedPrice, bitmap_number as bitmapNumber,
+               bitmap_hash as bitmapHash, seller_address, is_active,
+               listed_at as listedAt, inscription_id as inscriptionId
+        FROM listings WHERE is_active = 1 AND price > 0
+        ORDER BY listed_at DESC LIMIT ? OFFSET ?
+      `).all(limit, offset);
+    }
+
+    localDb.close();
+    sendSuccess(res, rows);
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+
 // ===== PROXY ORDINALSWALLET (URLs correctas: turbo.ordinalswallet.com) =====
-app.get('/api/v1/proxy/ordinalswallet/listings', async (req, res) => {
+app.get('/api/v1/proxy/ordinalswallet/listings', proxyLimiter, async (req, res) => {
   try {
     const offset = parseInt(req.query.offset) || 0;
     const limit = parseInt(req.query.limit) || 60;
@@ -949,7 +1087,7 @@ app.get('/api/v1/proxy/ordinalswallet/listings', async (req, res) => {
   }
 });
 
-app.get('/api/v1/proxy/ordinalswallet/sold', async (req, res) => {
+app.get('/api/v1/proxy/ordinalswallet/sold', proxyLimiter, async (req, res) => {
   try {
     const response = await axios.get('https://turbo.ordinalswallet.com/collection/bitmap/sold-escrows', {
       params: { limit: parseInt(req.query.limit) || 100, offset: parseInt(req.query.offset) || 0 },
@@ -961,7 +1099,7 @@ app.get('/api/v1/proxy/ordinalswallet/sold', async (req, res) => {
   }
 });
 
-app.get('/api/v1/proxy/ordinalswallet/stats', async (req, res) => {
+app.get('/api/v1/proxy/ordinalswallet/stats', proxyLimiter, async (req, res) => {
   try {
     const response = await axios.get('https://turbo.ordinalswallet.com/collection/bitmap/stats', {
       timeout: 10000
@@ -972,7 +1110,7 @@ app.get('/api/v1/proxy/ordinalswallet/stats', async (req, res) => {
   }
 });
 
-app.post('/api/v1/proxy/unisat/actions', async (req, res) => {
+app.post('/api/v1/proxy/unisat/actions', proxyLimiter, async (req, res) => {
   try {
     const response = await axios.post('https://open-api.unisat.io/v1/indexer/actions', req.body, {
       headers: { 'Content-Type': 'application/json' }
@@ -983,7 +1121,7 @@ app.post('/api/v1/proxy/unisat/actions', async (req, res) => {
   }
 });
 
-app.get('/api/v1/proxy/unisat/listings', async (req, res) => {
+app.get('/api/v1/proxy/unisat/listings', proxyLimiter, async (req, res) => {
   try {
     const response = await axios.get('https://open-api.unisat.io/v1/indexer/market/collection/bitmap/listings', {
       params: { limit: 100, offset: 0 }
@@ -1026,8 +1164,8 @@ async function pollOrdinalswallet() {
     console.error('[OW] Starting incremental poll...');
     const now = Date.now();
 
-    const lastTsRow = dbOw.prepare("SELECT value FROM ordinalswallet_stats WHERE key='lastPollTimestamp'").get();
-    const lastTs = lastTsRow ? lastTsRow.value : 0;
+    const lastTsRow = dbOw.prepare("SELECT MAX(listedAt) as m FROM ordinalswallet_cache").get();
+    const lastTs = lastTsRow?.m || 0;
     const isFirstSync = lastTs === 0;
     console.error('[OW] lastTs=' + lastTs + ', isFirstSync=' + isFirstSync);
 
@@ -1138,9 +1276,61 @@ async function pollOrdinalswallet() {
   pollUnified();
 }
 
+let livePollingActive = false;
+let liveLastPollTime = 0;
+
+async function pollLiveRates() {
+  if (livePollingActive) return;
+  if (!db) return;
+  livePollingActive = true;
+  try {
+    console.error('[LIVE] Starting poll...');
+    const now = Date.now();
+
+    let btcPrice = null;
+    let fees = null;
+
+    try {
+      const priceRes = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
+        params: { ids: 'bitcoin', vs_currencies: 'usd' },
+        timeout: 10000
+      });
+      btcPrice = priceRes.data?.bitcoin?.usd;
+    } catch (e) {
+      console.error('[LIVE] CoinGecko error:', e.message);
+    }
+
+    try {
+      const feeRes = await axios.get('https://mempool.space/api/v1/fees/recommended', { timeout: 10000 });
+      fees = feeRes.data;
+    } catch (e) {
+      console.error('[LIVE] mempool.space error:', e.message);
+    }
+
+    const stmt = db.prepare('INSERT OR REPLACE INTO live_stats (key, value, updatedAt) VALUES (?, ?, ?)');
+    if (btcPrice !== null) stmt.run('btcPrice', String(btcPrice), now);
+    if (fees) {
+      if (fees.fastestFee !== undefined) stmt.run('feeFastest', String(fees.fastestFee), now);
+      if (fees.halfHourFee !== undefined) stmt.run('feeHalfHour', String(fees.halfHourFee), now);
+      if (fees.hourFee !== undefined) stmt.run('feeHour', String(fees.hourFee), now);
+      if (fees.economyFee !== undefined) stmt.run('feeEconomy', String(fees.economyFee), now);
+      if (fees.minimumFee !== undefined) stmt.run('feeMinimum', String(fees.minimumFee), now);
+    }
+
+    liveLastPollTime = now;
+    console.error('[LIVE] Poll done: btcPrice=' + btcPrice + ', feeFastest=' + (fees?.fastestFee || 'n/a'));
+  } catch (err) {
+    console.error('[LIVE] FATAL:', err.message);
+  }
+  livePollingActive = false;
+}
+
 // Start polling on server startup
 pollOrdinalswallet();
 setInterval(pollOrdinalswallet, 300000);
+
+pollLiveRates();
+setInterval(pollLiveRates, 60000);
 
 // ===== UNISAT POLLING SERVICE + CACHE =====
 
@@ -1154,13 +1344,13 @@ async function pollUnisat() {
   try {
     console.error("[UNI] Starting incremental poll...");
     const now = Date.now();
-    const API_KEY = process.env.UNISAT_API_KEY || "ba45937b36025672839241126a39e54b6826bdd8a87fa1946714096b55ed9b34";
+    const API_KEY = process.env.UNISAT_API_KEY;
     const headers = { "Content-Type": "application/json" };
     headers["Authorization"] = "Bearer " + API_KEY;
     const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
-    const lastTsRow = dbUnisat.prepare("SELECT value FROM unisat_stats WHERE key='lastPollTimestamp'").get();
-    const lastTs = lastTsRow ? lastTsRow.value : 0;
+    const lastTsRow = dbUnisat.prepare("SELECT MAX(listedAt) as m FROM unisat_cache").get();
+    const lastTs = lastTsRow?.m || 0;
     const isFirstSync = lastTs === 0;
     const lastSoldRow = dbUnisat.prepare("SELECT value FROM unisat_stats WHERE key='lastSoldTimestamp'").get();
     let uniSoldSince = lastSoldRow ? lastSoldRow.value : lastTs;
@@ -1171,7 +1361,7 @@ async function pollUnisat() {
     let insertionOrder = (dbUnisat.prepare("SELECT MAX(insertionOrder) as m FROM unisat_cache").get()?.m || 0) + 1;
     let newLastTs = lastTs;
 
-    for (const evt of ["Listed", "Sold", "Cancel"]) {
+    for (const evt of ["Sold", "Cancel", "Listed"]) {
       console.error("[UNI] " + evt + " phase...");
       let start = 0;
       let hasMore = true;
@@ -1292,11 +1482,9 @@ async function pollUnified() {
   try {
     console.error('[UNIFIED] Starting merge...');
     const now = Date.now();
+    console.error('[UNIFIED] Using per-source timestamps');
 
-    const lastTsRow = dbUnified.prepare("SELECT value FROM unified_stats WHERE key='lastPollTimestamp'").get();
-    const lastTs = lastTsRow ? lastTsRow.value : 0;
-    const isFirstSync = lastTs === 0;
-    console.error('[UNIFIED] lastTs=' + lastTs + ', isFirstSync=' + isFirstSync);
+    const isFirstSync = (dbUnified.prepare("SELECT COUNT(*) as c FROM unified_listings").get() || {}).c === 0;
 
     const insertStmt = dbUnified.prepare(`
       INSERT OR REPLACE INTO unified_listings
@@ -1346,14 +1534,14 @@ async function pollUnified() {
     } else {
       console.error('[UNIFIED] Incremental sync...');
 
-      const owNew = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != '' AND listedAt > ?").all(lastTs);
+      const owNew = dbOw.prepare("SELECT * FROM ordinalswallet_cache WHERE bitmapId != ''").all();
       for (const row of owNew) {
         insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
           row.ownerAddress, row.extraData, row.extraData2, row.timestamp, insertionOrder++, 'ordinalswallet');
         total++;
       }
 
-      const uniNew = dbUnisat.prepare("SELECT * FROM unisat_cache WHERE bitmapId != '' AND listedAt > ?").all(lastTs);
+      const uniNew = dbUnisat.prepare("SELECT * FROM unisat_cache WHERE bitmapId != ''").all();
       for (const row of uniNew) {
         insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
           row.ownerAddress, row.extraData, row.extraData2, row.timestamp, insertionOrder++, 'unisat');
@@ -1384,14 +1572,6 @@ async function pollUnified() {
     dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('floor_price',?,?)").run(minRow?.p || 0, now);
     dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('total_listed',?,?)").run(countRow?.c || 0, now);
     dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('last_poll_time',?,?)").run(now, now);
-
-    const freshTs = Math.max(
-      (dbOw.prepare("SELECT MAX(listedAt) as m FROM ordinalswallet_cache").get() || {}).m || 0,
-      (dbUnisat.prepare("SELECT MAX(listedAt) as m FROM unisat_cache").get() || {}).m || 0
-    );
-    if (freshTs > lastTs) {
-      dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('lastPollTimestamp',?,?)").run(freshTs, now);
-    }
 
     if (!isFirstSync) {
       try {
@@ -1434,7 +1614,7 @@ async function pollUnified() {
         const Database = require('better-sqlite3');
         const dbLocal = new Database(path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db'), { readonly: true });
         const localSoldRow = dbUnified.prepare("SELECT value FROM unified_stats WHERE key='localLastSoldTimestamp'").get();
-        const localSoldSince = localSoldRow ? localSoldRow.value : lastTs;
+        const localSoldSince = localSoldRow ? localSoldRow.value : 0;
         const localVentas = dbLocal.prepare("SELECT * FROM ventas_historial WHERE sold_at > ?").all(localSoldSince);
         const insertSale = dbSales.prepare("INSERT INTO all_sales (bitmap_name, bitmap_number, inscription_id, price, buyer_address, seller_address, source, txid, sold_at, synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)");
         let maxLocalSoldTs = localSoldSince;
@@ -1530,6 +1710,95 @@ app.get('/api/v1/unified/cache/count', (req, res) => {
     const row = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_listings").get();
     sendSuccess(res, { count: row ? row.c : 0 });
   } catch (err) { sendError(res, err.message); }
+});
+
+
+
+
+// ===== UNIFIED CACHE TAGS (via tagged_blocks, deduplicated) =====
+
+app.get('/api/v1/unified/cache/tags', (req, res) => {
+  if (!dbUnified) return sendSuccess(res, []);
+  try {
+    const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
+    try { dbUnified.prepare('ATTACH DATABASE ? AS corp').run(mainDbPath); } catch (e) {}
+    const rows = dbUnified.prepare(`
+      SELECT DISTINCT ul.bitmapNumber, ul.listedPrice, ul.source, ul.bitmapId,
+             ul.ownerAddress, ul.listedAt, ul.insertionOrder, ul.timestamp,
+             ul.extraData, ul.extraData2,
+             tb.tagName, tb.etiquetas, tb.hash, tb.totalTransacciones
+      FROM unified_listings ul
+      JOIN corp.tagged_blocks tb ON ul.bitmapNumber = tb.bloque
+    `).all();
+    rows.sort(function(a, b) { return (a.listedPrice || 0) - (b.listedPrice || 0) || (b.listedAt || 0) - (a.listedAt || 0); });
+    const groups = {};
+    const seenPerTag = {};
+    rows.forEach(function(item) {
+      const tag = item.tagName;
+      if (!groups[tag]) {
+        groups[tag] = { tagName: tag, count: 0, floorPrice: item.listedPrice || 0, previews: [] };
+        seenPerTag[tag] = {};
+      }
+      groups[tag].count++;
+      if (item.listedPrice && item.listedPrice < groups[tag].floorPrice) groups[tag].floorPrice = item.listedPrice;
+      if (groups[tag].previews.length < 15 && !seenPerTag[tag][item.bitmapNumber]) {
+        seenPerTag[tag][item.bitmapNumber] = true;
+        groups[tag].previews.push(item);
+      }
+    });
+    Object.values(groups).forEach(function(g) {
+      g.previews.sort(function(a, b) {
+        return (a.listedPrice || 0) - (b.listedPrice || 0) || (b.listedAt || 0) - (a.listedAt || 0);
+      });
+    });
+    const result = Object.values(groups).sort((a, b) => a.floorPrice - b.floorPrice);
+    sendSuccess(res, result);
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/unified/cache/tags/:tagName', (req, res) => {
+  if (!dbUnified || !db) return sendSuccess(res, { items: [], total: 0 });
+  try {
+    const tagName = decodeURIComponent(req.params.tagName);
+    const source = req.query.source || 'all';
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 100;
+    const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
+    try { dbUnified.prepare('ATTACH DATABASE ? AS corp').run(mainDbPath); } catch (e) {}
+    const blockRows = db.prepare('SELECT DISTINCT bloque, etiquetas, hash, totalTransacciones FROM tagged_blocks WHERE tagName = ?').all(tagName);
+    if (blockRows.length === 0) return sendSuccess(res, { items: [], total: 0 });
+    const blockMap = {};
+    blockRows.forEach(function(r) { blockMap[r.bloque] = r; });
+    const uniqueBlocks = blockRows.map(function(r) { return r.bloque; });
+    const BATCH = 500;
+    let allListings = [];
+    for (let i = 0; i < uniqueBlocks.length; i += BATCH) {
+      const chunk = uniqueBlocks.slice(i, i + BATCH);
+      const placeholders = chunk.map(() => '?').join(',');
+      let whereClause = 'WHERE bitmapNumber IN (' + placeholders + ')';
+      let params = chunk.slice();
+      if (source !== 'all') {
+        whereClause += ' AND source = ?';
+        params.push(source);
+      }
+      const chunkRows = dbUnified.prepare('SELECT * FROM unified_listings ' + whereClause + ' ORDER BY listedPrice ASC, listedAt DESC').all(...params);
+      allListings = allListings.concat(chunkRows);
+    }
+    allListings.sort(function(a, b) { return (a.listedPrice || 0) - (b.listedPrice || 0) || (b.listedAt || 0) - (a.listedAt || 0); });
+    const total = allListings.length;
+    const items = allListings.slice(offset, offset + limit).map(function(row) {
+      const bData = blockMap[row.bitmapNumber] || {};
+      row.etiquetas = bData.etiquetas || '';
+      row.hash = bData.hash || '';
+      row.totalTransacciones = bData.totalTransacciones || '';
+      return row;
+    });
+    sendSuccess(res, { items, total });
+  } catch (err) {
+    sendError(res, err.message);
+  }
 });
 
 
@@ -1708,6 +1977,30 @@ app.get('/api/v1/db/tables', (req, res) => {
   sendSuccess(res, tables);
 });
 
+// ===== LIVE RATES =====
+app.get('/api/v1/live/rates', (req, res) => {
+  if (!db) return sendSuccess(res, { btcPrice: null, feeFastest: null, feeHalfHour: null, feeHour: null, feeEconomy: null, feeMinimum: null, updatedAt: 0 });
+  try {
+    const rows = db.prepare('SELECT key, value, updatedAt FROM live_stats').all();
+    const data = { btcPrice: null, feeFastest: null, feeHalfHour: null, feeHour: null, feeEconomy: null, feeMinimum: null, updatedAt: 0 };
+    let maxUpdated = 0;
+    rows.forEach(function(r) {
+      var v = r.value;
+      if (r.key === 'btcPrice') data.btcPrice = parseFloat(v);
+      else if (r.key === 'feeFastest') data.feeFastest = parseInt(v, 10);
+      else if (r.key === 'feeHalfHour') data.feeHalfHour = parseInt(v, 10);
+      else if (r.key === 'feeHour') data.feeHour = parseInt(v, 10);
+      else if (r.key === 'feeEconomy') data.feeEconomy = parseInt(v, 10);
+      else if (r.key === 'feeMinimum') data.feeMinimum = parseInt(v, 10);
+      if (r.updatedAt > maxUpdated) maxUpdated = r.updatedAt;
+    });
+    data.updatedAt = maxUpdated;
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
 // ===== HEALTH =====
 app.get('/api/v1/health', (req, res) => {
   sendSuccess(res, {
@@ -1721,7 +2014,9 @@ app.get('/api/v1/health', (req, res) => {
     owPollingActive: owPollingActive,
     owLastPollTime: owLastPollTime,
     uniPollingActive: uniPollingActive,
-    uniLastPollTime: uniLastPollTime
+    uniLastPollTime: uniLastPollTime,
+    livePollingActive: livePollingActive,
+    liveLastPollTime: liveLastPollTime
   });
 });
 
@@ -1733,12 +2028,12 @@ app.get('/api/v1/block-image/:blockNumber', (req, res) => {
     const etiquetas = req.query.etiquetas || '';
     const tx = parseInt(req.query.tx) || 0;
     const hash = req.query.hash || '';
-    const perfect = req.query.perfect === 'true';
+    const grid = req.query.grid === 'true';
     const punk = req.query.punk === 'true';
 
     const cryptoModule = require('crypto');
     const optsHash = cryptoModule.createHash('md5')
-      .update(etiquetas + '|' + tx + '|' + (perfect ? 1 : 0) + '|' + (punk ? 1 : 0) + '|' + hash)
+      .update(etiquetas + '|' + tx + '|' + (grid ? 1 : 0) + '|' + (punk ? 1 : 0) + '|' + hash)
       .digest('hex');
 
     if (!dbOw) return res.status(503).send('DB not ready');
@@ -1749,7 +2044,7 @@ app.get('/api/v1/block-image/:blockNumber', (req, res) => {
 
     if (row) {
       res.set('Content-Type', 'image/png');
-      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      res.set('Cache-Control', 'public, max-age=3600');
       return res.send(row.image_data);
     }
 
@@ -1761,7 +2056,7 @@ app.get('/api/v1/block-image/:blockNumber', (req, res) => {
       totalTransactions: tx,
       hash: hash,
       etiquetas: etiquetas,
-      isPerfect: perfect,
+      isPerfect: grid,
       isPunk: punk
     }, size);
 
@@ -1770,7 +2065,7 @@ app.get('/api/v1/block-image/:blockNumber', (req, res) => {
         .run(blockNumber, size, optsHash, png);
 
     res.set('Content-Type', 'image/png');
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('Cache-Control', 'public, max-age=3600');
     res.send(png);
   } catch(err) {
     res.status(500).send('Internal error');

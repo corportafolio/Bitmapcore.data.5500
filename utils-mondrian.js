@@ -3,7 +3,7 @@ const { createCanvas } = require('canvas');
 const BITMAP_YELLOW = '#FFD700';
 
 const MondrianGenerator = {
-  BORDER: 1,
+  BORDER: 3,
   MIN_PARCEL_PX: 0.2,
 
   generate: function(canvas, blockNumber, options, size) {
@@ -71,7 +71,8 @@ const MondrianGenerator = {
   },
 
   _draw2txPunk: function(ctx, size, neckType) {
-    var sideM = 40, tbM = 5, aw = size - sideM * 2, ah = size - tbM * 2;
+    var sideM = Math.max(Math.round(size * 0.125), 6), tbM = Math.max(Math.round(size * 0.015625), 2);
+    var aw = size - sideM * 2, ah = size - tbM * 2;
     var proportion = neckType === 1 ? 0.75 : neckType === 3 ? 0.25 : 0.50;
     var h1 = (ah - tbM) / (1 + proportion), h2 = h1 * proportion;
     ctx.fillStyle = BITMAP_YELLOW;
@@ -81,7 +82,7 @@ const MondrianGenerator = {
   },
 
   _drawPerfectGrid: function(ctx, tx, size, isPunk) {
-    var BASE = 5, EXTRA = 5, B = this.BORDER;
+    var BASE = Math.max(Math.round(size * 0.015625), 1), EXTRA = Math.max(Math.round(size * 0.015625), 1), B = Math.max(Math.round(size * 0.009375), 1);
     var spec = this._getPerfectSpec(tx, isPunk);
     var cols = spec[0], rows = spec[1], mtb = spec[2], mside = spec[3], negras = spec[4];
     var aw = size - B * 2 - mside * 2, ah = size - B * 2 - mtb * 2;

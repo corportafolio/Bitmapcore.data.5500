@@ -325,7 +325,7 @@ var SatflowViewModel = {
     if (SatflowViewModel._pollInterval) return;
     SatflowViewModel._pollInterval = setInterval(function() {
       SatflowViewModel.loadFromCacheOnly();
-    }, 300000);
+    }, 60000);
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) {
         if (SatflowViewModel._pollInterval) {

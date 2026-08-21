@@ -82,7 +82,7 @@ var MondrianGenerator = {
   },
 
   _draw2txPunk: function(ctx, size, neckType) {
-    var sideM = 40, tbM = 5;
+    var sideM = Math.max(Math.round(size * 0.125), 6), tbM = Math.max(Math.round(size * 0.015625), 2);
     var aw = size - sideM * 2;
     var ah = size - tbM * 2;
     var proportion = neckType === 1 ? 0.75 : neckType === 3 ? 0.25 : 0.50;
@@ -95,7 +95,7 @@ var MondrianGenerator = {
   },
 
   _drawPerfectGrid: function(ctx, tx, size, isPunk) {
-    var BASE = 5, EXTRA = 5, B = this.BORDER;
+    var BASE = Math.max(Math.round(size * 0.015625), 1), EXTRA = Math.max(Math.round(size * 0.015625), 1), B = Math.max(Math.round(size * 0.009375), 1);
     var spec = this._getPerfectSpec(tx, isPunk);
     var cols = spec[0], rows = spec[1], mtb = spec[2], mside = spec[3], negras = spec[4];
 

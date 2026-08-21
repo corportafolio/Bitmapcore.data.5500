@@ -18,6 +18,9 @@ function HeaderBar(props) {
   var _price = React.useState(null);
   var btcPrice = _price[0];
   var setBtcPrice = _price[1];
+  var _live = React.useState({ btcPrice: null, feeFastest: null });
+  var liveData = _live[0];
+  var setLiveData = _live[1];
   var _ws = React.useState(false);
   var showWalletSubmenu = _ws[0];
   var setShowWalletSubmenu = _ws[1];
@@ -37,10 +40,22 @@ function HeaderBar(props) {
   }, []);
 
   React.useEffect(function() {
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
-      .then(function(r) { return r.json(); })
-      .then(function(d) { setBtcPrice(d.bitcoin.usd); })
-      .catch(function() {});
+    var fetchLive = function() {
+      fetch('/api/v1/live/rates')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d && d.data) {
+            var btc = d.data.btcPrice;
+            var fee = d.data.feeFastest;
+            if (btc !== null) setBtcPrice(btc);
+            setLiveData({ btcPrice: btc, feeFastest: fee });
+          }
+        })
+        .catch(function() {});
+    };
+    fetchLive();
+    var interval = setInterval(fetchLive, 60000);
+    return function() { clearInterval(interval); };
   }, []);
 
   return React.createElement('header', { className:'flex items-center justify-between h-14 bg-bitmap-black border-b border-bitmap-border pl-[3px] pr-4 sm:pr-6 z-30 relative' },
@@ -56,7 +71,17 @@ function HeaderBar(props) {
     !showBackButton ? React.createElement('div', { className:'flex items-center gap-2 cursor-pointer', onClick: function() { navigate('/'); } },
       React.createElement('img', { src:'logo_bitmapcore_logo.png', alt:'BitmapCore', className:'h-6 w-6 object-contain' }),
       React.createElement('span', { className:'font-howdybun text-bitmap-orange text-lg tracking-wide hidden sm:block' }, 'Bitmapcore'),
-      btcPrice ? React.createElement('span', { className:'font-acme text-xs text-bitmap-text ml-2' }, 'BTC $' + Number(btcPrice).toLocaleString()) : null
+      btcPrice ? React.createElement('span', { className:'font-acme text-xs text-bitmap-text ml-2' }, 'BTC $' + Number(btcPrice).toLocaleString()) : null,
+      React.createElement('span', { className:'flex items-center gap-1 font-acme text-xs text-bitmap-text ml-1' },
+        React.createElement('svg', { className:'w-4 h-4 text-bitmap-orange', stroke:'currentColor', fill:'none', viewBox:'0 0 24 24', xmlns:'http://www.w3.org/2000/svg', strokeWidth:'2', strokeLinecap:'round', strokeLinejoin:'round' },
+          React.createElement('path', { d:'M14 11h1a2 2 0 0 1 2 2v3a1.5 1.5 0 0 0 3 0v-7l-3 -3' }),
+          React.createElement('path', { d:'M4 20v-14a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v14' }),
+          React.createElement('path', { d:'M3 20l12 0' }),
+          React.createElement('path', { d:'M18 7v1a1 1 0 0 0 1 1h1' }),
+          React.createElement('path', { d:'M4 11l10 0' })
+        ),
+        liveData.feeFastest !== null ? liveData.feeFastest + ' sat/vB' : '-- sat/vB'
+      )
     ) : null,
     title ? React.createElement('span', { className: showBackButton ? 'font-alfaslab text-white text-lg flex-1 text-center' : 'font-alfaslab text-white text-lg flex-1' }, title) : React.createElement('div', { className:'flex-1' }),
     !showBackButton ? React.createElement('a', {
@@ -106,14 +131,14 @@ function HeaderBar(props) {
         onClick: function(e) { e.stopPropagation(); }
       },
         React.createElement('button', {
-          onClick: function() { setShowWalletSubmenu(false); StoreApp.connectWallet('unisat'); },
+          onClick: function() { setShowWalletSubmenu(false); if (window.bcAnalytics) window.bcAnalytics.track('wallet_connect_clicked', { walletType: 'unisat', source: 'hamburger_menu' }); StoreApp.connectWallet('unisat'); },
           className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors flex items-center gap-2'
         },
           React.createElement('img', { src:'unisat_logo.png', alt:'Unisat', style:{ width:'20px', height:'20px', borderRadius:'3px', objectFit:'contain' } }),
           'Unisat'
         ),
         React.createElement('button', {
-          onClick: function() { setShowWalletSubmenu(false); StoreApp.connectWallet('xverse'); },
+          onClick: function() { setShowWalletSubmenu(false); if (window.bcAnalytics) window.bcAnalytics.track('wallet_connect_clicked', { walletType: 'xverse', source: 'hamburger_menu' }); StoreApp.connectWallet('xverse'); },
           className:'w-full px-4 py-2 text-left font-acme text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors flex items-center gap-2'
         },
           React.createElement('img', { src:'xverse-logo.png', alt:'Xverse', style:{ width:'20px', height:'20px', borderRadius:'3px', objectFit:'contain' } }),
@@ -205,20 +230,20 @@ function Sidebar(props) {
                 onClick: function() { navigate('/blocks/' + (item.bitmapNumber || '')); onClose(); }
               },
             React.createElement('img', {
-              src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=false&punk=false',
+              src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=3&size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + ((item.etiquetas || '').toLowerCase().indexOf('grid') !== -1) + '&punk=' + ((item.etiquetas || '').toLowerCase().indexOf('punk') !== -1),
               style: { width: 35, height: 35, borderRadius: 4, background: '#1a1a1a', imageRendering: 'pixelated', flexShrink: 0 },
               loading: 'lazy', alt: ''
             }),
             React.createElement('div', { className:'flex-1 min-w-0' },
               React.createElement('div', { className:'flex justify-between items-center' },
-                React.createElement('div', { className:'font-alfaslab text-[9px] text-bitmap-orange truncate' },
-                  '#' + (item.bitmapNumber || '?') + '.bitmap'
+                React.createElement('div', { className:'font-alfaslab text-[9px] text-white truncate' },
+                  (item.bitmapNumber || '?') + '.bitmap'
                 ),
                 React.createElement('div', { className:'flex items-center gap-1' },
                   React.createElement('span', { className:'font-acme text-[9px] text-white' },
                     BitmapUtils.timeAgo(item.listedAt)
                   ),
-                  React.createElement('span', { className:'font-acme text-[9px] text-bitmap-orange-light' },
+                  React.createElement('span', { className:'font-acme text-[9px]', style:{ color:'#666666' } },
                     btcPrice
                   )
                 )
@@ -373,12 +398,12 @@ function ErrorBoundary(props) {
 var TAG_NAMES = [
   "txS millonarias", "TXs MULTIMILLONARIAS", "100k out", "250k out", "500k out",
   "1M out", "2M out", "3M out", "5M out", "21e8",
-  "2 tx PERFECT", "3 tx PERFECT", "4 tx PERFECT", "6 tx PERFECT", "Grid Punk",
-  "Grid PERFECT", "Punk PERFECT", "5 tx Punk PERFECT", "Punk PERFECT 10 tx", "Giga Punk PERFECT",
-  "Palindrome", "Palindrome PERFECT", "Wide Neck Punk", "Standar Punk", "Pristine Punk",
+  "2 tx GRID", "3 tx GRID", "4 tx GRID", "6 tx GRID", "Grid Punk",
+  "5 tx Grid Punk", "Punk GRID 10 tx", "Giga Punk GRID",
+  "Palindrome", "Palindrome PERFECT", "microstrategy", "Wide Neck Punk", "Standar Punk", "Pristine Punk",
   "Punk 2tx", "8000 tx", "7000 tx", "6000 tx", "5000 tx",
   "4000 tx", "3000 tx", "2000 tx", "1000 tx", "1 tx",
-  "2 tx", "sub 100k", "sub 50k", "sub 25k", "sub 10k",
+  "2 tx", "leap day", "sub 100k", "sub 50k", "sub 25k", "sub 10k",
   "sub 1k", "power of 10", "mythic", "epic", "rare",
   "first transaction", "pizza transaction", "block 9", "block 78", "66 dao",
   "prime number", "fibonacci", "binary", "chinese lucky number", "pizza day"
@@ -400,13 +425,12 @@ var TAG_DESCRIPTIONS = [
   "Bloques con exactamente 4 transacciones donde todas tienen exactamente la misma cantidad de BTC",
   "Bloques con exactamente 6 transacciones donde todas tienen exactamente la misma cantidad de BTC",
   "Bloques con patron Grid Punk (cuadricula) en su representacion visual",
-  "Bloques con patron Grid donde todas las transacciones tienen exactamente la misma cantidad de BTC",
-  "Bloques con patron Punk donde todas las transacciones tienen exactamente la misma cantidad de BTC",
-  "Bloques Punk PERFECT con 5 transacciones donde todas tienen exactamente la misma cantidad de BTC",
-  "Bloques Punk PERFECT con 10 transacciones donde todas tienen exactamente la misma cantidad de BTC",
-  "Bloques Punk PERFECT con mas de 100 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques Grid Punk con 5 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques Grid Punk con 10 transacciones donde todas tienen exactamente la misma cantidad de BTC",
+  "Bloques Grid Punk con mas de 100 transacciones donde todas tienen exactamente la misma cantidad de BTC",
   "Bloques cuyo numero de bloque se lee igual al derecho y al reves",
   "Bloques cuyo numero de bloque tiene todos sus digitos iguales (ej: 11, 22, 111, 222, 9999)",
+  "Bloques que contienen transacciones de las 4 billeteras legacy de MicroStrategy, la mayor empresa tenedora de Bitcoin del mundo, que acumula BTC desde el 6 de junio de 2018. Estas billeteras estan inactivas. Son 2,599 bloques, desde el 526,317 (6 de junio de 2018) hasta el 947,431. Las billeteras son:\n\n1LQoWist8KkaUXSPKZHNvEyfrEkPHzSsCd\n1P5ZEDWTKTFGxQjZphgWPQUpe554WKDfHQ\n1FzWLkAahHooV3kzTgyx6qsswXJ6sCXkSR\n1JHceFenZHACSRPD6tE4bfU6yJ83wTG6kH",
   "Bloques con 2 transacciones: la coinbase es la cabeza (25% mas grande que la segunda tx, cuello ancho)",
   "Bloques con 2 transacciones: la coinbase es la cabeza (50% mas grande que la segunda tx, estandar)",
   "Bloques con 2 transacciones: la coinbase es la cabeza (75% mas grande que la segunda tx, pristino)",
@@ -420,7 +444,8 @@ var TAG_DESCRIPTIONS = [
   "Bloques con 2000 a 2999 transacciones",
   "Bloques con 1000 a 1999 transacciones",
   "Bloques con exactamente 1 transaccion",
-  "Bloques con exactamente 2 transacciones, excluyendo Punks y 2 tx PERFECT",
+  "Bloques con exactamente 2 transacciones, excluyendo Punks y 2 tx GRID",
+  "Bloques minados durante el día bisiesto (29 de febrero) en la historia de Bitcoin, desde el génesis (3 de enero de 2009). El primer día bisiesto fue el 29 de febrero de 2012: se minaron 179 bloques, desde el 168,957 hasta el 169,135. El segundo fue el 29 de febrero de 2016: se minaron 133 bloques, desde el 400,468 hasta el 400,600. El tercero fue el 29 de febrero de 2020: se minaron 139 bloques, desde el 619,443 hasta el 619,581. El cuarto fue el 29 de febrero de 2024: se minaron 133 bloques, desde el 832,470 hasta el 832,602. En total son 4 días bisiestos y 584 bloques. El próximo día bisiesto será el 29 de febrero de 2028, que no está incluido porque aún no se han minado sus bloques.",
   "Bloques desde el 50,001 hasta el 100,000",
   "Bloques desde el 25,001 hasta el 50,000",
   "Bloques desde el 10,001 hasta el 25,000",

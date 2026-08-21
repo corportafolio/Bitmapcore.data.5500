@@ -142,7 +142,7 @@ var UnifiedViewModel = {
     if (UnifiedViewModel._pollInterval) return;
     UnifiedViewModel._pollInterval = setInterval(function() {
       UnifiedViewModel.loadFromCacheOnly();
-    }, 300000);
+    }, 60000);
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) {
         if (UnifiedViewModel._pollInterval) {

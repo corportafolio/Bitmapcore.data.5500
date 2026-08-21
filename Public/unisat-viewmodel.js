@@ -217,7 +217,7 @@ var UnisatViewModel = {
     if (UnisatViewModel._pollInterval) return;
     UnisatViewModel._pollInterval = setInterval(function() {
       UnisatViewModel.loadFromCacheOnly();
-    }, 300000);
+    }, 60000);
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) {
         if (UnisatViewModel._pollInterval) {

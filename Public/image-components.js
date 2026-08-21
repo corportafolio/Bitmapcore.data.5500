@@ -145,18 +145,42 @@ function ResultCard(props) {
   var id = props.id;
   var label = props.label;
   var price = props.price;
-  var marketplace = props.marketplace;
   var onClick = props.onClick;
+  var onRemove = props.onRemove;
+  var etiquetas = props.etiquetas || '';
+  var hash = props.hash || '';
+  var totalTransactions = props.totalTransactions || 0;
 
-  return React.createElement('button', {
-    onClick: onClick,
-    className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3 hover:border-bitmap-orange transition-all text-left'
+  var firstTag = '';
+  if (etiquetas) {
+    var tags = etiquetas.split(/[|,]/).filter(function(t) { return t.trim() !== ''; });
+    if (tags.length > 0) firstTag = tags[0].trim();
+  }
+  var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
+  var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
+
+  return React.createElement('div', {
+    className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3 hover:border-bitmap-orange transition-all'
   },
-    React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black' },
-      type === 'block' ? React.createElement(MondrianCanvas, { blockNumber:Number(id), transactions:[], size:150 }) :
+    React.createElement('div', { className:'flex items-center justify-between mb-1' },
+      React.createElement('div', { className:'font-alfaslab text-sm text-white truncate flex-1 cursor-pointer', onClick:onClick }, label),
+      onRemove ? React.createElement('button', {
+        onClick:function(e) { e.stopPropagation(); onRemove(); },
+        className:'ml-2 text-bitmap-muted hover:text-bitmap-orange transition-colors font-acme text-2xl w-7 h-7 flex items-center justify-center rounded-full hover:bg-bitmap-black flex-shrink-0'
+      }, '\u00D7') : null
+    ),
+    type === 'block' ? (
+      firstTag ? React.createElement('div', { className:'mb-1' }, React.createElement(UniversalTag, { text:firstTag, fontSize:9 }))
+      : React.createElement('div', { className:'font-acme text-xs mb-1', style:{color:'#666666'} }, '0 tags')
+    ) : null,
+    React.createElement('div', { onClick:onClick, className:'cursor-pointer w-full aspect-square rounded-lg overflow-hidden bg-bitmap-black' },
+      type === 'block' ? React.createElement('img', {
+        src:'/api/v1/block-image/' + id + '?v=3&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + totalTransactions + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
+        className:'w-full h-full object-cover',
+        loading:'lazy'
+      }) :
       React.createElement('div', { className:'w-full h-full flex items-center justify-center text-3xl' }, '\uD83C\uDFF7\uFE0F')
     ),
-    React.createElement('div', { className:'font-alfaslab text-sm text-white truncate' }, label),
-    price ? React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light' }, BitmapUtils.formatBtc(price) + ' BTC') : null
+    price ? React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light mt-1' }, BitmapUtils.formatBtc(price) + ' BTC') : null
   );
 }

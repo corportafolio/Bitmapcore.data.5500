@@ -1,4 +1,4 @@
-// Classification queries for 55 tables - equivalent to Android BlockDao
+// Classification queries for 56 tables - equivalent to Android BlockDao
 // Run this to create tag_tables and tagged_blocks tables
 
 const CLASSIFICATION_TABLES = [
@@ -15,18 +15,18 @@ const CLASSIFICATION_TABLES = [
 
   // Grupo 2: Especiales (13)
   { tagName: '21e8', query: "WHERE lower(hash) LIKE '%21e8%'" },
-  { tagName: '2 tx PERFECT', query: "WHERE ('|' || lower(etiquetas) || '|') LIKE '%|2 tx perfect|%'" },
-  { tagName: '3 tx PERFECT', query: "WHERE lower(etiquetas) LIKE '%3 tx perfect%'" },
-  { tagName: '4 tx PERFECT', query: "WHERE lower(etiquetas) LIKE '%4 tx perfect%'" },
-  { tagName: '6 tx PERFECT', query: "WHERE lower(etiquetas) LIKE '%6 tx perfect%'" },
-  { tagName: 'Grid Punk', query: "WHERE lower(etiquetas) LIKE '%grid punk%'" },
-  { tagName: 'Grid PERFECT', query: "WHERE lower(etiquetas) LIKE '%grid perfect%'" },
-  { tagName: 'Punk PERFECT', query: "WHERE lower(etiquetas) LIKE '%punk perfect%'" },
-  { tagName: '5 tx Punk PERFECT', query: "WHERE lower(etiquetas) LIKE '%punk perfect%' AND lower(etiquetas) LIKE '%5 tx%'" },
-  { tagName: 'Punk PERFECT 10 tx', query: "WHERE lower(etiquetas) LIKE '%punk perfect%' AND lower(etiquetas) LIKE '%10 tx%'" },
-  { tagName: 'Giga Punk PERFECT', query: "WHERE lower(etiquetas) LIKE '%punk perfect%' AND lower(etiquetas) LIKE '%giga%'" },
+  { tagName: '2 tx GRID', query: "WHERE ('|' || lower(etiquetas) || '|') LIKE '%|2 tx grid|%'" },
+  { tagName: '3 tx GRID', query: "WHERE lower(etiquetas) LIKE '%3 tx grid%'" },
+  { tagName: '4 tx GRID', query: "WHERE lower(etiquetas) LIKE '%4 tx grid%'" },
+  { tagName: '6 tx GRID', query: "WHERE lower(etiquetas) LIKE '%6 tx grid%'" },
+  { tagName: '9 tx GRID', query: "WHERE lower(etiquetas) LIKE '%grid 9 tx%'" },
+  { tagName: 'Grid Punk', query: "WHERE lower(etiquetas) LIKE '%grid punk%' OR lower(etiquetas) LIKE '%punk grid%'" },
+  { tagName: '5 tx Grid Punk', query: "WHERE (lower(etiquetas) LIKE '%grid punk%' OR lower(etiquetas) LIKE '%punk grid%') AND (lower(etiquetas) LIKE '% 5 tx %' OR lower(etiquetas) LIKE '5 tx %' OR lower(etiquetas) LIKE '% 5 tx')" },
+  { tagName: 'Punk GRID 10 tx', query: "WHERE lower(etiquetas) LIKE '%punk grid%' AND lower(etiquetas) LIKE '%10 tx%'" },
+  { tagName: 'Giga Punk GRID', query: "WHERE lower(etiquetas) LIKE '%punk grid%' AND lower(etiquetas) LIKE '%giga%'" },
   { tagName: 'Palindrome', query: "WHERE lower(etiquetas) LIKE '%palindrome%'" },
   { tagName: 'Palindrome PERFECT', query: "WHERE lower(etiquetas) LIKE '%palindrome perfect%'" },
+  { tagName: 'microstrategy', query: "WHERE lower(etiquetas) LIKE '%microstrategy%'" },
 
   // Grupo 3: Punks Ordinarios (4)
   { tagName: 'Wide Neck Punk', query: "WHERE lower(etiquetas) LIKE '%wide neck punk%'" },
@@ -44,9 +44,10 @@ const CLASSIFICATION_TABLES = [
   { tagName: '2000 tx', query: "WHERE CAST(totalTransacciones AS INTEGER) BETWEEN 2000 AND 2999" },
   { tagName: '1000 tx', query: "WHERE CAST(totalTransacciones AS INTEGER) BETWEEN 1000 AND 1999" },
   { tagName: '1 tx', query: "WHERE CAST(totalTransacciones AS INTEGER) = 1" },
-  { tagName: '2 tx', query: "WHERE CAST(totalTransacciones AS INTEGER) = 2 AND lower(etiquetas) NOT LIKE '%wide neck punk%' AND lower(etiquetas) NOT LIKE '%standar punk%' AND lower(etiquetas) NOT LIKE '%pristine punk%' AND lower(etiquetas) NOT LIKE '%punk 2tx%' AND ('|' || lower(etiquetas) || '|') NOT LIKE '%|2 tx perfect|%'" },
+  { tagName: '2 tx', query: "WHERE CAST(totalTransacciones AS INTEGER) = 2 AND lower(etiquetas) NOT LIKE '%wide neck punk%' AND lower(etiquetas) NOT LIKE '%standar punk%' AND lower(etiquetas) NOT LIKE '%pristine punk%' AND lower(etiquetas) NOT LIKE '%punk 2tx%' AND ('|' || lower(etiquetas) || '|') NOT LIKE '%|2 tx grid|%'" },
 
-  // Grupo 5: Por Rango Bloque (19)
+  // Grupo 5: Por Rango Bloque (20)
+  { tagName: 'leap day', query: "WHERE (bloque BETWEEN 168957 AND 169135) OR (bloque BETWEEN 400468 AND 400600) OR (bloque BETWEEN 619443 AND 619581) OR (bloque BETWEEN 832470 AND 832602)" },
   { tagName: 'sub 100k', query: "WHERE bloque BETWEEN 50001 AND 100000" },
   { tagName: 'sub 50k', query: "WHERE bloque BETWEEN 25001 AND 50000" },
   { tagName: 'sub 25k', query: "WHERE bloque BETWEEN 10001 AND 25000" },

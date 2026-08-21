@@ -122,6 +122,7 @@ var StoreApp = {
             StoreApp._state.wallet = { address:accounts[0], publicKey:pubKey, balance:0, isConnected:true, network:'mainnet', walletType:'unisat' };
             localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address:accounts[0], publicKey:pubKey, network:'mainnet', walletType:'unisat' }));
             StoreApp._emit('wallet');
+            if (window.bcAnalytics) window.bcAnalytics.track('wallet_connected', { walletType: 'unisat', address: accounts[0] });
             resolve(accounts[0]);
           }).catch(function() {
             StoreApp._showWalletError('Unisat: no se pudo obtener la clave publica');
@@ -185,6 +186,7 @@ var StoreApp = {
           StoreApp._state.wallet = walletData;
           localStorage.setItem('bitmapcore_wallet', JSON.stringify({ address: ordinalsAddr.address, publicKey: ordinalsAddr.publicKey, paymentAddress: paymentAddr ? paymentAddr.address : null, paymentPublicKey: paymentAddr ? paymentAddr.publicKey : null, network: 'mainnet', walletType: 'xverse' }));
           StoreApp._emit('wallet');
+          if (window.bcAnalytics) window.bcAnalytics.track('wallet_connected', { walletType: 'xverse', address: ordinalsAddr.address });
           resolve(ordinalsAddr.address);
         }).catch(function() {
           StoreApp._showWalletError('Xverse: conexion cancelada o fallida');
@@ -280,6 +282,7 @@ var StoreApp = {
     StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
     localStorage.removeItem('bitmapcore_wallet');
     StoreApp._emit('wallet');
+    if (window.bcAnalytics) window.bcAnalytics.track('wallet_disconnected', {});
   },
   getBlock: function(id) {
     StoreApp._state.block.isLoading = true;

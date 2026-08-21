@@ -220,7 +220,7 @@ function MisActivosPage(props) {
       !wallet.isConnected ? React.createElement('div', { className:'text-center py-12' },
         React.createElement('p', { className:'font-acme text-bitmap-muted mb-4' }, 'No hay wallet conectada'),
         React.createElement('button', {
-          onClick:function() { StoreApp.connectWallet('unisat'); },
+          onClick:function() { if (window.bcAnalytics) window.bcAnalytics.track('wallet_connect_clicked', { walletType: 'unisat', source: 'assets_page' }); StoreApp.connectWallet('unisat'); },
           className:'px-4 py-2 bg-bitmap-orange text-white rounded-lg font-alfaslab text-sm'
         }, 'Conectar Wallet')
       ) :
@@ -735,7 +735,7 @@ function DetallePage(props) {
           React.createElement('h2', { className:'font-alfaslab text-xl text-white' }, collectionName)
         ),
         isBitmapCollection ? React.createElement('button', {
-          onClick:handleListar,
+          onClick: function() { if (window.bcAnalytics) window.bcAnalytics.track('list_button_clicked', { source: 'wallet_collection' }); handleListar(); },
           className:'px-4 py-2 bg-bitmap-orange text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-orange/80 transition-colors'
         }, 'Listar') : null
       ),
@@ -769,8 +769,8 @@ function DetallePage(props) {
           var etiquetas = blockData.etiquetas || '';
           var tx = parseInt(blockData.totalTransacciones) || 0;
           var hash = blockData.hash || '';
-          var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-          var isPunk = etiquetas.indexOf('Punk') !== -1;
+          var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
+          var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
           var tags = etiquetas.split('|').filter(function(t) { return t.trim() !== ''; });
           var listing = myListings[item.id] || null;
           var isListed = !!listing;
@@ -828,10 +828,10 @@ function DetallePage(props) {
                 ) : null,
                 React.createElement('div', { className:'w-full aspect-square mb-1 rounded-lg overflow-hidden bg-bitmap-black' },
                   blockNum ? React.createElement('img', {
-                    src: '/api/v1/block-image/' + blockNum + '?size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                    src: '/api/v1/block-image/' + blockNum + '?v=3&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
                     alt:'',
                     className:'w-full h-full object-cover',
-                    onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?size=150'; }
+                    onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=3&size=150'; }
                   }) : null
                 ),
                 React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
@@ -865,10 +865,10 @@ function DetallePage(props) {
             ) : null,
             React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black' },
               blockNum ? React.createElement('img', {
-                src: '/api/v1/block-image/' + blockNum + '?size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                src: '/api/v1/block-image/' + blockNum + '?v=3&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
                 alt:'',
                 className:'w-full h-full object-cover',
-                onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?size=150'; }
+                onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=3&size=150'; }
               }) : null
             ),
             React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
@@ -901,8 +901,8 @@ function DetallePage(props) {
           var etiquetas = blockData.etiquetas || '';
           var tx = parseInt(blockData.totalTransacciones) || 0;
           var hash = blockData.hash || '';
-          var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-          var isPunk = etiquetas.indexOf('Punk') !== -1;
+          var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
+          var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
           var tags = etiquetas.split('|').filter(function(t) { return t.trim() !== ''; });
           return React.createElement('div', { key:idx, className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3' },
             tags.length > 0 ? React.createElement('div', { className:'w-full mb-1 px-0.5' },
@@ -910,10 +910,10 @@ function DetallePage(props) {
             ) : null,
             React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black' },
               blockNum ? React.createElement('img', {
-                src: '/api/v1/block-image/' + blockNum + '?size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                src: '/api/v1/block-image/' + blockNum + '?v=3&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
                 alt:'',
                 className:'w-full h-full object-cover',
-                onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?size=150'; }
+                onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=3&size=150'; }
               }) : null
             ),
             React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },

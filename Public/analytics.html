@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BitmapCore Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #080008; color: #fff; font-family: 'Acme', sans-serif; padding: 20px; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    .header h1 { color: #FE3E00; font-size: 24px; }
+    .header .subtitle { color: #666; font-size: 13px; margin-top: 4px; }
+    .range-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #2A2A2A; background: transparent; color: #B0B0B0; font-family: Acme; font-size: 13px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+    .range-btn.active { border-color: #FE3E00; background: #FE3E00; color: #000; }
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid #2A2A2A; margin-bottom: 20px; overflow-x: auto; }
+    .tab { padding: 10px 18px; background: transparent; border: none; border-bottom: 2px solid transparent; color: #666; font-family: Acme; font-size: 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .tab.active { border-bottom-color: #FE3E00; color: #FE3E00; }
+    .kpi-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .kpi { background: #191217; border: 1px solid #2A2A2A; border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 150px; }
+    .kpi-label { color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .kpi-value { color: #fff; font-size: 28px; font-weight: bold; margin-bottom: 4px; }
+    .kpi-change { font-size: 12px; font-weight: bold; }
+    .card { background: #191217; border: 1px solid #2A2A2A; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+    .card h3 { color: #fff; margin: 0 0 16px 0; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; background: #191217; border-radius: 8px; overflow: hidden; }
+    th { padding: 10px 14px; background: #2A2A2A; color: #B0B0B0; text-align: right; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    th:first-child { text-align: left; }
+    td { padding: 10px 14px; border-bottom: 1px solid #2A2A2A; color: #B0B0B0; text-align: right; font-size: 13px; }
+    td:first-child { color: #fff; text-align: left; }
+    .charts-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .charts-row > div { flex: 1; min-width: 300px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .funnel-bar { margin-bottom: 10px; }
+    .funnel-bar .label { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .funnel-bar .label span { font-size: 13px; }
+    .funnel-bar .label span:first-child { color: #B0B0B0; }
+    .funnel-bar .label span:last-child { color: #fff; font-weight: bold; }
+    .funnel-bar .track { background: #2A2A2A; border-radius: 4px; height: 8px; }
+    .funnel-bar .fill { border-radius: 4px; height: 8px; transition: width 0.5s ease; }
+    .loading { text-align: center; padding: 60px; color: #666; }
+    .error { color: #FF3333; text-align: center; padding: 60px; font-size: 16px; }
+    .access-denied { color: #FF3333; text-align: center; padding: 60px; font-size: 18px; }
+    @media (max-width: 768px) {
+      .header { flex-direction: column; align-items: flex-start; }
+      .kpi-grid { flex-direction: column; }
+      .charts-row { flex-direction: column; }
+      .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <div class="loading">Cargando BitmapCore Analytics...</div>
+  </div>
+
+  <script>
+  (function(){
+    var TOKEN = new URLSearchParams(window.location.search).get('key') || '';
+    var RANGE = '7d';
+    var currentTab = 'overview';
+    var charts = {};
+    var refreshTimer = null;
+    var API_BASE = '/api/analytics';
+
+    if(!TOKEN){
+      document.getElementById('app').innerHTML = '<div class="access-denied">Acceso denegado. Agrega ?key=TU_TOKEN a la URL.</div>';
+      return;
+    }
+
+    function api(path, params){
+      var sep = path.indexOf('?') >= 0 ? '&' : '?';
+      var url = API_BASE + path + sep + 'key=' + TOKEN + (params ? '&' + params : '');
+      return fetch(url).then(function(r){ if(!r.ok) throw new Error('API error ('+r.status+')'); return r.json(); });
+    }
+
+    function fmt(n){
+      if(n >= 1000000) return (n/1000000).toFixed(1)+'M';
+      if(n >= 1000) return (n/1000).toFixed(1)+'K';
+      return n.toString();
+    }
+
+    function pctChange(current, prev){
+      if(!prev || prev === 0) return current > 0 ? '+∞' : '0%';
+      var p = ((current - prev) / prev * 100);
+      return (p >= 0 ? '+' : '') + p.toFixed(1) + '%';
+    }
+
+    function pctColor(current, prev){
+      if(!prev || prev === 0) return current > 0 ? '#00AA00' : '#B0B0B0';
+      return current >= prev ? '#00AA00' : '#FF3333';
+    }
+
+    function timeAgo(ms){
+      if(!ms) return '-';
+      var s = Math.floor(ms / 1000);
+      if(s < 60) return s + 's';
+      var m = Math.floor(s / 60);
+      if(m < 60) return m + 'm ' + (s%60) + 's';
+      var h = Math.floor(m / 60);
+      return h + 'h ' + (m%60) + 'm';
+    }
+
+    function destroyChart(id){
+      if(charts[id]){ charts[id].destroy(); delete charts[id]; }
+    }
+
+    function chartColors(count){
+      var base = ['#FE3E00','#FF6B35','#00AA00','#FF3333','#3498DB','#9B59B6','#F1C40F','#1ABC9C','#E67E22','#E74C3C'];
+      var colors = [];
+      for(var i = 0; i < count; i++) colors.push(base[i % base.length]);
+      return colors;
+    }
+
+    function render(){
+      var html = '';
+      html += '<div class="header">';
+      html += '  <div><h1>BitmapCore Analytics</h1><div class="subtitle" id="liveInfo">Cargando datos en vivo...</div></div>';
+      html += '  <div style="display:flex;gap:4px">';
+      ['24h','7d','30d','90d'].forEach(function(r){
+        html += '<button id="range-'+r+'" class="range-btn'+(RANGE===r?' active':'')+'" onclick="setRange(\''+r+'\')">'+r+'</button>';
+      });
+      html += '  </div>';
+      html += '</div>';
+      html += '<div class="tabs">';
+      [{id:'overview',label:'Overview'},{id:'pages',label:'Paginas'},{id:'events',label:'Eventos'},{id:'conversions',label:'Conversiones'},{id:'tech',label:'Tecnologia'},{id:'wallets',label:'Wallets'}].forEach(function(t){
+        html += '<button id="tab-'+t.id+'" class="tab'+(currentTab===t.id?' active':'')+'" onclick="setTab(\''+t.id+'\')">'+t.label+'</button>';
+      });
+      html += '</div>';
+      html += '<div id="tabContent"><div class="loading">Cargando datos...</div></div>';
+      document.getElementById('app').innerHTML = html;
+    }
+
+    window.setRange = function(r){
+      RANGE = r;
+      ['24h','7d','30d','90d'].forEach(function(btn){
+        var el = document.getElementById('range-'+btn);
+        if(el){
+          if(btn === r){ el.className = 'range-btn active'; }
+          else { el.className = 'range-btn'; }
+        }
+      });
+      loadDashboard();
+    };
+    window.setTab = function(t){
+      currentTab = t;
+      ['overview','pages','events','conversions','tech','wallets'].forEach(function(tab){
+        var el = document.getElementById('tab-'+tab);
+        if(el){
+          if(tab === t){ el.className = 'tab active'; }
+          else { el.className = 'tab'; }
+        }
+      });
+      loadDashboard();
+    };
+
+    function kpiCard(label, value, change, color){
+      return '<div class="kpi"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+value+'</div><div class="kpi-change" style="color:'+color+'">'+change+'</div></div>';
+    }
+
+    function dataTable(headers, rows){
+      var h = '<table><thead><tr>';
+      headers.forEach(function(header, i){ h += '<th'+(i===0?' style="text-align:left"':'')+'>'+header+'</th>'; });
+      h += '</tr></thead><tbody>';
+      rows.forEach(function(row){
+        h += '<tr>';
+        row.forEach(function(cell, i){ h += '<td'+(i===0?' style="text-align:left;color:#fff"':'')+'>'+cell+'</td>'; });
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+      return h;
+    }
+
+    function drawOverviewCharts(data){
+      setTimeout(function(){
+        api('/timeseries?range='+RANGE+'&metric=sessions&interval='+(RANGE==='24h'?'15m':RANGE==='7d'?'1h':'1d')).then(function(ts){
+          destroyChart('overviewChart');
+          var ctx = document.getElementById('overviewChart');
+          if(!ctx) return;
+          charts['overviewChart'] = new Chart(ctx, {
+            type:'line',
+            data:{
+              labels: ts.series.map(function(p){ var d = new Date(p.ts); return RANGE==='24h'?d.getHours()+':00':d.toLocaleDateString('es',{day:'numeric',month:'short'}); }),
+              datasets:[{ label:'Sesiones', data:ts.series.map(function(p){return p.value;}), borderColor:'#FE3E00', backgroundColor:'rgba(254,62,0,0.1)', fill:true, tension:0.4, pointRadius:2, borderWidth:2 }]
+            },
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#666',maxTicksLimit:8},grid:{color:'#2A2A2A'}},y:{ticks:{color:'#666'},grid:{color:'#2A2A2A'}}}}
+          });
+        });
+
+        destroyChart('eventsChart');
+        var evtCtx = document.getElementById('eventsChart');
+        if(evtCtx && data.eventTypes && data.eventTypes.length > 0){
+          charts['eventsChart'] = new Chart(evtCtx, {
+            type:'bar',
+            data:{
+              labels: data.eventTypes.slice(0,8).map(function(e){return e.event_type;}),
+              datasets:[{data:data.eventTypes.slice(0,8).map(function(e){return e.c;}),backgroundColor:chartColors(8),borderWidth:0}]
+            },
+            options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#666'},grid:{color:'#2A2A2A'}},y:{ticks:{color:'#B0B0B0',font:{size:11}},grid:{display:false}}}}
+          });
+        }
+
+        destroyChart('devicesChart');
+        var devCtx = document.getElementById('devicesChart');
+        if(devCtx && data.devices && data.devices.length > 0){
+          charts['devicesChart'] = new Chart(devCtx, {
+            type:'doughnut',
+            data:{
+              labels: data.devices.map(function(d){return d.device_type||'unknown';}),
+              datasets:[{data:data.devices.map(function(d){return d.c;}),backgroundColor:chartColors(data.devices.length),borderWidth:0}]
+            },
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#B0B0B0',font:{size:11}}}}}
+          });
+        }
+      }, 100);
+    }
+
+    function drawEventsCharts(data){
+      setTimeout(function(){
+        destroyChart('eventTypesChart');
+        var etcCtx = document.getElementById('eventTypesChart');
+        if(etcCtx && data.eventTypes && data.eventTypes.length > 0){
+          charts['eventTypesChart'] = new Chart(etcCtx, {
+            type:'doughnut',
+            data:{
+              labels: data.eventTypes.slice(0,10).map(function(e){return e.event_type;}),
+              datasets:[{data:data.eventTypes.slice(0,10).map(function(e){return e.c;}),backgroundColor:chartColors(10),borderWidth:0}]
+            },
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#B0B0B0',font:{size:11}}}}}
+          });
+        }
+      }, 100);
+    }
+
+    function drawConversionCharts(data){
+      setTimeout(function(){
+        api('/timeseries?range='+RANGE+'&metric=buyActions&interval='+(RANGE==='24h'?'15m':RANGE==='7d'?'1h':'1d')).then(function(ts){
+          destroyChart('conversionChart');
+          var ctx = document.getElementById('conversionChart');
+          if(!ctx) return;
+          charts['conversionChart'] = new Chart(ctx, {
+            type:'line',
+            data:{
+              labels: ts.series.map(function(p){ var d = new Date(p.ts); return RANGE==='24h'?d.getHours()+':00':d.toLocaleDateString('es',{day:'numeric',month:'short'}); }),
+              datasets:[{ label:'Compras', data:ts.series.map(function(p){return p.value;}), borderColor:'#00AA00', backgroundColor:'rgba(0,170,0,0.1)', fill:true, tension:0.4, pointRadius:2, borderWidth:2 }]
+            },
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#666',maxTicksLimit:8},grid:{color:'#2A2A2A'}},y:{ticks:{color:'#666'},grid:{color:'#2A2A2A'}}}}
+          });
+        });
+      }, 100);
+    }
+
+    function drawTechCharts(data){
+      setTimeout(function(){
+        destroyChart('techDevicesChart');
+        var tdc = document.getElementById('techDevicesChart');
+        if(tdc && data.devices && data.devices.length > 0){
+          charts['techDevicesChart'] = new Chart(tdc, {
+            type:'doughnut',
+            data:{labels:data.devices.map(function(d){return d.device_type||'?';}),datasets:[{data:data.devices.map(function(d){return d.c;}),backgroundColor:chartColors(data.devices.length),borderWidth:0}]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#B0B0B0',font:{size:11}}}}}
+          });
+        }
+        destroyChart('techBrowsersChart');
+        var tbc = document.getElementById('techBrowsersChart');
+        if(tbc && data.browsers && data.browsers.length > 0){
+          charts['techBrowsersChart'] = new Chart(tbc, {
+            type:'doughnut',
+            data:{labels:data.browsers.map(function(b){return b.browser||'?';}),datasets:[{data:data.browsers.map(function(b){return b.c;}),backgroundColor:chartColors(data.browsers.length),borderWidth:0}]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#B0B0B0',font:{size:11}}}}}
+          });
+        }
+      }, 100);
+    }
+
+    function renderOverview(data){
+      var s = data.summary;
+      var html = '<div class="kpi-grid">';
+      html += kpiCard('Visitas', fmt(s.sessions), pctChange(s.sessions, s.prevSessions), pctColor(s.sessions, s.prevSessions));
+      html += kpiCard('Navegadores unicos', fmt(s.users), pctChange(s.users, s.prevUsers), pctColor(s.users, s.prevUsers));
+      html += kpiCard('Paginas vistas', fmt(s.pageViews), pctChange(s.pageViews, s.prevPageViews), pctColor(s.pageViews, s.prevPageViews));
+      html += kpiCard('Duracion media', timeAgo(s.avgSessionDuration), pctChange(s.avgSessionDuration, s.prevAvgSessionDuration), pctColor(s.avgSessionDuration, s.prevAvgSessionDuration));
+      html += kpiCard('Rebotes por navegador', (s.bounceRate*100).toFixed(1)+'%', pctChange(-s.bounceRate, -s.prevBounceRate), pctColor(-s.bounceRate, -s.prevBounceRate));
+      html += kpiCard('Rebotes por visita', (s.visitBounceRate*100).toFixed(1)+'%', pctChange(-s.visitBounceRate, -s.prevVisitBounceRate), pctColor(-s.visitBounceRate, -s.prevVisitBounceRate));
+      html += kpiCard('Conversion', (s.conversionRate*100).toFixed(2)+'%', pctChange(s.conversionRate, s.prevConversionRate), pctColor(s.conversionRate, s.prevConversionRate));
+      html += '</div>';
+      html += '<div class="card"><h3>Tendencia</h3><canvas id="overviewChart" style="max-height:300px"></canvas></div>';
+      html += '<div class="charts-row">';
+      html += '  <div class="card"><h3>Eventos</h3><div style="max-height:250px"><canvas id="eventsChart"></canvas></div></div>';
+      html += '  <div class="card"><h3>Dispositivos</h3><div style="max-height:200px"><canvas id="devicesChart"></canvas></div></div>';
+      html += '</div>';
+      return html;
+    }
+
+    function renderPages(data){
+      if(!data.topPages || data.topPages.length === 0) return '<p style="color:#666">Sin datos de paginas aun.</p>';
+      var rows = data.topPages.map(function(p){
+        return [(p.page_url||'-').replace('https://bitmapcore.net','').slice(0,60), fmt(p.views), timeAgo(p.avgTime), p.avgScroll ? Math.round(p.avgScroll)+'%' : '-'];
+      });
+      return dataTable(['Pagina','Vistas','Tiempo medio','Scroll %'], rows);
+    }
+
+    function renderEvents(data){
+      if(!data.eventTypes || data.eventTypes.length === 0) return '<p style="color:#666">Sin eventos aun.</p>';
+      var rows = data.eventTypes.map(function(e){ return [e.event_type, fmt(e.c)]; });
+      return '<div class="card" style="max-height:300px;margin-bottom:20px"><canvas id="eventTypesChart"></canvas></div>' + dataTable(['Tipo de evento','Cantidad'], rows);
+    }
+
+    function renderConversions(data){
+      var s = data.summary;
+      var funnel = [
+        {label:'Visitas', value:s.sessions, color:'#FE3E00'},
+        {label:'Wallet connects', value:s.walletConns, color:'#FF6B35'},
+        {label:'Acciones compra', value:s.buyActions, color:'#00AA00'},
+        {label:'Acciones listar', value:s.listActions, color:'#3498DB'}
+      ];
+      var html = '<div class="card"><h3>Funnel de Conversion</h3>';
+      funnel.forEach(function(f){
+        var width = s.sessions > 0 ? Math.max(5, (f.value / s.sessions) * 100) : 0;
+        html += '<div class="funnel-bar">';
+        html += '  <div class="label"><span>'+f.label+'</span><span>'+fmt(f.value)+' ('+(s.sessions > 0 ? (f.value/s.sessions*100).toFixed(1) : 0)+'%)</span></div>';
+        html += '  <div class="track"><div class="fill" style="background:'+f.color+';width:'+width+'%"></div></div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '<div class="card"><canvas id="conversionChart" style="max-height:300px"></canvas></div>';
+      return html;
+    }
+
+    function renderTech(data){
+      var deviceRows = (data.devices||[]).map(function(d){ return [d.device_type||'unknown', fmt(d.c)]; });
+      var browserRows = (data.browsers||[]).map(function(b){ return [b.browser||'unknown', fmt(b.c)]; });
+      var utmRows = (data.utmSources||[]).map(function(u){ return [u.utm_source, fmt(u.c)]; });
+      var html = '<div class="grid-3">';
+      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Dispositivos</h3>' + dataTable(['Dispositivo','Sesiones'], deviceRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techDevicesChart"></canvas></div></div>';
+      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Navegadores</h3>' + dataTable(['Navegador','Sesiones'], browserRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techBrowsersChart"></canvas></div></div>';
+      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Fuentes UTM</h3>' + dataTable(['Fuente UTM','Sesiones'], utmRows) + '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    function renderWallets(data){
+      var w = data.walletStats;
+      if(!w) return '<p style="color:#666">Sin datos de wallets aun. Conecta una wallet en la web para empezar a medir.</p>';
+      var ranges = ['24h','7d','30d','90d'];
+
+      var connRows = ranges.map(function(r){ return [r, fmt(w.byRange[r].connections)]; });
+      var uniqueRows = ranges.map(function(r){ return [r, fmt(w.byRange[r].uniqueWallets)]; });
+
+      var activeList = (w.activeNow.wallets || []).map(function(x){ return [shortAddr(x.address), timeAgo(Date.now() - x.lastConnected)]; });
+
+      var html = '<div class="kpi-grid">';
+      html += kpiCard('Conexiones de wallet', fmt(w.byRange['7d'].connections), 'total en 7d', '#FE3E00');
+      html += kpiCard('Wallets unicas (historial)', fmt(w.byRange['7d'].uniqueWallets), 'total en 7d', '#FF6B35');
+      html += kpiCard('Wallets activas ahora', fmt(w.activeNow.count), 'ultimos 5 min', '#00AA00');
+      html += '</div>';
+      html += '<div class="grid-3">';
+      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">1. Conexiones de wallet (todas, incluye repeticiones)</h3>' + dataTable(['Periodo','Conexiones'], connRows) + '</div>';
+      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">2. Wallets unicas conectadas (historial)</h3>' + dataTable(['Periodo','Wallets unicas'], uniqueRows) + '</div>';
+      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">3. Wallets activas ahora (ultimos 5 min)</h3>' + (activeList.length > 0 ? dataTable(['Wallet','Ultima conexion'], activeList) : '<p style="color:#666">Ninguna wallet activa en este momento.</p>') + '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    function shortAddr(a){
+      if(!a) return '-';
+      if(a.length <= 12) return a;
+      return a.slice(0,6) + '...' + a.slice(-4);
+    }
+
+    function loadDashboard(){
+      document.getElementById('tabContent').innerHTML = '<div class="loading">Cargando datos...</div>';
+
+      Promise.all([
+        api('/dashboard?range='+RANGE),
+        api('/realtime'),
+        api('/wallet-stats')
+      ]).then(function(results){
+        var data = results[0];
+        var realtime = results[1];
+        data.walletStats = results[2];
+
+        var liveInfo = document.getElementById('liveInfo');
+        if(liveInfo) liveInfo.textContent = 'Online: '+realtime.activeSessions+' visitas | '+realtime.sessionsLast1h+' en 1h | '+realtime.sessionsLast24h+' en 24h';
+
+        var html = '';
+        if(currentTab === 'overview') html = renderOverview(data);
+        else if(currentTab === 'pages') html = renderPages(data);
+        else if(currentTab === 'events') html = renderEvents(data);
+        else if(currentTab === 'conversions') html = renderConversions(data);
+        else if(currentTab === 'tech') html = renderTech(data);
+        else if(currentTab === 'wallets') html = renderWallets(data);
+
+        document.getElementById('tabContent').innerHTML = html;
+
+        if(currentTab === 'overview') drawOverviewCharts(data);
+        if(currentTab === 'events') drawEventsCharts(data);
+        if(currentTab === 'conversions') drawConversionCharts(data);
+        if(currentTab === 'tech') drawTechCharts(data);
+
+      }).catch(function(err){
+        document.getElementById('tabContent').innerHTML = '<div class="error">Error cargando datos: '+err.message+'</div>';
+      });
+    }
+
+    render();
+    loadDashboard();
+    refreshTimer = setInterval(loadDashboard, 30000);
+  })();
+  </script>
+</body>
+</html>

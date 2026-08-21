@@ -217,7 +217,7 @@ var OrdinalswalletViewModel = {
     if (OrdinalswalletViewModel._pollInterval) return;
     OrdinalswalletViewModel._pollInterval = setInterval(function() {
       OrdinalswalletViewModel.loadFromCacheOnly();
-    }, 300000);
+    }, 60000);
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) {
         if (OrdinalswalletViewModel._pollInterval) {

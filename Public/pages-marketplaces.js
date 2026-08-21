@@ -56,23 +56,10 @@ function OrdinalswalletPage(props) {
     };
   }, []);
 
-  React.useEffect(function() {
-    var timer = setInterval(function() { setTick(function(t) { return t + 1; }); }, 1000);
-    return function() { clearInterval(timer); };
-  }, []);
-
-  var remaining = Math.max(0, Math.floor(300 - ((Date.now() - lastUpdateTime) / 1000) % 300));
-  var mins = Math.floor(remaining / 60);
-  var secs = remaining % 60;
-  var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
   var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
 
   var handleSort = function(sort) {
     vm.updateSortOrder(sort);
-  };
-
-  var handleRefresh = function() {
-    vm.triggerManualRefresh();
   };
 
   var handleScrollCheck = function() {
@@ -116,15 +103,8 @@ function OrdinalswalletPage(props) {
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
+        React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className:'h-[30px] w-[30px] object-contain rounded flex-shrink-0', style:{ margin:'2px' } }),
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Ordinalswallet Marketplace'),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },
-          'actualizado: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold', onClick: handleRefresh, style:{cursor:'pointer'} }, timeStr)
-        ),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted hidden sm:inline' },
-          'cargados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length) + ' / ' + BitmapUtils.formatNumber(totalListings))
-        ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
           'listados: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
@@ -174,8 +154,8 @@ function OrdinalswalletPage(props) {
                   var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
                   var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
                   var etiquetas = item.etiquetas || '';
-                  var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-                  var isPunk = etiquetas.indexOf('Punk') !== -1;
+                  var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
+                  var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
                   return React.createElement('div', {
                     key: item.bitmapId || i,
                     className: 'px-4 py-0.5 hover:bg-bitmap-surface transition-colors cursor-pointer'
@@ -183,7 +163,7 @@ function OrdinalswalletPage(props) {
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                         React.createElement('img', {
-                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=3&size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
                           width: 55,
                           height: 55,
                           loading: 'lazy',
@@ -194,12 +174,12 @@ function OrdinalswalletPage(props) {
                       React.createElement('div', { className: 'flex-1 min-w-0' },
                         React.createElement('div', { className: 'flex items-center justify-between' },
                           React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
-                              '#' + (item.bitmapNumber || '?') + '.bitmap'
+                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                              (item.bitmapNumber || '?') + '.bitmap'
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
                           ),
-                          React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
+                          React.createElement('span', { className: 'font-acme text-sm font-semibold', style:{ color:'#666666' } },
                             btcPrice + ' BTC'
                           )
                         ),
@@ -279,23 +259,10 @@ function UnisatPage(props) {
     };
   }, []);
 
-  React.useEffect(function() {
-    var timer = setInterval(function() { setTick(function(t) { return t + 1; }); }, 1000);
-    return function() { clearInterval(timer); };
-  }, []);
-
-  var remaining = Math.max(0, Math.floor(300 - ((Date.now() - lastUpdateTime) / 1000) % 300));
-  var mins = Math.floor(remaining / 60);
-  var secs = remaining % 60;
-  var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
   var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
 
   var handleSort = function(sort) {
     vm.updateSortOrder(sort);
-  };
-
-  var handleRefresh = function() {
-    vm.triggerManualRefresh();
   };
 
   var handleScrollCheck = function() {
@@ -339,15 +306,8 @@ function UnisatPage(props) {
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
+        React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className:'h-[30px] w-[30px] object-contain rounded flex-shrink-0', style:{ margin:'2px' } }),
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Unisat Marketplace'),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },
-          'actualizado: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold', onClick: handleRefresh, style:{cursor:'pointer'} }, timeStr)
-        ),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted hidden sm:inline' },
-          'cargados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length) + ' / ' + BitmapUtils.formatNumber(totalListings))
-        ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
           'listados: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
@@ -397,8 +357,8 @@ function UnisatPage(props) {
                   var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
                   var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
                   var etiquetas = item.etiquetas || '';
-                  var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-                  var isPunk = etiquetas.indexOf('Punk') !== -1;
+                  var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
+                  var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
                   return React.createElement('div', {
                     key: item.bitmapId || i,
                     className: 'px-4 py-0.5 hover:bg-bitmap-surface transition-colors cursor-pointer'
@@ -406,7 +366,7 @@ function UnisatPage(props) {
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                         React.createElement('img', {
-                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=3&size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
                           width: 55,
                           height: 55,
                           loading: 'lazy',
@@ -417,12 +377,12 @@ function UnisatPage(props) {
                       React.createElement('div', { className: 'flex-1 min-w-0' },
                         React.createElement('div', { className: 'flex items-center justify-between' },
                           React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
-                              '#' + (item.bitmapNumber || '?') + '.bitmap'
+                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                              (item.bitmapNumber || '?') + '.bitmap'
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
                           ),
-                          React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
+                          React.createElement('span', { className: 'font-acme text-sm font-semibold', style:{ color:'#666666' } },
                             btcPrice + ' BTC'
                           )
                         ),
@@ -507,24 +467,9 @@ function SatflowPage(props) {
     };
   }, []);
 
-  React.useEffect(function() {
-    var timer = setInterval(function() { setTick(function(t) { return t + 1; }); }, 1000);
-    return function() { clearInterval(timer); };
-  }, []);
-
-  var remaining = Math.max(0, Math.floor(300 - ((Date.now() - lastUpdateTime) / 1000) % 300));
-  var mins = Math.floor(remaining / 60);
-  var secs = remaining % 60;
-  var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
   var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
-  var connIndicator = connectionStatus === 'connected' ? '🟢' : connectionStatus === 'connecting' ? '🟡' : '🔴';
-
   var handleSort = function(sort) {
     vm.updateSortOrder(sort);
-  };
-
-  var handleRefresh = function() {
-    vm.triggerManualRefresh();
   };
 
   var handleScrollCheck = function() {
@@ -568,15 +513,8 @@ function SatflowPage(props) {
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
+        React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className:'h-[30px] w-[30px] object-contain rounded flex-shrink-0', style:{ margin:'2px' } }),
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Satflow Marketplace'),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },
-          'actualizado: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold', onClick: handleRefresh, style:{cursor:'pointer'} }, timeStr, ' ', connIndicator)
-        ),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted hidden sm:inline' },
-          'cargados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length) + ' / ' + BitmapUtils.formatNumber(totalListings))
-        ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
           'listados: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
@@ -626,8 +564,8 @@ function SatflowPage(props) {
                   var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
                   var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
                   var etiquetas = item.etiquetas || '';
-                  var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-                  var isPunk = etiquetas.indexOf('Punk') !== -1;
+                  var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
+                  var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
                   return React.createElement('div', {
                     key: item.bitmapId || i,
                     className: 'px-4 py-0.5 hover:bg-bitmap-surface transition-colors cursor-pointer'
@@ -635,7 +573,7 @@ function SatflowPage(props) {
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                         React.createElement('img', {
-                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=3&size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
                           width: 55,
                           height: 55,
                           loading: 'lazy',
@@ -646,12 +584,12 @@ function SatflowPage(props) {
                       React.createElement('div', { className: 'flex-1 min-w-0' },
                         React.createElement('div', { className: 'flex items-center justify-between' },
                           React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
-                              '#' + (item.bitmapNumber || '?') + '.bitmap'
+                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                              (item.bitmapNumber || '?') + '.bitmap'
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
                           ),
-                          React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
+                          React.createElement('span', { className: 'font-acme text-sm font-semibold', style:{ color:'#666666' } },
                             btcPrice + ' BTC'
                           )
                         ),

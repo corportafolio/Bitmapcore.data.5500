@@ -99,7 +99,8 @@
       React.createElement(Route, { path:'/wallet/transaction/:id', element:wrapper(TransactionPage) }),
       React.createElement(Route, { path:'/mondrian/:id', element:wrapper(MondrianPreviewPage) }),
       React.createElement(Route, { path:'/search', element:wrapper(BlockSearchPage) }),
-      React.createElement(Route, { path:'/settings', element:wrapper(SettingsPage) })
+      React.createElement(Route, { path:'/settings', element:wrapper(SettingsPage) }),
+      React.createElement(Route, { path:'/admin/analytics', element:React.createElement('div', {id:'analytics-root', style:{height:'100vh',background:'#080008',padding:'20px',overflow:'auto'}}) })
     );
   }
 

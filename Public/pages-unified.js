@@ -77,19 +77,9 @@ function UnifiedPage(props) {
     };
   }, []);
 
-  React.useEffect(function() {
-    var timer = setInterval(function() { setTick(function(t) { return t + 1; }); }, 1000);
-    return function() { clearInterval(timer); };
-  }, []);
-
-  var remaining = Math.max(0, Math.floor(300 - ((Date.now() - lastUpdateTime) / 1000) % 300));
-  var mins = Math.floor(remaining / 60);
-  var secs = remaining % 60;
-  var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
   var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
 
   var handleSort = function(sort) { vm.updateSortOrder(sort); };
-  var handleRefresh = function() { vm.triggerManualRefresh(); };
 
   var handleScrollCheck = function() {
     var container = scrollContainerRef.current;
@@ -131,15 +121,8 @@ function UnifiedPage(props) {
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
+        React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className:'h-[30px] w-[30px] object-contain rounded flex-shrink-0', style:{ margin:'2px' } }),
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Todos los Mercados'),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted ml-2 hidden sm:inline' },
-          'actualizado: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold', onClick: handleRefresh, style:{cursor:'pointer'} }, timeStr)
-        ),
-        React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted hidden sm:inline' },
-          'cargados: ',
-          React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(listings.length) + ' / ' + BitmapUtils.formatNumber(totalListings))
-        ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
           'listados: ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
@@ -188,8 +171,8 @@ function UnifiedPage(props) {
                   var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
                   var addr = BitmapUtils.truncateAddress(item.ownerAddress, 6);
                   var etiquetas = item.etiquetas || '';
-                  var isPerfect = etiquetas.indexOf('Perfect') !== -1;
-                  var isPunk = etiquetas.indexOf('Punk') !== -1;
+                  var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
+                  var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
                   return React.createElement('div', {
                     key: (item.source || '') + '_' + (item.bitmapId || i),
                     className: 'px-4 py-1.5 hover:bg-bitmap-surface transition-colors cursor-pointer'
@@ -197,7 +180,7 @@ function UnifiedPage(props) {
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                         React.createElement('img', {
-                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk,
+                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=3&size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
                           width: 55,
                           height: 55,
                           loading: 'lazy',
@@ -207,23 +190,39 @@ function UnifiedPage(props) {
                       React.createElement('div', { className: 'flex-1 min-w-0' },
                         React.createElement('div', { className: 'flex items-center justify-between' },
                           React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-bitmap-orange font-bold' },
-                              '#' + (item.bitmapNumber || '?') + '.bitmap'
+                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                              (item.bitmapNumber || '?') + '.bitmap'
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt)),
                             React.createElement('span', {
                               className: 'px-1.5 py-0.5 rounded text-[9px] font-acme flex-shrink-0',
-                              style: { backgroundColor: sourceColor(item.source) + '22', color: sourceColor(item.source) }
+                              style: { backgroundColor: sourceColor(item.source) + '22', color: sourceColor(item.source), cursor: 'pointer' },
+                              onClick: function(e) {
+                                e.stopPropagation();
+                                if (item.source === 'ordinalswallet') {
+                                  window.open('https://ordinalswallet.com/collection/bitmap', '_blank');
+                                } else if (item.source === 'unisat' || item.source === 'satflow') {
+                                  window.open('https://unisat.io/market/collection?collectionId=bitmap', '_blank');
+                                }
+                              }
                             }, sourceLabel(item.source)),
                             React.createElement('img', {
-                              src: item.source === 'ordinalswallet' 
-                                ? 'ordinalswallet_logo.png' 
+                              src: item.source === 'ordinalswallet'
+                                ? 'ordinalswallet_logo.png'
                                 : (item.source === 'local' ? 'logo_bitmapcore_logo.png' : 'unisat_logo.png'),
-                              style: { width: 10, height: 10, flexShrink: 0 },
+                              style: { width: 10, height: 10, flexShrink: 0, cursor: 'pointer' },
+                              onClick: function(e) {
+                                e.stopPropagation();
+                                if (item.source === 'ordinalswallet') {
+                                  window.open('https://ordinalswallet.com/collection/bitmap', '_blank');
+                                } else if (item.source === 'unisat' || item.source === 'satflow') {
+                                  window.open('https://unisat.io/market/collection?collectionId=bitmap', '_blank');
+                                }
+                              },
                               alt: ''
                             })
                           ),
-                          React.createElement('span', { className: 'font-acme text-sm font-semibold text-bitmap-orange-light' },
+                          React.createElement('span', { className: 'font-acme text-sm font-semibold', style:{ color:'#666666' } },
                             btcPrice + ' BTC'
                           )
                         ),
@@ -318,8 +317,8 @@ function TagGroupsPage(props) {
               React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black flex items-center justify-center' },
                 React.createElement(MondrianCanvas, { blockNumber:block.blockNumber || i, transactions:[], size:150 })
               ),
-              React.createElement('div', { className:'font-alfaslab text-xs text-white' }, '#' + (block.blockNumber || i)),
-              block.price ? React.createElement('div', { className:'font-acme text-[10px] text-bitmap-orange-light' }, BitmapUtils.formatBtc(block.price) + ' BTC') : null
+              React.createElement('div', { className:'font-alfaslab text-xs text-white' }, (block.blockNumber || i) + '.bitmap'),
+              block.price ? React.createElement('div', { className:'font-acme text-[10px]', style:{ color:'#666666' } }, BitmapUtils.formatBtc(block.price) + ' BTC') : null
             );
           })
         )
@@ -364,10 +363,10 @@ function TagTablePage(props) {
                 React.createElement(MondrianCanvas, { blockNumber:block.bloque || block.blockNumber || i, transactions:[], size:48 })
               ),
               React.createElement('div', { className:'flex-1 text-left' },
-                React.createElement('div', { className:'font-alfaslab text-sm text-white' }, '#' + (block.bloque || block.blockNumber || i)),
+                React.createElement('div', { className:'font-alfaslab text-sm text-white' }, (block.bloque || block.blockNumber || i) + '.bitmap'),
                 block.totalTransacciones || block.txCount ? React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' }, (block.totalTransacciones || block.txCount) + ' TXs') : null
               ),
-              block.totalBtc ? React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light' }, BitmapUtils.formatBtc(block.totalBtc) + ' BTC') : null
+              block.totalBtc ? React.createElement('div', { className:'font-acme text-xs', style:{ color:'#666666' } }, BitmapUtils.formatBtc(block.totalBtc) + ' BTC') : null
             );
           })
         )
@@ -397,9 +396,9 @@ function VentasPage(props) {
   var setSalesStats = _f[1];
 
   React.useEffect(function() {
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+    fetch('/api/v1/live/rates')
       .then(function(r) { return r.json(); })
-      .then(function(d) { setBtcPrice(d.bitcoin.usd); })
+      .then(function(d) { if (d && d.data && d.data.btcPrice !== null) setBtcPrice(d.data.btcPrice); })
       .catch(function() {});
   }, []);
 
@@ -421,6 +420,11 @@ function VentasPage(props) {
   };
 
   React.useEffect(function() { fetchSales(); }, [filterSource]);
+
+  React.useEffect(function() {
+    var interval = setInterval(fetchSales, 60000);
+    return function() { clearInterval(interval); };
+  }, [filterSource]);
 
   var timeAgo = function(ts) {
     if (!ts) return '';
@@ -558,9 +562,9 @@ function VentasPage(props) {
             ),
             group.items.map(function(sale, i) {
               var etiquetas = sale.etiquetas || '';
-              var isPerfect = etiquetas.indexOf('Perfect') !== -1;
+              var isPerfect = etiquetas.indexOf('Grid') !== -1;
               var isPunk = etiquetas.indexOf('Punk') !== -1;
-              var imgSrc = sale.bitmap_number ? '/api/v1/block-image/' + sale.bitmap_number + '?size=40&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (sale.totalTransacciones || 0) + '&hash=' + encodeURIComponent(sale.hash || '') + '&perfect=' + isPerfect + '&punk=' + isPunk : '';
+              var imgSrc = sale.bitmap_number ? '/api/v1/block-image/' + sale.bitmap_number + '?v=3&size=40&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (sale.totalTransacciones || 0) + '&hash=' + encodeURIComponent(sale.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk : '';
               return React.createElement('div', {
                 key: sale.id || i,
                 className: 'py-1.5 border-b border-[#222] hover:bg-[#111] transition-colors px-1'
@@ -577,7 +581,7 @@ function VentasPage(props) {
                   React.createElement('div', { className: 'flex-1 min-w-0' },
                     React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
                       React.createElement('span', { className: 'font-alfaslab text-sm text-white truncate' },
-                        sale.bitmap_name || ('#' + (sale.bitmap_number || '?') + '.bitmap')
+                        sale.bitmap_name || ((sale.bitmap_number || '?') + '.bitmap')
                       ),
                       React.createElement('span', {
                         className: 'px-1.5 py-0.5 rounded text-[9px] font-acme flex-shrink-0',

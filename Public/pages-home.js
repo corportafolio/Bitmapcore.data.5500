@@ -3,9 +3,6 @@ function HomePage(props) {
   var _b = React.useState('');
   var searchQuery = _b[0];
   var setSearchQuery = _b[1];
-  var _c = React.useState([]);
-  var searchResults = _c[0];
-  var setSearchResults = _c[1];
   var _d = React.useState(false);
   var isSearching = _d[0];
   var setIsSearching = _d[1];
@@ -21,8 +18,14 @@ function HomePage(props) {
   var _h = React.useState(false);
   var sortMenuOpen = _h[0];
   var setSortMenuOpen = _h[1];
+  var _i = React.useState([]);
+  var pinnedResults = _i[0];
+  var setPinnedResults = _i[1];
+  var _k = React.useState('');
+  var noBlockMessage = _k[0];
+  var setNoBlockMessage = _k[1];
 
-  var debounceTimer = null;
+  var noBlockTimer = null;
 
   React.useEffect(function() {
     TagViewModel.loadTagsWithPreviews().then(function(data) {
@@ -33,36 +36,108 @@ function HomePage(props) {
     });
   }, []);
 
-  var handleSearch = function(query) {
-    setSearchQuery(query);
-    if (!query.trim()) { setSearchResults([]); return; }
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(function() {
-      setIsSearching(true);
-      var results = [];
-      var num = parseInt(query);
-      if (!isNaN(num)) {
-        results.push({ type:'block', id:num, label:'Block #' + num });
-      } else {
-        results.push({ type:'tag', id:query, label:query });
-        var tagBlocks = TagClassifier.getBlocksByTag(query, 3);
-        for (var i = 0; i < tagBlocks.length; i++) {
-          results.push({ type:'block', id:tagBlocks[i].blockNumber, label:'Block #' + tagBlocks[i].blockNumber });
+  React.useEffect(function() {
+    var interval = setInterval(function() {
+      TagViewModel.loadTagsWithPreviews().then(function(data) {
+        setTags(data);
+      });
+    }, 60000);
+    return function() { clearInterval(interval); };
+  }, []);
+
+  var commitSearch = function(query) {
+    if (!query.trim()) return;
+    setSearchQuery('');
+    setIsSearching(true);
+    var results = [];
+    var num = parseInt(query);
+    if (!isNaN(num)) {
+      BlockViewModel.getBlock(num).then(function(block) {
+        setIsSearching(false);
+        if (!block) {
+          setNoBlockMessage('El bloque ' + num + ' no existe en la base de datos');
+          if (noBlockTimer) clearTimeout(noBlockTimer);
+          noBlockTimer = setTimeout(function() { setNoBlockMessage(''); }, 10000);
+          return;
         }
+        var etiquetas = block.etiquetas || '';
+        var hash = block.hash || '';
+        var totalTransactions = block.totalTransacciones || 0;
+        var newResult = {
+          type:'block', id:num, label:num + '.bitmap',
+          etiquetas:etiquetas, hash:hash, totalTransactions:totalTransactions
+        };
+        setPinnedResults(function(prev) {
+          var exists = prev.some(function(r) { return r.type === newResult.type && r.id === newResult.id; });
+          if (exists) return prev;
+          return [newResult].concat(prev).slice(0, 5);
+        });
+      });
+    } else {
+      results.push({ type:'tag', id:query, label:query });
+      var tagBlocks = TagClassifier.getBlocksByTag(query, 3);
+      for (var i = 0; i < tagBlocks.length; i++) {
+        results.push({ type:'block', id:tagBlocks[i].blockNumber, label:tagBlocks[i].blockNumber + '.bitmap' });
       }
-      setSearchResults(results.slice(0, 4));
-      setIsSearching(false);
-    }, 300);
+      if (results.length > 1) {
+        var pending = results.length - 1;
+        for (var j = 1; j < results.length; j++) {
+          (function(idx) {
+            BlockViewModel.getBlock(results[idx].id).then(function(block) {
+              if (block) {
+                results[idx].etiquetas = block.etiquetas || '';
+                results[idx].hash = block.hash || '';
+                results[idx].totalTransactions = block.totalTransacciones || 0;
+              } else {
+                results[idx] = null;
+              }
+              pending--;
+              if (pending === 0) {
+                var toPin = results.slice(1).filter(function(r) { return r !== null; }).slice(0, 3);
+                toPin.unshift(results[0]);
+                setPinnedResults(function(prev) {
+                  var combined = toPin.concat(prev);
+                  var seen = {};
+                  var deduped = [];
+                  for (var k = 0; k < combined.length; k++) {
+                    var key = combined[k].type + '-' + combined[k].id;
+                    if (!seen[key]) { seen[key] = true; deduped.push(combined[k]); }
+                  }
+                  return deduped.slice(0, 5);
+                });
+                setIsSearching(false);
+              }
+            });
+          })(j);
+        }
+      } else {
+        setPinnedResults(function(prev) {
+          var exists = prev.some(function(r) { return r.type === results[0].type && r.id === results[0].id; });
+          if (exists) return prev;
+          return results.concat(prev).slice(0, 5);
+        });
+        setIsSearching(false);
+      }
+    }
+  };
+
+  var handleKeyDown = function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchQuery.trim()) {
+        commitSearch(searchQuery);
+      }
+    }
+  };
+
+  var handleRemovePinned = function(index) {
+    setPinnedResults(function(prev) { return prev.filter(function(_, i) { return i !== index; }); });
   };
 
   var handleResultClick = function(result) {
     if (result.type === 'block') navigate('/blocks/' + result.id);
     else navigate('/tags/' + result.id);
   };
-
-  var filteredTags = tags.filter(function(t) {
-    return t.name.toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1 || searchQuery === '';
-  });
 
   var sortOptions = [
     { key:'A-Z', label:'A-Z' },
@@ -72,8 +147,8 @@ function HomePage(props) {
   ];
 
   var getSortedTags = function() {
-    if (sortOrder === 'original') return filteredTags.slice();
-    var arr = filteredTags.slice();
+    if (sortOrder === 'original') return tags.slice();
+    var arr = tags.slice();
     switch (sortOrder) {
       case 'A-Z':
         arr.sort(function(a, b) { return a.name.localeCompare(b.name); });
@@ -88,38 +163,45 @@ function HomePage(props) {
     return arr;
   };
 
-  return React.createElement('div', { className:'p-4 lg:p-6' },
-    React.createElement('div', { className:'max-w-4xl mx-auto space-y-4' },
-      React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-4' },
+  return React.createElement('div', { className:'pl-14 pr-3 py-3' },
+    React.createElement('div', { className:'max-w-7xl mx-auto space-y-4 px-2' },
+      React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl px-4 py-0.5' },
         React.createElement('div', { className:'flex items-center gap-2' },
           React.createElement('span', { className:'text-lg' }, '\uD83D\uDD0D'),
           React.createElement('input', {
             type:'text',
             value:searchQuery,
-            onChange:function(e) { handleSearch(e.target.value); },
+            onChange:function(e) { setSearchQuery(e.target.value); setNoBlockMessage(''); },
+            onKeyDown:handleKeyDown,
             placeholder:'Buscar bloque o etiqueta...',
             className:'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors h-10'
           })
         ),
-        isSearching ? React.createElement('div', { className:'mt-2 font-acme text-xs text-bitmap-muted' }, I18n.t('app.loading')) : null
+        isSearching ? React.createElement('div', { className:'mt-0.5 font-acme text-xs text-bitmap-muted' }, I18n.t('app.loading')) : null,
+        noBlockMessage ? React.createElement('div', { className:'mt-0.5 font-acme text-xs text-center', style:{color:'#666666'} }, noBlockMessage) : null
       ),
-      searchResults.length > 0 ? React.createElement('div', { className:'grid grid-cols-2 md:grid-cols-4 gap-3' },
-        searchResults.map(function(result, i) {
-          return React.createElement(ResultCard, {
-            key: result.type + '-' + result.id + '-' + i,
-            type: result.type,
-            id: result.id,
-            label: result.label,
-            price: result.price,
-            onClick: function() { handleResultClick(result); }
-          });
-        })
+      pinnedResults.length > 0 ? React.createElement('div', { className:'mt-4' },
+        React.createElement('div', { className:'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3' },
+          pinnedResults.map(function(result, i) {
+            return React.createElement(ResultCard, {
+              key: 'pinned-' + result.type + '-' + result.id + '-' + i,
+              type: result.type,
+              id: result.id,
+              label: result.label,
+              price: result.price,
+              etiquetas: result.etiquetas || '',
+              hash: result.hash || '',
+              totalTransactions: result.totalTransactions || 0,
+              onClick: function() { handleResultClick(result); },
+              onRemove: function() { handleRemovePinned(i); }
+            });
+          })
+        )
       ) : null,
-      searchQuery && searchResults.length === 0 && !isSearching ? React.createElement('div', { className:'text-center py-8 font-acme text-bitmap-muted' }, I18n.t('app.noResults')) : null,
       tagsLoading ? React.createElement('div', { className:'flex items-center justify-center h-32 font-acme text-bitmap-muted' }, I18n.t('app.loading')) :
       React.createElement('div', { className:'space-y-2' },
         React.createElement('div', { className:'flex items-center justify-between' },
-        React.createElement('h2', { className:'font-alfaslab text-lg text-white' }, filteredTags.length + ' Tablas de Etiquetas (' + tags.length + ')'),
+        React.createElement('h2', { className:'font-alfaslab text-lg text-white' }, tags.length + ' Tablas de Etiquetas (' + tags.length + ')'),
         React.createElement('div', { className:'relative' },
           React.createElement('button', {
             onClick:function() { setSortMenuOpen(!sortMenuOpen); },
@@ -138,7 +220,7 @@ function HomePage(props) {
           ) : null
         )
       ),
-        React.createElement('div', { className:'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3' },
+        React.createElement('div', { className:'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2' },
           getSortedTags().map(function(tag, i) {
             return React.createElement(TagPreviewCard, {
               key: tag.name + '-' + i,

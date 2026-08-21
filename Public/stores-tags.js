@@ -34,7 +34,7 @@ var TagViewModel = {
     this._notify();
   },
 
-  // Orden TotalTablas exacto (Android) — 55 tablas de arriba a abajo
+  // Orden TotalTablas exacto (Android) — 56 tablas de arriba a abajo
   _TOTALTABLAS_ORDER: [
     "txS millonarias",
     "TXs MULTIMILLONARIAS",
@@ -46,18 +46,18 @@ var TagViewModel = {
     "3M out",
     "5M out",
     "21e8",
-    "2 tx PERFECT",
-    "3 tx PERFECT",
-    "4 tx PERFECT",
-    "6 tx PERFECT",
+    "2 tx GRID",
+    "3 tx GRID",
+    "4 tx GRID",
+    "6 tx GRID",
+    "9 tx GRID",
     "Grid Punk",
-    "Grid PERFECT",
-    "Punk PERFECT",
-    "5 tx Punk PERFECT",
-    "Punk PERFECT 10 tx",
-    "Giga Punk PERFECT",
+    "5 tx Grid Punk",
+    "Punk GRID 10 tx",
+    "Giga Punk GRID",
     "Palindrome",
     "Palindrome PERFECT",
+    "microstrategy",
     "Wide Neck Punk",
     "Standar Punk",
     "Pristine Punk",
@@ -90,12 +90,13 @@ var TagViewModel = {
     "fibonacci",
     "binary",
     "chinese lucky number",
-    "pizza day"
+    "pizza day",
+    "leap day"
   ],
 
   // ===== METODOS PUBLICOS =====
 
-  // Cargar todos los nombres de tags (55 tablas)
+  // Cargar todos los nombres de tags (56 tablas)
   loadAllTagNames: function() {
     var self = this;
     
@@ -175,8 +176,8 @@ var TagViewModel = {
         block.totalTransactions = parseInt(block.totalTransacciones) || 0;
         block.hash = block.hash || '';
         block.etiquetas = block.etiquetas || '';
-        block.isPerfect = (block.etiquetas || '').indexOf('Perfect') !== -1;
-        block.isPunk = (block.etiquetas || '').indexOf('Punk') !== -1;
+        block.isPerfect = (block.etiquetas || '').toLowerCase().indexOf('grid') !== -1;
+        block.isPunk = (block.etiquetas || '').toLowerCase().indexOf('punk') !== -1;
         block.totalEtiquetas = block.totalEtiquetas || 0;
         block.totalBloquesUnicos = block.totalBloquesUnicos || 0;
 
@@ -188,11 +189,11 @@ var TagViewModel = {
       .catch(function() { return null; });
   },
 
-  // Cargar lista completa de numeros de bloque de un tag (paginado)
+  // Cargar bloques completos de un tag (paginado, con datos completos)
   loadTagBlocks: function(tagName, page, limit) {
     var self = this;
     page = page || 1;
-    limit = limit || 50;
+    limit = limit || 100;
     var offset = (page - 1) * limit;
 
     var cacheKey = tagName + '_page' + page;
@@ -205,14 +206,21 @@ var TagViewModel = {
         var blocks = res.data || res;
         if (!Array.isArray(blocks)) blocks = [];
 
-        var blockNumbers = blocks.map(function(b) {
-          return b.bloque || b.blockNumber;
-        }).filter(function(n) { return n !== undefined && n !== null; });
+        var normalized = blocks.map(function(b) {
+          return {
+            blockNumber: b.bloque || b.blockNumber,
+            etiquetas: b.etiquetas || '',
+            totalBtc: parseFloat(b.totalBtc || b.total_btc) || 0,
+            totalTransactions: parseInt(b.totalTransacciones) || 0,
+            hash: b.hash || '',
+            mempool: b.mempool || false
+          };
+        });
 
         var newCache = Object.assign({}, self._state.tagBlocksCache);
-        newCache[cacheKey] = blockNumbers;
+        newCache[cacheKey] = normalized;
         self._set({ tagBlocksCache: newCache });
-        return blockNumbers;
+        return normalized;
       })
       .catch(function() { return []; });
   },
