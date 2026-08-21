@@ -980,10 +980,17 @@ app.get('/api/v1/sales/stats', (req, res) => {
     const last24h = now - 86400000;
     const last7d = now - (7 * 86400000);
     const last30d = now - (30 * 86400000);
+    const source = req.query.source;
+    let sourceFilter = '';
+    let sourceParams = [];
+    if (source && source !== 'all') {
+      sourceFilter = ' AND source = ?';
+      sourceParams = [source];
+    }
 
-    const sales24h = dbSales.prepare("SELECT COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ?").get(last24h);
-    const sales7d = dbSales.prepare("SELECT COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ?").get(last7d);
-    const sales30d = dbSales.prepare("SELECT COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ?").get(last30d);
+    const sales24h = dbSales.prepare("SELECT COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ?" + sourceFilter).get(last24h, ...sourceParams);
+    const sales7d = dbSales.prepare("SELECT COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ?" + sourceFilter).get(last7d, ...sourceParams);
+    const sales30d = dbSales.prepare("SELECT COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ?" + sourceFilter).get(last30d, ...sourceParams);
     const bySource = dbSales.prepare("SELECT source, COUNT(*) as c, COALESCE(SUM(price),0) as v FROM all_sales WHERE sold_at > ? GROUP BY source").all(last30d);
 
     sendSuccess(res, {
