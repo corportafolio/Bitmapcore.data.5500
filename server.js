@@ -1010,7 +1010,15 @@ app.post('/api/v1/internal/refresh-local', async (req, res) => {
 // ===== LOCAL MARKETPLACE STATS =====
 app.get('/api/v1/local/stats', (req, res) => {
   try {
-    const localDb = new Database(path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db'), { readonly: true });
+    const localDbPath = path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db');
+    const altLocalDbPath = '/root/bitmapcore-server/data/bitmapcorp.db';
+    let localDb = null;
+    try {
+      localDb = new Database(localDbPath, { readonly: true });
+    } catch (e) {
+      try { localDb = new Database(altLocalDbPath, { readonly: true }); } catch (e2) { localDb = null; }
+    }
+    if (!localDb) return sendSuccess(res, { ventas: 0, volumen: 0, volumen24h: 0, listados: 0, piso: 0 });
     
     const ventasTotal = localDb.prepare("SELECT COUNT(*) as c, SUM(price) as v FROM ventas_historial").get();
     const ventas24h = localDb.prepare("SELECT SUM(price) as v FROM ventas_historial WHERE sold_at > ?").get(Date.now() - 86400000);
