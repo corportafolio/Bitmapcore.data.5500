@@ -74,10 +74,10 @@ var PagesWorld = (function() {
       null
     );
 
-    WorldBlocks.loadChunk(500, 500, function() {
-      WorldControls.setPosition(500 * 1.1, 500 * 1.1);
-      WorldControls.setZoom(1);
-    });
+    WorldControls.setPosition(500 * 1.1, 500 * 1.1);
+    WorldControls.setZoom(1);
+
+    WorldBlocks.loadChunk(500, 500, function() {});
 
     animate();
   }
