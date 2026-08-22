@@ -42,7 +42,7 @@ var PagesWorld = (function() {
           borderRadius: '8px', padding: '8px 12px', color: '#666',
           fontSize: '11px', fontFamily: 'monospace', zIndex: 100
         }
-      }, 'Bitmap Valley - Arrastra: mover | Scroll: zoom | Click: detalle bloque'),
+      }, 'Bitmap World - Arrastra: mover | Scroll: zoom | Click: detalle bloque'),
       React.createElement('div', {
         style: {
           position: 'absolute', top: '16px', left: '16px',
@@ -52,7 +52,7 @@ var PagesWorld = (function() {
       },
         React.createElement('div', {
           style: { color: '#FE3E00', fontSize: '16px', fontFamily: 'Alfa Slab One, serif', marginBottom: '4px' }
-        }, 'Bitmap Valley'),
+        }, 'Bitmap World'),
         React.createElement('div', {
           style: { color: '#666', fontSize: '11px', fontFamily: 'Acme, sans-serif' }
         }, 'Mundo Virtual 3D - 1,000,000 bloques Bitcoin')
