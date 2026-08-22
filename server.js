@@ -1104,6 +1104,9 @@ app.get('/api/v1/local/cache/listings', (req, res) => {
     } finally {
       if (localDb) try { localDb.close(); } catch (e) {}
     }
+  } catch (err) {
+    sendError(res, err.message);
+  }
 });
 
 
