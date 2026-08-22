@@ -3,12 +3,13 @@ var WorldScene = (function() {
   var LIGHT_COLOR = 0xffffff;
   var AMBIENT_INTENSITY = 0.6;
   var DIR_INTENSITY = 0.8;
-  var BG_COLOR = 0x080008;
+  var BG_COLOR = 0x12101a;
+  var orthoZoom = 15;
 
   function init(container) {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(BG_COLOR);
-    scene.fog = new THREE.FogExp2(BG_COLOR, 0.001);
+    scene.fog = new THREE.FogExp2(BG_COLOR, 0.003);
 
     clock = new THREE.Clock();
 
@@ -17,8 +18,12 @@ var WorldScene = (function() {
     if (w === 0) w = window.innerWidth;
     if (h === 0) h = window.innerHeight;
 
-    camera = new THREE.PerspectiveCamera(45, w / h, 1, 2000);
-    camera.position.set(0, 50, 300);
+    camera = new THREE.OrthographicCamera(
+      (w / -2) / orthoZoom, (w / 2) / orthoZoom,
+      (h / 2) / orthoZoom, (h / -2) / orthoZoom,
+      0.1, 2000
+    );
+    camera.position.set(100, 100, 100);
     camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -32,30 +37,51 @@ var WorldScene = (function() {
     scene.add(ambient);
 
     var dir = new THREE.DirectionalLight(LIGHT_COLOR, DIR_INTENSITY);
-    dir.position.set(100, 150, 100);
+    dir.position.set(50, 80, 30);
     dir.castShadow = true;
     dir.shadow.mapSize.width = 2048;
     dir.shadow.mapSize.height = 2048;
     dir.shadow.camera.near = 0.5;
-    dir.shadow.camera.far = 800;
-    dir.shadow.camera.left = -150;
-    dir.shadow.camera.right = 150;
-    dir.shadow.camera.top = 150;
-    dir.shadow.camera.bottom = -150;
+    dir.shadow.camera.far = 500;
+    dir.shadow.camera.left = -100;
+    dir.shadow.camera.right = 100;
+    dir.shadow.camera.top = 100;
+    dir.shadow.camera.bottom = -100;
     scene.add(dir);
 
-    var hemi = new THREE.HemisphereLight(0x444466, 0x222233, 0.3);
-    scene.add(hemi);
-
     window.addEventListener('resize', onResize);
+  }
+
+  function setOrthoZoom(z) {
+    orthoZoom = z;
+    updateFrustum();
+  }
+
+  function getOrthoZoom() {
+    return orthoZoom;
+  }
+
+  function updateFrustum() {
+    var c = renderer.domElement.parentElement;
+    if (!c) return;
+    var w = c.clientWidth;
+    var h = c.clientHeight;
+    camera.left = (w / -2) / orthoZoom;
+    camera.right = (w / 2) / orthoZoom;
+    camera.top = (h / 2) / orthoZoom;
+    camera.bottom = (h / -2) / orthoZoom;
+    camera.updateProjectionMatrix();
   }
 
   function onResize() {
     var c = renderer.domElement.parentElement;
     if (!c) return;
-    var w = c.clientWidth || window.innerWidth;
-    var h = c.clientHeight || window.innerHeight;
-    camera.aspect = w / h;
+    var w = c.clientWidth;
+    var h = c.clientHeight;
+    camera.left = (w / -2) / orthoZoom;
+    camera.right = (w / 2) / orthoZoom;
+    camera.top = (h / 2) / orthoZoom;
+    camera.bottom = (h / -2) / orthoZoom;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
   }
@@ -71,6 +97,9 @@ var WorldScene = (function() {
     getCamera: getCamera,
     getRenderer: getRenderer,
     getClock: getClock,
-    onResize: onResize
+    onResize: onResize,
+    setOrthoZoom: setOrthoZoom,
+    getOrthoZoom: getOrthoZoom,
+    updateFrustum: updateFrustum
   };
 })();

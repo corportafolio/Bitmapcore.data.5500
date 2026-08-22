@@ -5,6 +5,7 @@ var WorldInteraction = (function() {
   var hoveredMesh = null;
   var tooltipEl = null;
   var infoEl = null;
+  var BLOCK_SPACING = 1.1;
 
   function init(cam, ren, sceneRef, tooltipElement, infoElement) {
     camera = cam;
