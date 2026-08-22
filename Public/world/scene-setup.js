@@ -13,8 +13,10 @@ var WorldScene = (function() {
 
     clock = new THREE.Clock();
 
-    var w = container.clientWidth;
-    var h = container.clientHeight;
+    var w = container.clientWidth || window.innerWidth;
+    var h = container.clientHeight || window.innerHeight;
+    if (w === 0) w = window.innerWidth;
+    if (h === 0) h = window.innerHeight;
 
     camera = new THREE.OrthographicCamera(
       (w / -2) / orthoZoom, (w / 2) / orthoZoom,
