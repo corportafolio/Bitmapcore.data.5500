@@ -1,8 +1,6 @@
 var PagesWorld = (function() {
   var initialized = false;
   var animFrame = null;
-  var compassTheta = 0;
-  var currentBlockInfo = { blockNumber: 0, tx: 0, lat: 0, lon: 0 };
 
   function WorldPage(props) {
     var ref = React.useRef(null);
@@ -11,24 +9,63 @@ var PagesWorld = (function() {
     var infoRef = React.useRef(null);
     var blockInfoRef = React.useRef(null);
 
+    var onControlsChange = React.useCallback(function(theta, phi, distance) {
+      if (compassRef.current) {
+        compassRef.current.style.transform = 'rotate(' + (-theta * 180 / Math.PI) + 'deg)';
+      }
+      updateBlockInfo(theta, phi, distance);
+    }, []);
+
+    function updateBlockInfo(theta, phi, distance) {
+      var dir = new THREE.Vector3(
+        -Math.cos(phi) * Math.sin(theta),
+        -Math.sin(phi),
+        -Math.cos(phi) * Math.cos(theta)
+      );
+
+      var bestBlock = -1;
+      var bestDot = -1;
+      var meshes = WorldBlocks.getAllMeshes();
+      var keys = Object.keys(meshes);
+
+      for (var i = 0; i < keys.length; i++) {
+        var bn = parseInt(keys[i]);
+        var pos = WorldGrid.blockToSphere(bn);
+        var len = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
+        if (len < 0.001) continue;
+
+        var blockDir = new THREE.Vector3(pos.x / len, pos.y / len, pos.z / len);
+        var dot = blockDir.dot(dir);
+
+        if (dot > bestDot) {
+          bestDot = dot;
+          bestBlock = bn;
+        }
+      }
+
+      if (bestBlock >= 0 && blockInfoRef.current) {
+        var pos = WorldGrid.blockToSphere(bestBlock);
+        var lat = pos.phi * 180 / Math.PI;
+        var lon = pos.theta * 180 / Math.PI;
+        var data = WorldBlocks.getBlockData(bestBlock);
+        var tx = data ? data.tx : 0;
+        blockInfoRef.current.innerHTML =
+          'Bloque #' + bestBlock + ' | ' + tx + ' tx<br/>' +
+          lat.toFixed(1) + '°N, ' + lon.toFixed(1) + '°E<br/>' +
+          'Dist: ' + Math.round(distance) + ' / Zoom: ' + (300 / distance).toFixed(1) + 'x';
+      }
+    }
+
     React.useEffect(function() {
       if (!ref.current || initialized) return;
-      initWorld(ref.current);
+      initWorld(ref.current, onControlsChange);
       initialized = true;
-
-      WorldControls.setOnChange(function(theta, phi, distance) {
-        compassTheta = theta;
-        if (compassRef.current) {
-          compassRef.current.style.transform = 'rotate(' + (-theta * 180 / Math.PI) + 'deg)';
-        }
-        updateBlockInfo();
-      });
 
       return function() {
         if (animFrame) cancelAnimationFrame(animFrame);
         initialized = false;
       };
-    }, []);
+    }, [onControlsChange]);
 
     return React.createElement('div', {
       style: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', overflow: 'hidden', background: '#080008', zIndex: 0 }
@@ -150,7 +187,7 @@ var PagesWorld = (function() {
     }, symbol);
   }
 
-  function initWorld(containerEl) {
+  function initWorld(containerEl, onChange) {
     WorldScene.init(containerEl);
     WorldControls.init(WorldScene.getCamera(), WorldScene.getRenderer());
     WorldGrid.create(WorldScene.getScene());
@@ -165,60 +202,11 @@ var PagesWorld = (function() {
     );
 
     WorldControls.setInitial(0, 0, 280);
-    WorldControls.setOnChange(onControlsChange);
+    WorldControls.setOnChange(onChange);
 
     WorldBlocks.loadChunk(0, 0, function() {});
 
     animate();
-  }
-
-  function onControlsChange(theta, phi, distance) {
-    compassTheta = theta;
-    updateBlockInfo();
-  }
-
-  function updateBlockInfo() {
-    var state = WorldControls.getState();
-    var theta = state.theta;
-    var phi = state.phi;
-
-    var dir = new THREE.Vector3(
-      -Math.cos(phi) * Math.sin(theta),
-      -Math.sin(phi),
-      -Math.cos(phi) * Math.cos(theta)
-    );
-
-    var bestBlock = -1;
-    var bestDot = -1;
-    var meshes = WorldBlocks.getAllMeshes();
-    var keys = Object.keys(meshes);
-
-    for (var i = 0; i < keys.length; i++) {
-      var bn = parseInt(keys[i]);
-      var pos = WorldGrid.blockToSphere(bn);
-      var len = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
-      if (len < 0.001) continue;
-
-      var blockDir = new THREE.Vector3(pos.x / len, pos.y / len, pos.z / len);
-      var dot = blockDir.dot(dir);
-
-      if (dot > bestDot) {
-        bestDot = dot;
-        bestBlock = bn;
-      }
-    }
-
-    if (bestBlock >= 0 && blockInfoRef.current) {
-      var pos = WorldGrid.blockToSphere(bestBlock);
-      var lat = pos.phi * 180 / Math.PI;
-      var lon = pos.theta * 180 / Math.PI;
-      var data = WorldBlocks.getBlockData(bestBlock);
-      var tx = data ? data.tx : 0;
-      blockInfoRef.current.innerHTML =
-        'Bloque #' + bestBlock + ' | ' + tx + ' tx<br/>' +
-        lat.toFixed(1) + '°N, ' + lon.toFixed(1) + '°E<br/>' +
-        'Dist: ' + Math.round(state.distance) + ' / Zoom: ' + (300 / state.distance).toFixed(1) + 'x';
-    }
   }
 
   function animate() {
