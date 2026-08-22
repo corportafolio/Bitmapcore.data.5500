@@ -52,6 +52,22 @@ setInterval(() => {
   }
 }, 300000);
 
+// VACUUM periodico cada 6 horas para limpiar archivos .db de cache
+setInterval(() => {
+  const dbsToVacuum = [
+    { name: 'ordinalswallet_cache', handle: () => dbOw },
+    { name: 'unisat_cache', handle: () => dbUnisat },
+    { name: 'unified_cache', handle: () => dbUnified },
+    { name: 'sales_history', handle: () => dbSales }
+  ];
+  for (const d of dbsToVacuum) {
+    try {
+      const conn = d.handle();
+      if (conn) { conn.exec('VACUUM'); console.log('[VACUUM] ' + d.name + ' limpiado'); }
+    } catch (e) { /* ignore */ }
+  }
+}, 21600000);
+
 const publicDir = path.join(__dirname, 'Public');
 app.use(express.static(publicDir, {
   setHeaders: function(res, filePath) {
@@ -66,6 +82,7 @@ app.use(express.static(publicDir, {
 let db = null;
 try {
   db = new Database(path.join(__dirname, 'data/bitmapcorp_database.db'), { readonly: false });
+  db.pragma('journal_mode = WAL');
   db.exec(`
     CREATE TABLE IF NOT EXISTS live_stats (
       key TEXT PRIMARY KEY,
@@ -1051,39 +1068,42 @@ app.get('/api/v1/local/cache/listings', (req, res) => {
     const offset = parseInt(req.query.offset) || 0;
     const limit = parseInt(req.query.limit) || 100;
     const localDbPath = path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db');
-    const localDb = new Database(localDbPath, { readonly: true });
-
-    const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
-    try { localDb.prepare('ATTACH DATABASE ? AS maindb').run(mainDbPath); } catch (e) { /* already attached */ }
-
-    let rows;
+    let localDb = null;
     try {
-      rows = localDb.prepare(`
-        SELECT l.id, l.name, l.price as listedPrice, l.bitmap_number as bitmapNumber,
-               l.bitmap_hash as bitmapHash, l.seller_address, l.is_active,
-               l.listed_at as listedAt, l.inscription_id as inscriptionId,
-               b.hash, b.etiquetas, b.totalTransacciones, b.totalBtc
-        FROM listings l
-        LEFT JOIN maindb.blocks b ON l.bitmap_number = b.bloque
-        WHERE l.is_active = 1 AND l.price > 0
-        ORDER BY l.listed_at DESC
-        LIMIT ? OFFSET ?
-      `).all(limit, offset);
-    } catch (e) {
-      rows = localDb.prepare(`
-        SELECT id, name, price as listedPrice, bitmap_number as bitmapNumber,
-               bitmap_hash as bitmapHash, seller_address, is_active,
-               listed_at as listedAt, inscription_id as inscriptionId
-        FROM listings WHERE is_active = 1 AND price > 0
-        ORDER BY listed_at DESC LIMIT ? OFFSET ?
-      `).all(limit, offset);
-    }
+      localDb = new Database(localDbPath, { readonly: true });
 
-    localDb.close();
-    sendSuccess(res, rows);
-  } catch (err) {
-    sendError(res, err.message);
-  }
+      const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
+      try { localDb.prepare('ATTACH DATABASE ? AS maindb').run(mainDbPath); } catch (e) { /* already attached */ }
+
+      let rows;
+      try {
+        rows = localDb.prepare(`
+          SELECT l.id, l.name, l.price as listedPrice, l.bitmap_number as bitmapNumber,
+                 l.bitmap_hash as bitmapHash, l.seller_address, l.is_active,
+                 l.listed_at as listedAt, l.inscription_id as inscriptionId,
+                 b.hash, b.etiquetas, b.totalTransacciones, b.totalBtc
+          FROM listings l
+          LEFT JOIN maindb.blocks b ON l.bitmap_number = b.bloque
+          WHERE l.is_active = 1 AND l.price > 0
+          ORDER BY l.listed_at DESC
+          LIMIT ? OFFSET ?
+        `).all(limit, offset);
+      } catch (e) {
+        rows = localDb.prepare(`
+          SELECT id, name, price as listedPrice, bitmap_number as bitmapNumber,
+                 bitmap_hash as bitmapHash, seller_address, is_active,
+                 listed_at as listedAt, inscription_id as inscriptionId
+          FROM listings WHERE is_active = 1 AND price > 0
+          ORDER BY listed_at DESC LIMIT ? OFFSET ?
+        `).all(limit, offset);
+      }
+
+      sendSuccess(res, rows);
+    } catch (err) {
+      sendError(res, err.message);
+    } finally {
+      if (localDb) try { localDb.close(); } catch (e) {}
+    }
 });
 
 
@@ -1624,10 +1644,11 @@ async function pollUnified() {
     }
 
     if (dbSales) {
+      let dbLocal = null;
       try {
         const path = require('path');
         const Database = require('better-sqlite3');
-        const dbLocal = new Database(path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db'), { readonly: true });
+        dbLocal = new Database(path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db'), { readonly: true });
         const localSoldRow = dbUnified.prepare("SELECT value FROM unified_stats WHERE key='localLastSoldTimestamp'").get();
         const localSoldSince = localSoldRow ? localSoldRow.value : 0;
         const localVentas = dbLocal.prepare("SELECT * FROM ventas_historial WHERE sold_at > ?").all(localSoldSince);
@@ -1644,10 +1665,11 @@ async function pollUnified() {
         if (maxLocalSoldTs > localSoldSince) {
           dbUnified.prepare("INSERT OR REPLACE INTO unified_stats (key, value, updatedAt) VALUES ('localLastSoldTimestamp',?,?)").run(maxLocalSoldTs, now);
         }
-        dbLocal.close();
         if (localVentas.length > 0) console.error('[UNIFIED] Synced ' + localVentas.length + ' local sales to all_sales');
       } catch (e) {
         console.error('[UNIFIED] Error syncing local sales:', e.message);
+      } finally {
+        if (dbLocal) try { dbLocal.close(); } catch (e) {}
       }
 
       try {
