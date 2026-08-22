@@ -130,8 +130,9 @@ var WorldBlocks = (function() {
     var centerTheta = Math.atan2(camDir.z, camDir.x);
     if (centerTheta < 0) centerTheta += Math.PI * 2;
 
-    var gzCenter = Math.round(((centerPhi / Math.PI) + 0.5) * 1000);
-    var gxCenter = Math.round((centerTheta / (Math.PI * 2)) * 1000);
+    var gzShiftedCenter = Math.round(((centerPhi / Math.PI) + 0.5) * 1000);
+    var gzCenter = (gzShiftedCenter - 500 + 1000) % 1000;
+    var gxCenter = Math.round((centerTheta / (Math.PI * 2)) * 1000) % 1000;
 
     var fovFactor = 1.5;
     var gridRadius = Math.max(8, Math.min(200, Math.round(300 * fovFactor * (150 / Math.max(distance, 105)))));
@@ -161,7 +162,7 @@ var WorldBlocks = (function() {
         var blockDir = new THREE.Vector3(pos.x / len, pos.y / len, pos.z / len);
         var dot = blockDir.dot(camDir);
 
-        if (dot > -0.3) {
+        if (dot > 0) {
           visibleBlocks.push({ blockNum: blockNum, dot: dot });
           count++;
         }
