@@ -3,15 +3,15 @@ var WorldBlocks = (function() {
   var blockData = {};
   var textureCache = {};
   var scene = null;
-  var BLOCK_SPACING = 1.1;
+  var BLOCK_SIZE = 0.6;
   var BASE_HEIGHT = 0.5;
   var MAX_HEIGHT = 5.0;
   var MAX_TX = 8000;
-  var CHUNK_SIZE = 15;
-  var LOAD_RADIUS = 20;
-  var MAX_VISIBLE = 400;
+  var MAX_VISIBLE = 500;
   var LOAD_DEBOUNCE = 300;
   var loadTimer = null;
+  var loadedBlocks = {};
+  var BLOCK_HEIGHT_SCALE = 3.0;
 
   function init(sceneRef) {
     scene = sceneRef;
@@ -41,11 +41,15 @@ var WorldBlocks = (function() {
     return texture;
   }
 
-  function createBlockMesh(blockNumber, tx, hash, gridX, gridZ) {
+  function createBlockMesh(blockNumber, tx, hash) {
     if (blockMeshes[blockNumber]) return;
 
+    var pos = WorldGrid.blockToSphere(blockNumber);
+    var normal = WorldGrid.getBlockNormal(blockNumber);
+    var scale = WorldGrid.getBlockScale(blockNumber);
     var height = mapHeight(tx);
-    var geo = new THREE.BoxGeometry(0.95, height, 0.95);
+
+    var geo = new THREE.BoxGeometry(BLOCK_SIZE * scale.x, height * BLOCK_HEIGHT_SCALE, BLOCK_SIZE * scale.z);
     var texture = generateMondrianTexture(blockNumber, tx, hash);
 
     var mat = new THREE.MeshStandardMaterial({
@@ -55,9 +59,14 @@ var WorldBlocks = (function() {
     });
 
     var mesh = new THREE.Mesh(geo, mat);
-    var worldX = gridX * BLOCK_SPACING;
-    var worldZ = gridZ * BLOCK_SPACING;
-    mesh.position.set(worldX, height / 2, worldZ);
+
+    mesh.position.set(pos.x, pos.y, pos.z);
+
+    var up = new THREE.Vector3(0, 1, 0);
+    var normalVec = new THREE.Vector3(normal.x, normal.y, normal.z);
+    var quaternion = new THREE.Quaternion().setFromUnitVectors(up, normalVec);
+    mesh.quaternion.copy(quaternion);
+
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData = { blockNumber: blockNumber, tx: tx, hash: hash };
@@ -66,23 +75,30 @@ var WorldBlocks = (function() {
     blockMeshes[blockNumber] = mesh;
   }
 
-  function createGhostBlock(blockNumber, gridX, gridZ) {
+  function createGhostBlock(blockNumber) {
     if (blockMeshes[blockNumber]) return;
 
-    var height = 0.5;
-    var geo = new THREE.BoxGeometry(0.95, height, 0.95);
+    var pos = WorldGrid.blockToSphere(blockNumber);
+    var normal = WorldGrid.getBlockNormal(blockNumber);
+    var scale = WorldGrid.getBlockScale(blockNumber);
+
+    var geo = new THREE.BoxGeometry(BLOCK_SIZE * scale.x, 0.3, BLOCK_SIZE * scale.z);
     var mat = new THREE.MeshStandardMaterial({
       color: 0x333333,
       roughness: 0.8,
       metalness: 0.1,
       transparent: true,
-      opacity: 0.3
+      opacity: 0.2
     });
 
     var mesh = new THREE.Mesh(geo, mat);
-    var worldX = gridX * BLOCK_SPACING;
-    var worldZ = gridZ * BLOCK_SPACING;
-    mesh.position.set(worldX, height / 2, worldZ);
+    mesh.position.set(pos.x, pos.y, pos.z);
+
+    var up = new THREE.Vector3(0, 1, 0);
+    var normalVec = new THREE.Vector3(normal.x, normal.y, normal.z);
+    var quaternion = new THREE.Quaternion().setFromUnitVectors(up, normalVec);
+    mesh.quaternion.copy(quaternion);
+
     mesh.castShadow = false;
     mesh.receiveShadow = true;
     mesh.userData = { blockNumber: blockNumber, ghost: true };
@@ -99,28 +115,44 @@ var WorldBlocks = (function() {
     mesh.material.dispose();
     if (mesh.material.map) mesh.material.map.dispose();
     delete blockMeshes[blockNumber];
+    delete loadedBlocks[blockNumber];
   }
 
-  function loadChunk(centerX, centerZ, callback) {
-    var startX = Math.max(0, centerX - LOAD_RADIUS);
-    var endX = Math.min(999, centerX + LOAD_RADIUS);
-    var startZ = Math.max(0, centerZ - LOAD_RADIUS);
-    var endZ = Math.min(999, centerZ + LOAD_RADIUS);
-    var blocksToLoad = [];
+  function loadChunk(theta, phi, callback) {
+    var visibleBlocks = [];
+    var camDir = new THREE.Vector3(
+      -Math.cos(phi) * Math.sin(theta),
+      -Math.sin(phi),
+      -Math.cos(phi) * Math.cos(theta)
+    );
 
-    for (var z = startZ; z <= endZ; z++) {
-      for (var x = startX; x <= endX; x++) {
-        var blockNum = WorldGrid.gridToBlock(x, z);
-        if (blockNum >= 0 && blockNum <= 999999 && !blockMeshes[blockNum]) {
-          blocksToLoad.push({ blockNum: blockNum, x: x, z: z });
+    for (var gz = 0; gz < 1000; gz += 8) {
+      for (var gx = 0; gx < 1000; gx += 8) {
+        var gzShifted = (gz + 500) % 1000;
+        if (gzShifted < WorldGrid.getBlockScale(0).x && false) continue;
+
+        var blockNum = gz * 1000 + gx;
+        if (WorldGrid.isBlockInPolarZone(blockNum)) continue;
+        if (loadedBlocks[blockNum]) continue;
+
+        var pos = WorldGrid.blockToSphere(blockNum);
+        var len = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
+        if (len < 0.001) continue;
+
+        var blockDir = new THREE.Vector3(pos.x / len, pos.y / len, pos.z / len);
+        var dot = blockDir.dot(camDir);
+
+        if (dot > -0.3) {
+          visibleBlocks.push({ blockNum: blockNum, dot: dot });
         }
       }
     }
 
-    blocksToLoad = blocksToLoad.slice(0, MAX_VISIBLE);
+    visibleBlocks.sort(function(a, b) { return b.dot - a.dot; });
+    visibleBlocks = visibleBlocks.slice(0, MAX_VISIBLE);
 
     var loaded = 0;
-    var total = blocksToLoad.length;
+    var total = visibleBlocks.length;
     if (total === 0) { if (callback) callback(); return; }
 
     var batch = 20;
@@ -130,7 +162,7 @@ var WorldBlocks = (function() {
       var end = Math.min(idx + batch, total);
       var promises = [];
       for (var i = idx; i < end; i++) {
-        promises.push(fetchBlock(blocksToLoad[i]));
+        promises.push(fetchBlock(visibleBlocks[i].blockNum));
       }
       Promise.all(promises).then(function() {
         idx = end;
@@ -145,41 +177,54 @@ var WorldBlocks = (function() {
     loadNext();
   }
 
-  function fetchBlock(info) {
-    return fetch('/api/v1/blocks/' + info.blockNum)
+  function fetchBlock(blockNum) {
+    if (loadedBlocks[blockNum]) return Promise.resolve();
+    loadedBlocks[blockNum] = true;
+
+    return fetch('/api/v1/blocks/' + blockNum)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (!data || !data.data) {
-          createGhostBlock(info.blockNum, info.x, info.z);
+          createGhostBlock(blockNum);
           return;
         }
         var block = data.data;
         var tx = parseInt(block.totalTransacciones) || 1;
         var hash = block.hash || '';
-        blockData[info.blockNum] = { tx: tx, hash: hash };
-        createBlockMesh(info.blockNum, tx, hash, info.x, info.z);
+        blockData[blockNum] = { tx: tx, hash: hash };
+        createBlockMesh(blockNum, tx, hash);
       })
       .catch(function() {
-        createGhostBlock(info.blockNum, info.x, info.z);
+        createGhostBlock(blockNum);
       });
   }
 
-  function scheduleLoad(centerX, centerZ) {
+  function scheduleLoad(theta, phi) {
     if (loadTimer) clearTimeout(loadTimer);
     loadTimer = setTimeout(function() {
-      cleanupDistant(centerX, centerZ);
-      loadChunk(centerX, centerZ);
+      cleanupDistant(theta, phi);
+      loadChunk(theta, phi);
     }, LOAD_DEBOUNCE);
   }
 
-  function cleanupDistant(centerX, centerZ) {
+  function cleanupDistant(theta, phi) {
+    var camDir = new THREE.Vector3(
+      -Math.cos(phi) * Math.sin(theta),
+      -Math.sin(phi),
+      -Math.cos(phi) * Math.cos(theta)
+    );
+
     var keys = Object.keys(blockMeshes);
     for (var i = 0; i < keys.length; i++) {
       var bn = parseInt(keys[i]);
-      var gx = bn % WorldGrid.GRID_SIZE;
-      var gz = Math.floor(bn / WorldGrid.GRID_SIZE);
-      var dist = Math.max(Math.abs(gx - centerX), Math.abs(gz - centerZ));
-      if (dist > LOAD_RADIUS + 10) {
+      var pos = WorldGrid.blockToSphere(bn);
+      var len = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
+      if (len < 0.001) continue;
+
+      var blockDir = new THREE.Vector3(pos.x / len, pos.y / len, pos.z / len);
+      var dot = blockDir.dot(camDir);
+
+      if (dot < -0.6) {
         removeBlockMesh(bn);
       }
     }
