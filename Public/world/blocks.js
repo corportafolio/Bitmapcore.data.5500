@@ -66,6 +66,31 @@ var WorldBlocks = (function() {
     blockMeshes[blockNumber] = mesh;
   }
 
+  function createGhostBlock(blockNumber, gridX, gridZ) {
+    if (blockMeshes[blockNumber]) return;
+
+    var height = 0.5;
+    var geo = new THREE.BoxGeometry(0.95, height, 0.95);
+    var mat = new THREE.MeshStandardMaterial({
+      color: 0x333333,
+      roughness: 0.8,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.3
+    });
+
+    var mesh = new THREE.Mesh(geo, mat);
+    var worldX = gridX * BLOCK_SPACING;
+    var worldZ = gridZ * BLOCK_SPACING;
+    mesh.position.set(worldX, height / 2, worldZ);
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    mesh.userData = { blockNumber: blockNumber, ghost: true };
+
+    scene.add(mesh);
+    blockMeshes[blockNumber] = mesh;
+  }
+
   function removeBlockMesh(blockNumber) {
     var mesh = blockMeshes[blockNumber];
     if (!mesh) return;
@@ -86,7 +111,7 @@ var WorldBlocks = (function() {
     for (var z = startZ; z <= endZ; z++) {
       for (var x = startX; x <= endX; x++) {
         var blockNum = WorldGrid.gridToBlock(x, z);
-        if (blockNum >= 0 && blockNum <= 955000 && !blockMeshes[blockNum]) {
+        if (blockNum >= 0 && blockNum <= 999999 && !blockMeshes[blockNum]) {
           blocksToLoad.push({ blockNum: blockNum, x: x, z: z });
         }
       }
@@ -124,14 +149,19 @@ var WorldBlocks = (function() {
     return fetch('/api/v1/blocks/' + info.blockNum)
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (!data || !data.data) return;
+        if (!data || !data.data) {
+          createGhostBlock(info.blockNum, info.x, info.z);
+          return;
+        }
         var block = data.data;
         var tx = parseInt(block.totalTransacciones) || 1;
         var hash = block.hash || '';
         blockData[info.blockNum] = { tx: tx, hash: hash };
         createBlockMesh(info.blockNum, tx, hash, info.x, info.z);
       })
-      .catch(function() {});
+      .catch(function() {
+        createGhostBlock(info.blockNum, info.x, info.z);
+      });
   }
 
   function scheduleLoad(centerX, centerZ) {

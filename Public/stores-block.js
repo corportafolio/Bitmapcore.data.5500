@@ -8,7 +8,7 @@ var BlockViewModel = {
     cache: {},           // cache[blockNumber] = blockEntity
     searchCache: {},     // cache[query] = results
     tagBlocksCache: {},  // cache[tagName] = [blockNumbers]
-    minMax: null,        // { min: 0, max: 955000 }
+    minMax: null,        // { min: 0, max: 999999 }
     totalCount: null,    // total de bloques
     isLoading: false,
     error: null

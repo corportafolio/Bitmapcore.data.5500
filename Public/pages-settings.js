@@ -120,7 +120,7 @@ function SettingsPage(props) {
             ),
             React.createElement('div', { className:'flex justify-between' },
               React.createElement('span', { className:'text-bitmap-muted' }, 'Base de datos'),
-              React.createElement('span', null, '~955,001 bloques')
+              React.createElement('span', null, '~1,000,000 bloques')
             ),
             React.createElement('div', { className:'flex justify-between' },
               React.createElement('span', { className:'text-bitmap-muted' }, 'Tablas de etiquetas'),

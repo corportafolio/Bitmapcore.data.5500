@@ -55,7 +55,7 @@ var PagesWorld = (function() {
         }, 'Bitmap Valley'),
         React.createElement('div', {
           style: { color: '#666', fontSize: '11px', fontFamily: 'Acme, sans-serif' }
-        }, 'Mundo Virtual 3D - 955,001 bloques Bitcoin')
+        }, 'Mundo Virtual 3D - 1,000,000 bloques Bitcoin')
       )
     );
   }
