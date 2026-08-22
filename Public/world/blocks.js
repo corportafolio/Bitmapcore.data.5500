@@ -118,7 +118,7 @@ var WorldBlocks = (function() {
     delete loadedBlocks[blockNumber];
   }
 
-  function loadChunk(theta, phi, callback) {
+  function loadChunk(theta, phi, distance, callback) {
     var visibleBlocks = [];
     var camDir = new THREE.Vector3(
       -Math.cos(phi) * Math.sin(theta),
@@ -126,12 +126,31 @@ var WorldBlocks = (function() {
       -Math.cos(phi) * Math.cos(theta)
     );
 
-    for (var gz = 0; gz < 1000; gz += 1) {
-      for (var gx = 0; gx < 1000; gx += 1) {
-        var gzShifted = (gz + 500) % 1000;
-        if (gzShifted < WorldGrid.getBlockScale(0).x && false) continue;
+    var centerPhi = Math.asin(Math.max(-1, Math.min(1, camDir.y)));
+    var centerTheta = Math.atan2(camDir.z, camDir.x);
+    if (centerTheta < 0) centerTheta += Math.PI * 2;
 
+    var gzCenter = Math.round(((centerPhi / Math.PI) + 0.5) * 1000);
+    var gxCenter = Math.round((centerTheta / (Math.PI * 2)) * 1000);
+
+    var fovFactor = 1.5;
+    var gridRadius = Math.max(8, Math.min(200, Math.round(300 * fovFactor * (150 / Math.max(distance, 105)))));
+
+    var maxBlocks = MAX_VISIBLE;
+    var count = 0;
+
+    for (var dz = -gridRadius; dz <= gridRadius && count < maxBlocks; dz++) {
+      var gz = (gzCenter + dz + 1000) % 1000;
+      var gzShifted = (gz + 500) % 1000;
+      if (gzShifted < 35 || gzShifted >= 965) continue;
+
+      var latFactor = Math.cos(((gzShifted / 1000) - 0.5) * Math.PI);
+      var dxMax = Math.ceil(gridRadius / Math.max(latFactor, 0.15));
+
+      for (var dx = -dxMax; dx <= dxMax && count < maxBlocks; dx++) {
+        var gx = (gxCenter + dx + 1000) % 1000;
         var blockNum = gz * 1000 + gx;
+
         if (WorldGrid.isBlockInPolarZone(blockNum)) continue;
         if (loadedBlocks[blockNum]) continue;
 
@@ -144,6 +163,7 @@ var WorldBlocks = (function() {
 
         if (dot > -0.3) {
           visibleBlocks.push({ blockNum: blockNum, dot: dot });
+          count++;
         }
       }
     }
@@ -151,11 +171,10 @@ var WorldBlocks = (function() {
     visibleBlocks.sort(function(a, b) { return b.dot - a.dot; });
     visibleBlocks = visibleBlocks.slice(0, MAX_VISIBLE);
 
-    var loaded = 0;
     var total = visibleBlocks.length;
     if (total === 0) { if (callback) callback(); return; }
 
-    var batch = 20;
+    var batch = 25;
     var idx = 0;
 
     function loadNext() {
@@ -167,7 +186,7 @@ var WorldBlocks = (function() {
       Promise.all(promises).then(function() {
         idx = end;
         if (idx < total) {
-          setTimeout(loadNext, 10);
+          setTimeout(loadNext, 5);
         } else {
           if (callback) callback();
         }
@@ -202,8 +221,9 @@ var WorldBlocks = (function() {
   function scheduleLoad(theta, phi) {
     if (loadTimer) clearTimeout(loadTimer);
     loadTimer = setTimeout(function() {
+      var state = WorldControls.getState();
       cleanupDistant(theta, phi);
-      loadChunk(theta, phi);
+      loadChunk(theta, phi, state.distance);
     }, LOAD_DEBOUNCE);
   }
 

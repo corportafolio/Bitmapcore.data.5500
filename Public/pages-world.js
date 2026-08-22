@@ -204,7 +204,8 @@ var PagesWorld = (function() {
     WorldControls.setInitial(0, 0, 280);
     WorldControls.setOnChange(onChange);
 
-    WorldBlocks.loadChunk(0, 0, function() {});
+    var initialState = WorldControls.getState();
+    WorldBlocks.loadChunk(0, 0, initialState.distance, function() {});
 
     animate();
   }
