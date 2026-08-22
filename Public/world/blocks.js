@@ -7,11 +7,11 @@ var WorldBlocks = (function() {
   var BASE_HEIGHT = 0.5;
   var MAX_HEIGHT = 5.0;
   var MAX_TX = 8000;
-  var MAX_VISIBLE = 500;
+  var MAX_VISIBLE = 800;
   var LOAD_DEBOUNCE = 300;
   var loadTimer = null;
   var loadedBlocks = {};
-  var BLOCK_HEIGHT_SCALE = 3.0;
+  var BLOCK_HEIGHT_SCALE = 1.2;
 
   function init(sceneRef) {
     scene = sceneRef;
@@ -126,8 +126,8 @@ var WorldBlocks = (function() {
       -Math.cos(phi) * Math.cos(theta)
     );
 
-    for (var gz = 0; gz < 1000; gz += 8) {
-      for (var gx = 0; gx < 1000; gx += 8) {
+    for (var gz = 0; gz < 1000; gz += 1) {
+      for (var gx = 0; gx < 1000; gx += 1) {
         var gzShifted = (gz + 500) % 1000;
         if (gzShifted < WorldGrid.getBlockScale(0).x && false) continue;
 
