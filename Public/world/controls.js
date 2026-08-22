@@ -2,12 +2,19 @@ var WorldControls = (function() {
   var camera, renderer;
   var isDragging = false;
   var previousMouse = { x: 0, y: 0 };
-  var cameraOffset = { x: 0, y: 0, z: 0 };
-  var zoomLevel = 15;
-  var MIN_ZOOM = 1;
-  var MAX_ZOOM = 80;
-  var ZOOM_SPEED = 1.5;
-  var PAN_SPEED = 0.3;
+  var theta = 0;
+  var phi = 0;
+  var distance = 300;
+  var MIN_DISTANCE = 105;
+  var MAX_DISTANCE = 600;
+  var MIN_PHI = -1.3;
+  var MAX_PHI = 1.3;
+  var ZOOM_SPEED = 20;
+  var ROTATE_SPEED = 0.005;
+  var ARROW_SPEED = 0.08;
+  var ON_CHANGE = null;
+  var animTarget = null;
+  var animFrame = null;
 
   function init(cam, ren) {
     camera = cam;
@@ -23,6 +30,9 @@ var WorldControls = (function() {
     el.addEventListener('touchstart', onTouchStart, { passive: false });
     el.addEventListener('touchmove', onTouchMove, { passive: false });
     el.addEventListener('touchend', onTouchEnd);
+
+    document.addEventListener('keydown', onKeyDown);
+    updateCamera();
   }
 
   function onMouseDown(e) {
@@ -39,7 +49,10 @@ var WorldControls = (function() {
     var dy = e.clientY - previousMouse.y;
     previousMouse.x = e.clientX;
     previousMouse.y = e.clientY;
-    pan(dx, dy);
+    theta -= dx * ROTATE_SPEED;
+    phi += dy * ROTATE_SPEED;
+    phi = Math.max(MIN_PHI, Math.min(MAX_PHI, phi));
+    updateCamera();
   }
 
   function onMouseUp() {
@@ -48,7 +61,7 @@ var WorldControls = (function() {
 
   function onWheel(e) {
     e.preventDefault();
-    var delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
+    var delta = e.deltaY > 0 ? ZOOM_SPEED : -ZOOM_SPEED;
     zoom(delta);
   }
 
@@ -79,13 +92,16 @@ var WorldControls = (function() {
       var dy = e.touches[0].clientY - previousMouse.y;
       previousMouse.x = e.touches[0].clientX;
       previousMouse.y = e.touches[0].clientY;
-      pan(dx, dy);
+      theta -= dx * ROTATE_SPEED;
+      phi += dy * ROTATE_SPEED;
+      phi = Math.max(MIN_PHI, Math.min(MAX_PHI, phi));
+      updateCamera();
     } else if (e.touches.length === 2) {
       var newDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
-      var delta = (newDist - pinchDist) * 0.05;
+      var delta = (pinchDist - newDist) * 0.5;
       pinchDist = newDist;
       zoom(delta);
     }
@@ -95,49 +111,96 @@ var WorldControls = (function() {
     isDragging = false;
   }
 
-  function pan(dx, dy) {
-    var scale = 1 / zoomLevel;
-    cameraOffset.x -= dx * PAN_SPEED * scale;
-    cameraOffset.z += dy * PAN_SPEED * scale;
+  function onKeyDown(e) {
+    switch (e.key) {
+      case 'ArrowLeft':  rotateBy(-ARROW_SPEED, 0); e.preventDefault(); break;
+      case 'ArrowRight': rotateBy(ARROW_SPEED, 0); e.preventDefault(); break;
+      case 'ArrowUp':    rotateBy(0, -ARROW_SPEED); e.preventDefault(); break;
+      case 'ArrowDown':  rotateBy(0, ARROW_SPEED); e.preventDefault(); break;
+      case '+': case '=': zoomIn(); e.preventDefault(); break;
+      case '-': case '_': zoomOut(); e.preventDefault(); break;
+    }
+  }
+
+  function rotateBy(dTheta, dPhi) {
+    theta += dTheta;
+    phi += dPhi;
+    phi = Math.max(MIN_PHI, Math.min(MAX_PHI, phi));
     updateCamera();
   }
 
   function zoom(delta) {
-    zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel + delta));
-    WorldScene.setOrthoZoom(zoomLevel);
+    distance = Math.max(MIN_DISTANCE, Math.min(MAX_DISTANCE, distance + delta));
     updateCamera();
+  }
+
+  function zoomIn() {
+    zoom(-ZOOM_SPEED);
+  }
+
+  function zoomOut() {
+    zoom(ZOOM_SPEED);
+  }
+
+  function animateTo(targetTheta, targetPhi, targetDist) {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    animTarget = {
+      theta: targetTheta,
+      phi: targetPhi,
+      dist: targetDist !== undefined ? targetDist : distance,
+      startTheta: theta,
+      startPhi: phi,
+      startDist: distance,
+      t: 0
+    };
+    function step() {
+      animTarget.t = Math.min(1, animTarget.t + 0.04);
+      var ease = 1 - Math.pow(1 - animTarget.t, 3);
+      theta = animTarget.startTheta + (animTarget.theta - animTarget.startTheta) * ease;
+      phi = animTarget.startPhi + (animTarget.phi - animTarget.startPhi) * ease;
+      distance = animTarget.startDist + (animTarget.dist - animTarget.startDist) * ease;
+      updateCamera();
+      if (animTarget.t < 1) {
+        animFrame = requestAnimationFrame(step);
+      }
+    }
+    step();
   }
 
   function updateCamera() {
-    camera.position.set(
-      cameraOffset.x + 20,
-      40,
-      cameraOffset.z + 20
-    );
-    camera.lookAt(cameraOffset.x, 0, cameraOffset.z);
+    var x = distance * Math.cos(phi) * Math.sin(theta);
+    var y = distance * Math.sin(phi);
+    var z = distance * Math.cos(phi) * Math.cos(theta);
+    camera.position.set(x, y, z);
+    camera.lookAt(0, 0, 0);
+    if (ON_CHANGE) ON_CHANGE(theta, phi, distance);
   }
 
-  function setZoom(z) {
-    zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
-    WorldScene.setOrthoZoom(zoomLevel);
+  function setOnChange(fn) {
+    ON_CHANGE = fn;
+  }
+
+  function setInitial(t, p, d) {
+    theta = t;
+    phi = p;
+    distance = d;
     updateCamera();
   }
 
-  function setPosition(x, z) {
-    cameraOffset.x = x;
-    cameraOffset.z = z;
-    updateCamera();
-  }
-
-  function getPosition() {
-    return { x: cameraOffset.x, z: cameraOffset.z, zoom: zoomLevel };
+  function getState() {
+    return { theta: theta, phi: phi, distance: distance };
   }
 
   return {
     init: init,
-    setZoom: setZoom,
-    setPosition: setPosition,
-    getPosition: getPosition,
+    rotateBy: rotateBy,
+    zoom: zoom,
+    zoomIn: zoomIn,
+    zoomOut: zoomOut,
+    animateTo: animateTo,
+    setOnChange: setOnChange,
+    setInitial: setInitial,
+    getState: getState,
     updateCamera: updateCamera
   };
 })();
