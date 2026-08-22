@@ -2,19 +2,19 @@ var WorldGrid = (function() {
   var gridHelper;
   var GRID_SIZE = 1000;
   var GRID_DIVISIONS = 1000;
-  var GRID_COLOR_1 = 0x1a1a1a;
-  var GRID_COLOR_2 = 0x0d0d0d;
+  var GRID_COLOR_1 = 0x3a3a4a;
+  var GRID_COLOR_2 = 0x222233;
 
   function create(scene) {
     gridHelper = new THREE.GridHelper(GRID_SIZE, GRID_DIVISIONS, GRID_COLOR_1, GRID_COLOR_2);
     gridHelper.position.set(GRID_SIZE / 2, 0, GRID_SIZE / 2);
-    gridHelper.material.opacity = 0.3;
+    gridHelper.material.opacity = 0.6;
     gridHelper.material.transparent = true;
     scene.add(gridHelper);
 
     var planeGeo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE);
     var planeMat = new THREE.MeshStandardMaterial({
-      color: 0x080008,
+      color: 0x12101a,
       roughness: 0.9,
       metalness: 0.1
     });

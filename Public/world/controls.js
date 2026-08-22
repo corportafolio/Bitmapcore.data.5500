@@ -3,11 +3,11 @@ var WorldControls = (function() {
   var isDragging = false;
   var previousMouse = { x: 0, y: 0 };
   var cameraOffset = { x: 0, y: 0, z: 0 };
-  var zoomLevel = 1;
-  var MIN_ZOOM = 0.2;
-  var MAX_ZOOM = 5;
-  var ZOOM_SPEED = 0.1;
-  var PAN_SPEED = 0.5;
+  var zoomLevel = 15;
+  var MIN_ZOOM = 3;
+  var MAX_ZOOM = 80;
+  var ZOOM_SPEED = 1.5;
+  var PAN_SPEED = 0.3;
 
   function init(cam, ren) {
     camera = cam;
@@ -85,7 +85,7 @@ var WorldControls = (function() {
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
-      var delta = (newDist - pinchDist) * 0.005;
+      var delta = (newDist - pinchDist) * 0.05;
       pinchDist = newDist;
       zoom(delta);
     }
@@ -96,32 +96,30 @@ var WorldControls = (function() {
   }
 
   function pan(dx, dy) {
-    var factor = PAN_SPEED / zoomLevel;
-    cameraOffset.x -= dx * factor;
-    cameraOffset.z += dy * factor;
+    var scale = 1 / zoomLevel;
+    cameraOffset.x -= dx * PAN_SPEED * scale;
+    cameraOffset.z += dy * PAN_SPEED * scale;
     updateCamera();
   }
 
   function zoom(delta) {
     zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel + delta));
+    WorldScene.setOrthoZoom(zoomLevel);
     updateCamera();
   }
 
   function updateCamera() {
-    var baseX = 100;
-    var baseY = 100;
-    var baseZ = 100;
     camera.position.set(
-      baseX + cameraOffset.x,
-      baseY * zoomLevel,
-      baseZ + cameraOffset.z
+      cameraOffset.x + 20,
+      40,
+      cameraOffset.z + 20
     );
     camera.lookAt(cameraOffset.x, 0, cameraOffset.z);
-    camera.updateProjectionMatrix();
   }
 
   function setZoom(z) {
     zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
+    WorldScene.setOrthoZoom(zoomLevel);
     updateCamera();
   }
 

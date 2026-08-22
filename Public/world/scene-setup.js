@@ -3,12 +3,13 @@ var WorldScene = (function() {
   var LIGHT_COLOR = 0xffffff;
   var AMBIENT_INTENSITY = 0.6;
   var DIR_INTENSITY = 0.8;
-  var BG_COLOR = 0x080008;
+  var BG_COLOR = 0x12101a;
+  var orthoZoom = 15;
 
   function init(container) {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(BG_COLOR);
-    scene.fog = new THREE.FogExp2(BG_COLOR, 0.008);
+    scene.fog = new THREE.FogExp2(BG_COLOR, 0.003);
 
     clock = new THREE.Clock();
 
@@ -16,7 +17,9 @@ var WorldScene = (function() {
     var h = container.clientHeight;
 
     camera = new THREE.OrthographicCamera(
-      w / -2, w / 2, h / 2, h / -2, 0.1, 2000
+      (w / -2) / orthoZoom, (w / 2) / orthoZoom,
+      (h / 2) / orthoZoom, (h / -2) / orthoZoom,
+      0.1, 2000
     );
     camera.position.set(100, 100, 100);
     camera.lookAt(0, 0, 0);
@@ -47,15 +50,36 @@ var WorldScene = (function() {
     window.addEventListener('resize', onResize);
   }
 
+  function setOrthoZoom(z) {
+    orthoZoom = z;
+    updateFrustum();
+  }
+
+  function getOrthoZoom() {
+    return orthoZoom;
+  }
+
+  function updateFrustum() {
+    var c = renderer.domElement.parentElement;
+    if (!c) return;
+    var w = c.clientWidth;
+    var h = c.clientHeight;
+    camera.left = (w / -2) / orthoZoom;
+    camera.right = (w / 2) / orthoZoom;
+    camera.top = (h / 2) / orthoZoom;
+    camera.bottom = (h / -2) / orthoZoom;
+    camera.updateProjectionMatrix();
+  }
+
   function onResize() {
     var c = renderer.domElement.parentElement;
     if (!c) return;
     var w = c.clientWidth;
     var h = c.clientHeight;
-    camera.left = w / -2;
-    camera.right = w / 2;
-    camera.top = h / 2;
-    camera.bottom = h / -2;
+    camera.left = (w / -2) / orthoZoom;
+    camera.right = (w / 2) / orthoZoom;
+    camera.top = (h / 2) / orthoZoom;
+    camera.bottom = (h / -2) / orthoZoom;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
   }
@@ -71,6 +95,9 @@ var WorldScene = (function() {
     getCamera: getCamera,
     getRenderer: getRenderer,
     getClock: getClock,
-    onResize: onResize
+    onResize: onResize,
+    setOrthoZoom: setOrthoZoom,
+    getOrthoZoom: getOrthoZoom,
+    updateFrustum: updateFrustum
   };
 })();
