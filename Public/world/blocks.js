@@ -64,7 +64,7 @@ var WorldBlocks = (function() {
 
     var mesh = new THREE.Mesh(geo, mat);
 
-    var offset = 0.5;
+    var offset = 2.0;
     mesh.position.set(
       pos.x + normal.x * offset,
       pos.y + normal.y * offset,
@@ -102,7 +102,7 @@ var WorldBlocks = (function() {
 
     var mesh = new THREE.Mesh(geo, mat);
 
-    var offset = 0.5;
+    var offset = 2.0;
     mesh.position.set(
       pos.x + normal.x * offset,
       pos.y + normal.y * offset,

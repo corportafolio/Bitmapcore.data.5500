@@ -16,7 +16,8 @@ var WorldGrid = (function() {
       metalness: 0.05,
       transparent: true,
       opacity: 0.25,
-      side: THREE.BackSide
+      side: THREE.BackSide,
+      depthWrite: false
     });
     var sphere = new THREE.Mesh(sphereGeo, sphereMat);
     scene.add(sphere);

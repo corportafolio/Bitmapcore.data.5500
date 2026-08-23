@@ -202,7 +202,7 @@ var PagesWorld = (function() {
       null
     );
 
-    WorldControls.setInitial(-Math.PI / 2, 0, 280);
+    WorldControls.setInitial(0, 0, 280);
     WorldControls.setOnChange(onChange);
 
     var initialState = WorldControls.getState();
