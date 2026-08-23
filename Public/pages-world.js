@@ -30,6 +30,7 @@ var PagesWorld = (function() {
 
       for (var i = 0; i < keys.length; i++) {
         var bn = parseInt(keys[i]);
+        if (bn === 0) continue;
         var pos = WorldGrid.blockToSphere(bn);
         var len = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
         if (len < 0.001) continue;
@@ -212,17 +213,9 @@ var PagesWorld = (function() {
       phiDeg: (initialState.phi * 180 / Math.PI).toFixed(1),
       distance: initialState.distance
     });
-    WorldBlocks.loadChunk(initialState.theta, initialState.phi, initialState.distance, function() {});
 
-    var scene = WorldScene.getScene();
-    var block0Pos = WorldGrid.blockToSphere(0);
-    var markerGeo = new THREE.SphereGeometry(2.5, 16, 16);
-    var markerMat = new THREE.MeshBasicMaterial({ color: 0xFE3E00, transparent: true, opacity: 0.9 });
-    var marker = new THREE.Mesh(markerGeo, markerMat);
-    marker.position.set(block0Pos.x, block0Pos.y, block0Pos.z);
-    marker.userData = { isBlock0Marker: true, blockNumber: 0 };
-    scene.add(marker);
-    console.log('🔍 BLOCK 0 MARKER at:', block0Pos);
+    WorldBlocks.createBlockMesh(0, 1, '');
+    WorldBlocks.loadChunk(initialState.theta, initialState.phi, initialState.distance, function() {});
 
     animate();
   }

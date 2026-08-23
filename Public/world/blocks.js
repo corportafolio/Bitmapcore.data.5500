@@ -25,13 +25,17 @@ var WorldBlocks = (function() {
     canvas.width = 64;
     canvas.height = 64;
 
-    MondrianGenerator.generate(canvas, blockNumber, {
+    var options = {
       totalTransactions: tx,
       hash: hash || '',
       isPerfect: false,
       isPunk: false,
       etiquetas: ''
-    }, 64);
+    };
+    if (blockNumber === 0) {
+      options.totalTransactions = 1;
+    }
+    MondrianGenerator.generate(canvas, blockNumber, options, 64);
 
     var texture = new THREE.CanvasTexture(canvas);
     texture.magFilter = THREE.NearestFilter;
@@ -207,6 +211,11 @@ var WorldBlocks = (function() {
   function fetchBlock(blockNum) {
     if (loadedBlocks[blockNum]) return Promise.resolve();
     loadedBlocks[blockNum] = true;
+
+    if (blockNum === 0) {
+      createBlockMesh(0, 1, '');
+      return Promise.resolve();
+    }
 
     return fetch('/api/v1/blocks/' + blockNum)
       .then(function(r) { return r.json(); })

@@ -1,4 +1,5 @@
 var BITMAP_YELLOW = '#FFD700';
+var BLOCK0_RED_PALETTE = ['#8B0000', '#B22222', '#CC0000', '#DC143C', '#FF3333', '#FF6666'];
 
 var MondrianGenerator = {
   BORDER: 3,
@@ -19,6 +20,7 @@ var MondrianGenerator = {
     var isPunk = options.isPunk || false;
     var etiquetas = options.etiquetas || '';
     var transactions = options.transactions || [];
+    var colorPalette = options.colorPalette || [BITMAP_YELLOW];
 
     if (totalTransactions === 0 && transactions.length > 0) {
       totalTransactions = transactions.length;
@@ -37,6 +39,11 @@ var MondrianGenerator = {
     var isPristinePunk = labelsLower.indexOf('pristine punk') !== -1;
     var isPunk2tx = labelsLower.indexOf('punk 2tx') !== -1;
     var isSpecial2txPunk = isWideNeckPunk || isStandarPunk || isPristinePunk || isPunk2tx;
+
+    if (blockNumber === 0) {
+      this._drawSolidRed(ctx, size);
+      return;
+    }
 
     if (totalTransactions === 1 && is1Tx) {
       this._drawSpecial1Tx(ctx, size);
@@ -79,6 +86,12 @@ var MondrianGenerator = {
     ctx.fillStyle = BITMAP_YELLOW;
     ctx.fillRect(m, m, aw, h1);
     ctx.fillRect(m, m + h1 + m, aw, h2);
+  },
+
+  _drawSolidRed: function(ctx, size) {
+    var a = size - this.BORDER * 2;
+    ctx.fillStyle = '#CC0000';
+    ctx.fillRect(this.BORDER, this.BORDER, a, a);
   },
 
   _draw2txPunk: function(ctx, size, neckType) {

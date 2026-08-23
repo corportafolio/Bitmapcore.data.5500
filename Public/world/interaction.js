@@ -25,7 +25,9 @@ var WorldInteraction = (function() {
 
     raycaster.setFromCamera(mouse, camera);
 
-    var meshes = Object.values(WorldBlocks.getAllMeshes());
+    var meshes = Object.values(WorldBlocks.getAllMeshes()).filter(function(m) {
+      return m.userData.blockNumber !== 0;
+    });
     var intersects = raycaster.intersectObjects(meshes);
 
     if (intersects.length > 0) {
