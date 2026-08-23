@@ -31,7 +31,6 @@ var PagesWorld = (function() {
 
       for (var i = 0; i < keys.length; i++) {
         var bn = parseInt(keys[i]);
-        if (bn === 0) continue;
         var pos = WorldGrid.blockToSphere(bn);
         var len = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
         if (len < 0.001) continue;

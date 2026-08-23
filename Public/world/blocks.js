@@ -153,7 +153,7 @@ var WorldBlocks = (function() {
 
     var fovFactor = 1.5;
     var gridRadius = Math.max(8, Math.min(200, Math.round(300 * fovFactor * (150 / Math.max(distance, 105)))));
-    if (distance > 200) gridRadius = Math.min(gridRadius, 30);
+    if (distance > 200) gridRadius = Math.min(gridRadius, 80);
 
     console.log('🔍 LOADCHUNK CALC:', { gzCenter: gzCenter, gxCenter: gxCenter, gridRadius: gridRadius, fovFactor: fovFactor, distance: distance });
 

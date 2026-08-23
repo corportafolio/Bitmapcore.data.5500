@@ -4,7 +4,8 @@ var BlockCache = (function() {
   var STORE_NAME = 'blocks';
   var META_STORE = 'meta';
   var REFRESH_INTERVAL = 60 * 60 * 1000;
-  var BATCH_SIZE = 1000;
+  var BATCH_SIZE = 50000;
+  var PARALLEL_REQUESTS = 5;
   var db = null;
   var isPreloading = false;
   var preloadProgress = { current: 0, total: 0, startBlock: 0 };
@@ -140,36 +141,55 @@ var BlockCache = (function() {
       return Promise.resolve();
     }
 
+    var promises = [];
     var limit = BATCH_SIZE;
-    console.log('📦 BlockCache: Descargando lote', start, '-', start + limit - 1);
+    var completed = 0;
 
-    return fetch('/api/v1/blocks/batch?start=' + start + '&limit=' + limit)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (!data.success || !data.items || data.items.length === 0) {
-          console.log('📦 BlockCache: Sin más bloques');
-          isPreloading = false;
-          if (preloadCallback) preloadCallback(true);
-          return;
+    for (var i = 0; i < PARALLEL_REQUESTS; i++) {
+      var batchStart = start + i * limit;
+      if (batchStart >= 955001) break;
+
+      promises.push(
+        fetch('/api/v1/blocks/batch?start=' + batchStart + '&limit=' + limit)
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data.success || !data.items || data.items.length === 0) {
+              return { blocks: [], start: batchStart };
+            }
+            return { blocks: data.items, start: batchStart };
+          })
+          .catch(function(err) {
+            console.error('📦 BlockCache: Error en batch:', err);
+            return { blocks: [], start: batchStart };
+          })
+      );
+    }
+
+    return Promise.all(promises).then(function(results) {
+      var allBlocks = [];
+      results.forEach(function(result) {
+        if (result.blocks && result.blocks.length > 0) {
+          allBlocks = allBlocks.concat(result.blocks);
         }
-
-        var blocks = data.items;
-        preloadProgress.current += blocks.length;
-        preloadProgress.startBlock = start;
-
-        return saveBlocks(blocks).then(function() {
-          console.log('📦 BlockCache: Lote guardado. Progreso:', preloadProgress.current, '/', 955001);
-
-          if (preloadCallback) preloadCallback(false, preloadProgress);
-
-          setTimeout(preloadNextBatch, 200);
-        });
-      })
-      .catch(function(err) {
-        console.error('📦 BlockCache: Error en preload:', err);
-        isPreloading = false;
-        if (preloadCallback) preloadCallback(false, preloadProgress, err);
       });
+
+      if (allBlocks.length === 0) {
+        console.log('📦 BlockCache: Sin más bloques');
+        isPreloading = false;
+        if (preloadCallback) preloadCallback(true);
+        return;
+      }
+
+      preloadProgress.current += allBlocks.length;
+
+      return saveBlocks(allBlocks).then(function() {
+        console.log('📦 BlockCache: Lotes guardados. Progreso:', preloadProgress.current, '/', 955001);
+        if (preloadCallback) preloadCallback(false, preloadProgress);
+
+        if (!isPreloading) return;
+        preloadNextBatch();
+      });
+    });
   }
 
   function getPreloadProgress() {
