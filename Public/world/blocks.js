@@ -137,14 +137,14 @@ var WorldBlocks = (function() {
     console.log('🔍 LOADCHUNK INPUT:', { theta: theta, thetaDeg: (theta * 180 / Math.PI).toFixed(1), phi: phi, phiDeg: (phi * 180 / Math.PI).toFixed(1), distance: distance });
 
     var visibleBlocks = [];
-    var camDir = new THREE.Vector3(
-      -Math.cos(phi) * Math.sin(theta),
-      -Math.sin(phi),
-      -Math.cos(phi) * Math.cos(theta)
-    );
 
-    var centerPhi = Math.asin(Math.max(-1, Math.min(1, camDir.y)));
-    var centerTheta = Math.atan2(camDir.z, camDir.x);
+    var camX = distance * Math.cos(phi) * Math.sin(theta);
+    var camY = distance * Math.sin(phi);
+    var camZ = distance * Math.cos(phi) * Math.cos(theta);
+    var nearDir = new THREE.Vector3(camX, camY, camZ).normalize();
+
+    var centerPhi = Math.asin(Math.max(-1, Math.min(1, nearDir.y)));
+    var centerTheta = Math.atan2(nearDir.z, nearDir.x);
     if (centerTheta < 0) centerTheta += Math.PI * 2;
 
     var gzShiftedCenter = Math.round(((centerPhi / Math.PI) + 0.5) * 1000);
@@ -180,9 +180,9 @@ var WorldBlocks = (function() {
         if (len < 0.001) continue;
 
         var blockDir = new THREE.Vector3(pos.x / len, pos.y / len, pos.z / len);
-        var dot = blockDir.dot(camDir);
+        var dot = blockDir.dot(nearDir);
 
-        if (dot < 0) {
+        if (dot > 0) {
           visibleBlocks.push({ blockNum: blockNum, dot: dot });
           count++;
         }
@@ -250,17 +250,16 @@ var WorldBlocks = (function() {
     if (loadTimer) clearTimeout(loadTimer);
     loadTimer = setTimeout(function() {
       var state = WorldControls.getState();
-      cleanupDistant(theta, phi);
+      cleanupDistant(theta, phi, state.distance);
       loadChunk(theta, phi, state.distance);
     }, LOAD_DEBOUNCE);
   }
 
-  function cleanupDistant(theta, phi) {
-    var camDir = new THREE.Vector3(
-      -Math.cos(phi) * Math.sin(theta),
-      -Math.sin(phi),
-      -Math.cos(phi) * Math.cos(theta)
-    );
+  function cleanupDistant(theta, phi, distance) {
+    var camX = distance * Math.cos(phi) * Math.sin(theta);
+    var camY = distance * Math.sin(phi);
+    var camZ = distance * Math.cos(phi) * Math.cos(theta);
+    var nearDir = new THREE.Vector3(camX, camY, camZ).normalize();
 
     var keys = Object.keys(blockMeshes);
     for (var i = 0; i < keys.length; i++) {
@@ -270,7 +269,7 @@ var WorldBlocks = (function() {
       if (len < 0.001) continue;
 
       var blockDir = new THREE.Vector3(pos.x / len, pos.y / len, pos.z / len);
-      var dot = blockDir.dot(camDir);
+      var dot = blockDir.dot(nearDir);
 
       if (dot < -0.6) {
         removeBlockMesh(bn);

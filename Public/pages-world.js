@@ -14,6 +14,7 @@ var PagesWorld = (function() {
         compassRef.current.style.transform = 'rotate(' + (-theta * 180 / Math.PI) + 'deg)';
       }
       updateBlockInfo(theta, phi, distance);
+      WorldBlocks.scheduleLoad(theta, phi);
     }, []);
 
     function updateBlockInfo(theta, phi, distance) {
