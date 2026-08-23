@@ -346,7 +346,7 @@ app.get('/api/v1/blocks/batch', (req, res) => {
   try {
     const start = parseInt(req.query.start) || 0;
     const limit = parseInt(req.query.limit) || 1000;
-    const maxLimit = Math.min(limit, 50000);
+    const maxLimit = Math.min(limit, 1000000);
     
     const tables = getTableNames();
     let stmt;
