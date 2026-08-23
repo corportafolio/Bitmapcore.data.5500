@@ -182,7 +182,7 @@ var WorldBlocks = (function() {
         var blockDir = new THREE.Vector3(pos.x / len, pos.y / len, pos.z / len);
         var dot = blockDir.dot(camDir);
 
-        if (dot > 0) {
+        if (dot < 0) {
           visibleBlocks.push({ blockNum: blockNum, dot: dot });
           count++;
         }
