@@ -293,6 +293,7 @@ var WorldBlocks = (function() {
     getBlockData: getBlockData,
     getAllMeshes: getAllMeshes,
     removeBlockMesh: removeBlockMesh,
-    generateMondrianTexture: generateMondrianTexture
+    generateMondrianTexture: generateMondrianTexture,
+    createBlockMesh: createBlockMesh
   };
 })();
