@@ -17,7 +17,7 @@ var WorldScene = (function() {
     if (w === 0) w = window.innerWidth;
     if (h === 0) h = window.innerHeight;
 
-    camera = new THREE.PerspectiveCamera(45, w / h, 1, 2000);
+    camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 2000);
     camera.position.set(0, 50, 300);
     camera.lookAt(0, 0, 0);
 

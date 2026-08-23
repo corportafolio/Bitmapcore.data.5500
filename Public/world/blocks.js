@@ -64,7 +64,12 @@ var WorldBlocks = (function() {
 
     var mesh = new THREE.Mesh(geo, mat);
 
-    mesh.position.set(pos.x, pos.y, pos.z);
+    var offset = 0.5;
+    mesh.position.set(
+      pos.x + normal.x * offset,
+      pos.y + normal.y * offset,
+      pos.z + normal.z * offset
+    );
 
     var up = new THREE.Vector3(0, 1, 0);
     var normalVec = new THREE.Vector3(normal.x, normal.y, normal.z);
@@ -96,7 +101,13 @@ var WorldBlocks = (function() {
     });
 
     var mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(pos.x, pos.y, pos.z);
+
+    var offset = 0.5;
+    mesh.position.set(
+      pos.x + normal.x * offset,
+      pos.y + normal.y * offset,
+      pos.z + normal.z * offset
+    );
 
     var up = new THREE.Vector3(0, 1, 0);
     var normalVec = new THREE.Vector3(normal.x, normal.y, normal.z);
