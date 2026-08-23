@@ -205,7 +205,24 @@ var PagesWorld = (function() {
     WorldControls.setOnChange(onChange);
 
     var initialState = WorldControls.getState();
+    console.log('🔍 INIT STATE:', {
+      theta: initialState.theta,
+      thetaDeg: (initialState.theta * 180 / Math.PI).toFixed(1),
+      phi: initialState.phi,
+      phiDeg: (initialState.phi * 180 / Math.PI).toFixed(1),
+      distance: initialState.distance
+    });
     WorldBlocks.loadChunk(initialState.theta, initialState.phi, initialState.distance, function() {});
+
+    var scene = WorldScene.getScene();
+    var block0Pos = WorldGrid.blockToSphere(0);
+    var markerGeo = new THREE.SphereGeometry(2.5, 16, 16);
+    var markerMat = new THREE.MeshBasicMaterial({ color: 0xFE3E00, transparent: true, opacity: 0.9 });
+    var marker = new THREE.Mesh(markerGeo, markerMat);
+    marker.position.set(block0Pos.x, block0Pos.y, block0Pos.z);
+    marker.userData = { isBlock0Marker: true, blockNumber: 0 };
+    scene.add(marker);
+    console.log('🔍 BLOCK 0 MARKER at:', block0Pos);
 
     animate();
   }

@@ -119,6 +119,8 @@ var WorldBlocks = (function() {
   }
 
   function loadChunk(theta, phi, distance, callback) {
+    console.log('🔍 LOADCHUNK INPUT:', { theta: theta, thetaDeg: (theta * 180 / Math.PI).toFixed(1), phi: phi, phiDeg: (phi * 180 / Math.PI).toFixed(1), distance: distance });
+
     var visibleBlocks = [];
     var camDir = new THREE.Vector3(
       -Math.cos(phi) * Math.sin(theta),
@@ -136,6 +138,9 @@ var WorldBlocks = (function() {
 
     var fovFactor = 1.5;
     var gridRadius = Math.max(8, Math.min(200, Math.round(300 * fovFactor * (150 / Math.max(distance, 105)))));
+    if (distance > 200) gridRadius = Math.min(gridRadius, 30);
+
+    console.log('🔍 LOADCHUNK CALC:', { gzCenter: gzCenter, gxCenter: gxCenter, gridRadius: gridRadius, fovFactor: fovFactor, distance: distance });
 
     var maxBlocks = MAX_VISIBLE;
     var count = 0;
@@ -171,6 +176,8 @@ var WorldBlocks = (function() {
 
     visibleBlocks.sort(function(a, b) { return b.dot - a.dot; });
     visibleBlocks = visibleBlocks.slice(0, MAX_VISIBLE);
+
+    console.log('🔍 LOADCHUNK RESULT:', { total: visibleBlocks.length, first: visibleBlocks[0] ? visibleBlocks[0].blockNum : 'none', last: visibleBlocks[visibleBlocks.length-1] ? visibleBlocks[visibleBlocks.length-1].blockNum : 'none' });
 
     var total = visibleBlocks.length;
     if (total === 0) { if (callback) callback(); return; }
