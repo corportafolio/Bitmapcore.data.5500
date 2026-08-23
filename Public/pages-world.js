@@ -217,8 +217,8 @@ var PagesWorld = (function() {
     WorldBlocks.createBlockMesh(0, 1, '');
     WorldBlocks.loadChunk(initialState.theta, initialState.phi, initialState.distance, function() {
       setTimeout(function() {
-        console.log('🌍 Iniciando preload background de todos los bloques...');
-        BlockCache.preloadAll(function(done, progress, err) {
+        console.log('🌍 Iniciando descarga completa de todos los bloques...');
+        BlockCache.preloadAllAtOnce(function(done, progress, err) {
           if (err) {
             console.error('📦 Preload error:', err);
             return;

@@ -1,14 +1,15 @@
 var BlockCache = (function() {
   var DB_NAME = 'BitmapCoreBlockCache';
-  var DB_VERSION = 1;
-  var STORE_NAME = 'blocks';
+  var DB_VERSION = 2;
+  var STORE_NAME = 'batches';
   var META_STORE = 'meta';
   var REFRESH_INTERVAL = 60 * 60 * 1000;
   var BATCH_SIZE = 50000;
-  var PARALLEL_REQUESTS = 5;
+  var TOTAL_BLOCKS = 955001;
+  var TOTAL_BATCHES = Math.ceil(TOTAL_BLOCKS / BATCH_SIZE);
   var db = null;
   var isPreloading = false;
-  var preloadProgress = { current: 0, total: 0, startBlock: 0 };
+  var preloadProgress = { current: 0, total: TOTAL_BLOCKS, startBlock: 0 };
   var preloadCallback = null;
 
   function openDB() {
@@ -23,8 +24,7 @@ var BlockCache = (function() {
       request.onupgradeneeded = function(e) {
         var database = e.target.result;
         if (!database.objectStoreNames.contains(STORE_NAME)) {
-          var store = database.createObjectStore(STORE_NAME, { keyPath: 'bloque' });
-          store.createIndex('bloque', 'bloque', { unique: true });
+          var store = database.createObjectStore(STORE_NAME, { keyPath: 'batchIndex' });
         }
         if (!database.objectStoreNames.contains(META_STORE)) {
           database.createObjectStore(META_STORE, { keyPath: 'key' });
@@ -33,24 +33,42 @@ var BlockCache = (function() {
     });
   }
 
+  function getBatchIndex(blockNum) {
+    return Math.floor(blockNum / BATCH_SIZE);
+  }
+
+  function getBlockInBatch(blockNum, batch) {
+    var localIndex = blockNum % BATCH_SIZE;
+    return batch[localIndex] || null;
+  }
+
   function getBlock(blockNum) {
+    var batchIndex = getBatchIndex(blockNum);
     return openDB().then(function(database) {
       return new Promise(function(resolve, reject) {
         var tx = database.transaction(STORE_NAME, 'readonly');
         var store = tx.objectStore(STORE_NAME);
-        var request = store.get(blockNum);
-        request.onsuccess = function() { resolve(request.result || null); };
+        var request = store.get(batchIndex);
+        request.onsuccess = function() {
+          var batch = request.result;
+          if (!batch || !batch.blocks) {
+            resolve(null);
+            return;
+          }
+          var block = getBlockInBatch(blockNum, batch.blocks);
+          resolve(block);
+        };
         request.onerror = function() { reject(request.error); };
       });
     });
   }
 
-  function saveBlock(blockData) {
+  function saveBatch(batchIndex, blocks) {
     return openDB().then(function(database) {
       return new Promise(function(resolve, reject) {
         var tx = database.transaction(STORE_NAME, 'readwrite');
         var store = tx.objectStore(STORE_NAME);
-        var request = store.put(blockData);
+        var request = store.put({ batchIndex: batchIndex, blocks: blocks });
         request.onsuccess = function() { resolve(); };
         request.onerror = function() { reject(request.error); };
       });
@@ -58,21 +76,8 @@ var BlockCache = (function() {
   }
 
   function saveBlocks(blocks) {
-    return openDB().then(function(database) {
-      return new Promise(function(resolve, reject) {
-        var tx = database.transaction(STORE_NAME, 'readwrite');
-        var store = tx.objectStore(STORE_NAME);
-        var count = 0;
-        blocks.forEach(function(block) {
-          var request = store.put(block);
-          request.onsuccess = function() {
-            count++;
-            if (count === blocks.length) resolve();
-          };
-          request.onerror = function() { reject(request.error); };
-        });
-      });
-    });
+    var startIndex = blocks[0] ? getBatchIndex(blocks[0].bloque) : 0;
+    return saveBatch(startIndex, blocks);
   }
 
   function getLastRefresh() {
@@ -107,6 +112,21 @@ var BlockCache = (function() {
         var tx = database.transaction(STORE_NAME, 'readonly');
         var store = tx.objectStore(STORE_NAME);
         var request = store.count();
+        request.onsuccess = function() {
+          var batchCount = request.result;
+          resolve(batchCount * BATCH_SIZE);
+        };
+        request.onerror = function() { reject(request.error); };
+      });
+    });
+  }
+
+  function getCachedBatchesCount() {
+    return openDB().then(function(database) {
+      return new Promise(function(resolve, reject) {
+        var tx = database.transaction(STORE_NAME, 'readonly');
+        var store = tx.objectStore(STORE_NAME);
+        var request = store.count();
         request.onsuccess = function() { resolve(request.result); };
         request.onerror = function() { reject(request.error); };
       });
@@ -124,16 +144,17 @@ var BlockCache = (function() {
     isPreloading = true;
     preloadCallback = callback || null;
 
-    return getTotalBlocks().then(function(cachedCount) {
-      console.log('📦 BlockCache: Iniciando preload. En caché:', cachedCount, 'bloques');
-      preloadProgress = { current: cachedCount, total: 955001, startBlock: cachedCount };
+    return getCachedBatchesCount().then(function(cachedBatchCount) {
+      var cachedBlocks = cachedBatchCount * BATCH_SIZE;
+      console.log('📦 BlockCache: Iniciando preload. En caché:', cachedBlocks, 'bloques');
+      preloadProgress = { current: cachedBlocks, total: TOTAL_BLOCKS, startBlock: cachedBlocks };
       return preloadNextBatch();
     });
   }
 
   function preloadNextBatch() {
     var start = preloadProgress.current;
-    if (start >= 955001) {
+    if (start >= TOTAL_BLOCKS) {
       console.log('📦 BlockCache: Preload completo. Total en caché:', preloadProgress.current);
       isPreloading = false;
       setLastRefresh(Date.now());
@@ -143,11 +164,10 @@ var BlockCache = (function() {
 
     var promises = [];
     var limit = BATCH_SIZE;
-    var completed = 0;
 
-    for (var i = 0; i < PARALLEL_REQUESTS; i++) {
+    for (var i = 0; i < 5; i++) {
       var batchStart = start + i * limit;
-      if (batchStart >= 955001) break;
+      if (batchStart >= TOTAL_BLOCKS) break;
 
       promises.push(
         fetch('/api/v1/blocks/batch?start=' + batchStart + '&limit=' + limit)
@@ -167,9 +187,12 @@ var BlockCache = (function() {
 
     return Promise.all(promises).then(function(results) {
       var allBlocks = [];
+      var resultsToSave = [];
+
       results.forEach(function(result) {
         if (result.blocks && result.blocks.length > 0) {
           allBlocks = allBlocks.concat(result.blocks);
+          resultsToSave.push(result);
         }
       });
 
@@ -182,13 +205,61 @@ var BlockCache = (function() {
 
       preloadProgress.current += allBlocks.length;
 
-      return saveBlocks(allBlocks).then(function() {
-        console.log('📦 BlockCache: Lotes guardados. Progreso:', preloadProgress.current, '/', 955001);
+      return Promise.all(resultsToSave.map(function(result) {
+        return saveBatch(Math.floor(result.start / BATCH_SIZE), result.blocks);
+      })).then(function() {
+        console.log('📦 BlockCache: Lotes guardados. Progreso:', preloadProgress.current, '/', TOTAL_BLOCKS);
         if (preloadCallback) preloadCallback(false, preloadProgress);
 
         if (!isPreloading) return;
         preloadNextBatch();
       });
+    });
+  }
+
+  function preloadAllAtOnce(callback) {
+    if (isPreloading) return Promise.resolve();
+    isPreloading = true;
+    preloadCallback = callback || null;
+
+    return getCachedBatchesCount().then(function(cachedBatchCount) {
+      var cachedBlocks = cachedBatchCount * BATCH_SIZE;
+      console.log('📦 BlockCache: Descarga completa de', TOTAL_BLOCKS, 'bloques...');
+      preloadProgress = { current: cachedBlocks, total: TOTAL_BLOCKS, startBlock: cachedBlocks };
+
+      return fetch('/api/v1/blocks/batch?start=' + cachedBlocks + '&limit=' + (TOTAL_BLOCKS - cachedBlocks))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success || !data.items || data.items.length === 0) {
+            console.log('📦 BlockCache: Sin más bloques');
+            isPreloading = false;
+            if (preloadCallback) preloadCallback(true);
+            return;
+          }
+
+          var blocks = data.items;
+          console.log('📦 BlockCache: Recibidos', blocks.length, 'bloques en 1 request');
+
+          return Promise.all(
+            Array.from({ length: Math.ceil(blocks.length / BATCH_SIZE) }, function(_, i) {
+              var start = i * BATCH_SIZE;
+              var batchBlocks = blocks.slice(start, start + BATCH_SIZE);
+              var batchIndex = Math.floor((cachedBlocks + start) / BATCH_SIZE);
+              return saveBatch(batchIndex, batchBlocks);
+            })
+          ).then(function() {
+            preloadProgress.current = TOTAL_BLOCKS;
+            console.log('📦 BlockCache: Preload completo. Total en caché:', TOTAL_BLOCKS);
+            isPreloading = false;
+            setLastRefresh(Date.now());
+            if (preloadCallback) preloadCallback(true);
+          });
+        })
+        .catch(function(err) {
+          console.error('📦 BlockCache: Error en preloadAllAtOnce:', err);
+          isPreloading = false;
+          if (preloadCallback) preloadCallback(false, preloadProgress, err);
+        });
     });
   }
 
@@ -222,6 +293,7 @@ var BlockCache = (function() {
     getTotalBlocks: getTotalBlocks,
     needsRefresh: needsRefresh,
     preloadAll: preloadAll,
+    preloadAllAtOnce: preloadAllAtOnce,
     getPreloadProgress: getPreloadProgress,
     isPreloadingActive: isPreloadingActive,
     clearCache: clearCache,
