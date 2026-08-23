@@ -341,6 +341,31 @@ app.post('/api/v1/classify', async (req, res) => {
 });
 
 // ===== BLOCKS (Table principal) =====
+app.get('/api/v1/blocks/batch', (req, res) => {
+  if (!db) return sendError(res, 'No database', 500);
+  try {
+    const start = parseInt(req.query.start) || 0;
+    const limit = parseInt(req.query.limit) || 1000;
+    const maxLimit = Math.min(limit, 2000);
+    
+    const tables = getTableNames();
+    let stmt;
+    if (tableExists('blocks')) {
+      stmt = db.prepare('SELECT bloque, totalBtc, totalTransacciones, etiquetas, hash FROM blocks WHERE bloque >= ? ORDER BY bloque ASC LIMIT ?');
+    } else if (tableExists('tag_tables')) {
+      stmt = db.prepare('SELECT * FROM tag_tables WHERE bloque >= ? ORDER BY bloque ASC LIMIT ?');
+    } else {
+      return sendSuccess(res, { items: [], total: 0, start: start, limit: maxLimit });
+    }
+
+    const items = stmt.all(start, maxLimit);
+    const nextStart = items.length === maxLimit ? start + maxLimit : null;
+    sendSuccess(res, { items: items, total: items.length, start: start, limit: maxLimit, nextStart: nextStart });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
 app.get('/api/v1/blocks', (req, res) => {
   if (!db) return sendSuccess(res, []);
   try {

@@ -216,7 +216,24 @@ var PagesWorld = (function() {
     });
 
     WorldBlocks.createBlockMesh(0, 1, '');
-    WorldBlocks.loadChunk(initialState.theta, initialState.phi, initialState.distance, function() {});
+    WorldBlocks.loadChunk(initialState.theta, initialState.phi, initialState.distance, function() {
+      setTimeout(function() {
+        console.log('🌍 Iniciando preload background de todos los bloques...');
+        BlockCache.preloadAll(function(done, progress, err) {
+          if (err) {
+            console.error('📦 Preload error:', err);
+            return;
+          }
+          if (progress) {
+            var pct = ((progress.current / progress.total) * 100).toFixed(1);
+            console.log('📦 Preload progreso: ' + pct + '% (' + progress.current + '/' + progress.total + ')');
+          }
+          if (done) {
+            console.log('📦 Preload completado. Todos los bloques en caché.');
+          }
+        });
+      }, 2000);
+    });
 
     animate();
   }

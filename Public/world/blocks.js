@@ -228,22 +228,33 @@ var WorldBlocks = (function() {
       return Promise.resolve();
     }
 
-    return fetch('/api/v1/blocks/' + blockNum)
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (!data || !data.data) {
-          createGhostBlock(blockNum);
-          return;
-        }
-        var block = data.data;
-        var tx = parseInt(block.totalTransacciones) || 1;
-        var hash = block.hash || '';
+    return BlockCache.getBlock(blockNum).then(function(cached) {
+      if (cached) {
+        var tx = parseInt(cached.totalTransacciones) || 1;
+        var hash = cached.hash || '';
         blockData[blockNum] = { tx: tx, hash: hash };
         createBlockMesh(blockNum, tx, hash);
-      })
-      .catch(function() {
-        createGhostBlock(blockNum);
-      });
+        return;
+      }
+
+      return fetch('/api/v1/blocks/' + blockNum)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data || !data.data) {
+            createGhostBlock(blockNum);
+            return;
+          }
+          var block = data.data;
+          var tx = parseInt(block.totalTransacciones) || 1;
+          var hash = block.hash || '';
+          blockData[blockNum] = { tx: tx, hash: hash };
+          createBlockMesh(blockNum, tx, hash);
+          BlockCache.saveBlock(block);
+        })
+        .catch(function() {
+          createGhostBlock(blockNum);
+        });
+    });
   }
 
   function scheduleLoad(theta, phi) {
