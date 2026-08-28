@@ -22,7 +22,7 @@ function MondrianCanvas(props) {
   var options = {
     totalTransactions: props.totalTransactions || props.txCount || 0,
     hash: props.hash || '',
-    isPerfect: props.isPerfect || false,
+    isGrid: props.isPerfect || false,
     isPunk: props.isPunk || false,
     etiquetas: props.etiquetas || '',
     transactions: props.transactions || []
@@ -74,7 +74,7 @@ function BlockThumbnail(props) {
   var options = {
     totalTransactions: props.totalTransactions || 0,
     hash: props.hash || '',
-    isPerfect: props.isPerfect || false,
+    isGrid: props.isPerfect || false,
     isPunk: props.isPunk || false,
     etiquetas: props.etiquetas || ''
   };
@@ -87,7 +87,7 @@ function BlockThumbnail(props) {
       blockNumber: blockNumber,
       totalTransactions: options.totalTransactions,
       hash: options.hash,
-      isPerfect: options.isPerfect,
+      isPerfect: options.isGrid,
       isPunk: options.isPunk,
       etiquetas: options.etiquetas,
       transactions: [],
@@ -175,7 +175,7 @@ function ResultCard(props) {
     ) : null,
     React.createElement('div', { onClick:onClick, className:'cursor-pointer w-full aspect-square rounded-lg overflow-hidden bg-bitmap-black' },
       type === 'block' ? React.createElement('img', {
-        src:'/api/v1/block-image/' + id + '?v=3&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + totalTransactions + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
+        src:'/api/v1/block-image/' + id + '?v=5&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + totalTransactions + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
         className:'w-full h-full object-cover',
         loading:'lazy'
       }) :

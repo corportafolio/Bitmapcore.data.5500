@@ -180,7 +180,7 @@ function UnifiedPage(props) {
                     React.createElement('div', { className: 'flex items-center gap-2' },
                       React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                         React.createElement('img', {
-                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=3&size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
+                          src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=5&size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
                           width: 55,
                           height: 55,
                           loading: 'lazy',
@@ -564,7 +564,7 @@ function VentasPage(props) {
               var etiquetas = sale.etiquetas || '';
               var isPerfect = etiquetas.indexOf('Grid') !== -1;
               var isPunk = etiquetas.indexOf('Punk') !== -1;
-              var imgSrc = sale.bitmap_number ? '/api/v1/block-image/' + sale.bitmap_number + '?v=3&size=40&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (sale.totalTransacciones || 0) + '&hash=' + encodeURIComponent(sale.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk : '';
+              var imgSrc = sale.bitmap_number ? '/api/v1/block-image/' + sale.bitmap_number + '?v=5&size=40&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (sale.totalTransacciones || 0) + '&hash=' + encodeURIComponent(sale.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk : '';
               return React.createElement('div', {
                 key: sale.id || i,
                 className: 'py-1.5 border-b border-[#222] hover:bg-[#111] transition-colors px-1'

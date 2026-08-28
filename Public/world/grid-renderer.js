@@ -77,20 +77,29 @@ var WorldGrid = (function() {
     scene.add(southRing);
   }
 
+  function getPhiFromGz(gz) {
+    if (gz < 500) {
+      return (gz / 500) * (Math.PI / 2);
+    }
+    if (gz <= 955) {
+      return -((gz - 499) / 456) * (Math.PI / 2);
+    }
+    return -Math.PI / 2;
+  }
+
   function blockToSphere(blockNumber) {
     var gx = blockNumber % GRID_SIZE;
     var gz = Math.floor(blockNumber / GRID_SIZE);
-    var gzShifted = (gz + 500) % GRID_SIZE;
 
     var theta = (gx / GRID_SIZE) * PI2;
-    var phi = ((gzShifted / GRID_SIZE) - 0.5) * Math.PI;
+    var phi = getPhiFromGz(gz);
 
     var cosPhi = Math.cos(phi);
     var x = RADIUS * cosPhi * Math.cos(theta);
     var y = RADIUS * Math.sin(phi);
     var z = RADIUS * cosPhi * Math.sin(theta);
 
-    return { x: x, y: y, z: z, theta: theta, phi: phi, gx: gx, gz: gz, gzShifted: gzShifted };
+    return { x: x, y: y, z: z, theta: theta, phi: phi, gx: gx, gz: gz };
   }
 
   function sphereToBlock(x, y, z) {
@@ -105,11 +114,15 @@ var WorldGrid = (function() {
     var theta = Math.atan2(nz, nx);
     if (theta < 0) theta += PI2;
 
-    var gzShifted = Math.round(((phi / Math.PI) + 0.5) * GRID_SIZE);
-    gzShifted = Math.max(0, Math.min(GRID_SIZE - 1, gzShifted));
     var gx = Math.round((theta / PI2) * GRID_SIZE) % GRID_SIZE;
+    var gz;
+    if (phi >= 0) {
+      gz = Math.round((phi / (Math.PI / 2)) * 500);
+    } else {
+      gz = 499 + Math.round((-phi / (Math.PI / 2)) * 456);
+    }
+    gz = Math.max(0, Math.min(GRID_SIZE - 1, gz));
 
-    var gz = (gzShifted - 500 + GRID_SIZE * 2) % GRID_SIZE;
     var blockNum = gz * GRID_SIZE + gx;
     if (blockNum < 0 || blockNum >= TOTAL_BLOCKS) return -1;
     return blockNum;
@@ -129,9 +142,91 @@ var WorldGrid = (function() {
     return { x: scale, y: 1, z: 1 };
   }
 
+  var posCache = null;
+
+  function buildPositionCache() {
+    if (posCache) return;
+    var total = 956 * GRID_SIZE;
+    posCache = new Float32Array(total * 4);
+    var idx = 0;
+    for (var gz = 0; gz < 956; gz++) {
+      var phi = getPhiFromGz(gz);
+      var cosPhi = Math.cos(phi);
+      var sinPhi = Math.sin(phi);
+      var scale = Math.max(0.15, cosPhi);
+      for (var gx = 0; gx < GRID_SIZE; gx++) {
+        var theta = (gx / GRID_SIZE) * PI2;
+        var cosT = Math.cos(theta);
+        var sinT = Math.sin(theta);
+        posCache[idx] = cosPhi * cosT;
+        posCache[idx + 1] = sinPhi;
+        posCache[idx + 2] = cosPhi * sinT;
+        posCache[idx + 3] = scale;
+        idx += 4;
+      }
+    }
+    console.log('🧠 WorldGrid: Caché de 956K posiciones listo (' + Math.round(total * 4 * 4 / 1048576) + ' MB)');
+  }
+
+  function getCachedBlockInfo(blockNumber) {
+    if (!posCache) buildPositionCache();
+    var idx = blockNumber * 4;
+    return {
+      nx: posCache[idx],
+      ny: posCache[idx + 1],
+      nz: posCache[idx + 2],
+      scale: posCache[idx + 3]
+    };
+  }
+
   function isBlockInPolarZone(blockNumber) {
-    var pos = blockToSphere(blockNumber);
-    return pos.gzShifted < POLE_SKIP || pos.gzShifted >= (GRID_SIZE - POLE_SKIP);
+    var gz = Math.floor(blockNumber / GRID_SIZE);
+    return gz < POLE_SKIP || gz > 955 - POLE_SKIP;
+  }
+
+  var ATLAS_CELLS = 32;
+  var ATLAS_COLS = 40;
+  var ATLAS_ROWS = 25;
+  var TILES_X = 25;
+  var TILES_NORTH = 20;
+
+  function atlasInfo(blockNumber) {
+    var gx = blockNumber % GRID_SIZE;
+    var gz = Math.floor(blockNumber / GRID_SIZE);
+    var col = gx % ATLAS_COLS;
+    var tileGx = Math.floor(gx / ATLAS_COLS);
+    var tileGz;
+    var row;
+    if (gz < 500) {
+      tileGz = Math.floor(gz / ATLAS_ROWS);
+      row = (ATLAS_ROWS - 1) - (gz % ATLAS_ROWS);
+    } else {
+      tileGz = TILES_NORTH + Math.floor((gz - 500) / ATLAS_ROWS);
+      row = (gz - 500) % ATLAS_ROWS;
+    }
+    var cellSizeU = 1 / ATLAS_COLS;
+    var cellSizeV = 1 / ATLAS_ROWS;
+    return {
+      tile: tileGz * TILES_X + tileGx,
+      gz: gz,
+      u0: col * cellSizeU,
+      v0: 1 - (row + 1) * cellSizeV,
+      u1: (col + 1) * cellSizeU,
+      v1: 1 - row * cellSizeV
+    };
+  }
+
+  function getAtlasTile(blockNumber) {
+    var gx = blockNumber % GRID_SIZE;
+    var gz = Math.floor(blockNumber / GRID_SIZE);
+    var tileGx = Math.floor(gx / ATLAS_COLS);
+    var tileGz;
+    if (gz < 500) {
+      tileGz = Math.floor(gz / ATLAS_ROWS);
+    } else {
+      tileGz = TILES_NORTH + Math.floor((gz - 500) / ATLAS_ROWS);
+    }
+    return tileGz * TILES_X + tileGx;
   }
 
   function getRadius() { return RADIUS; }
@@ -144,6 +239,10 @@ var WorldGrid = (function() {
     getBlockNormal: getBlockNormal,
     getBlockScale: getBlockScale,
     isBlockInPolarZone: isBlockInPolarZone,
+    atlasInfo: atlasInfo,
+    getAtlasTile: getAtlasTile,
+    getPhiFromGz: getPhiFromGz,
+    getCachedBlockInfo: getCachedBlockInfo,
     getRadius: getRadius,
     getGridSize: getGridSize
   };

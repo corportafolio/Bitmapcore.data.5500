@@ -82,7 +82,7 @@ function TagPreviewCard(props) {
     ),
     preview ? React.createElement('div', { className:'w-full aspect-square rounded-lg overflow-hidden bg-bitmap-black relative' },
       React.createElement('img', {
-        src:'/api/v1/block-image/' + blockNum + '?v=3&size=200&etiquetas=' + encodeURIComponent(preview.etiquetas || '') + '&tx=' + (preview.totalTransactions || 0) + '&hash=' + encodeURIComponent(preview.hash || '') + '&grid=' + (preview.isPerfect || false) + '&punk=' + (preview.isPunk || false),
+        src:'/api/v1/block-image/' + blockNum + '?v=5&size=200&view=preview&etiquetas=' + encodeURIComponent(preview.etiquetas || '') + '&tx=' + (preview.totalTransactions || 0) + '&hash=' + encodeURIComponent(preview.hash || '') + '&grid=' + (preview.isPerfect || false) + '&punk=' + (preview.isPunk || false),
         className:'w-full h-full object-cover',
         loading:'lazy'
       })
@@ -260,7 +260,7 @@ function TagTableScreen(props) {
                 blocks.map(function(block, i) {
                   var blockNum = block.blockNumber;
                   var etiquetas = block.etiquetas || '';
-                  var imgParams = 'v=3&size=200&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + block.totalTransactions + '&hash=' + encodeURIComponent(block.hash || '') + '&grid=' + (etiquetas.toLowerCase().indexOf('grid') !== -1) + '&punk=' + (etiquetas.toLowerCase().indexOf('punk') !== -1);
+                  var imgParams = 'v=5&size=200&view=grid&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + block.totalTransactions + '&hash=' + encodeURIComponent(block.hash || '') + '&grid=' + (etiquetas.toLowerCase().indexOf('grid') !== -1) + '&punk=' + (etiquetas.toLowerCase().indexOf('punk') !== -1);
                   return React.createElement('button', {
                     key: blockNum + '-' + i,
                     onClick: function() { navigate('/blocks/' + blockNum); },
@@ -285,7 +285,7 @@ function TagTableScreen(props) {
                 blocks.map(function(block, i) {
                   var blockNum = block.blockNumber;
                   var etiquetas = block.etiquetas || '';
-                  var imgParams = 'v=3&size=55&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + block.totalTransactions + '&hash=' + encodeURIComponent(block.hash || '') + '&grid=' + (etiquetas.toLowerCase().indexOf('grid') !== -1) + '&punk=' + (etiquetas.toLowerCase().indexOf('punk') !== -1);
+                  var imgParams = 'v=5&size=55&view=list&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + block.totalTransactions + '&hash=' + encodeURIComponent(block.hash || '') + '&grid=' + (etiquetas.toLowerCase().indexOf('grid') !== -1) + '&punk=' + (etiquetas.toLowerCase().indexOf('punk') !== -1);
                   return React.createElement('button', {
                     key: blockNum + '-' + i,
                     onClick: function() { navigate('/blocks/' + blockNum); },

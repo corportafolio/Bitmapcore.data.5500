@@ -13,9 +13,18 @@ var PagesWorld = (function() {
       if (compassRef.current) {
         compassRef.current.style.transform = 'rotate(' + (-theta * 180 / Math.PI) + 'deg)';
       }
-      updateBlockInfo(theta, phi, distance);
+      updateBlockInfoThrottled(theta, phi, distance);
       WorldBlocks.scheduleLoad(theta, phi);
     }, []);
+
+    var lastInfoUpdate = 0;
+
+    function updateBlockInfoThrottled(theta, phi, distance) {
+      var now = Date.now();
+      if (now - lastInfoUpdate < 300) return;
+      lastInfoUpdate = now;
+      updateBlockInfo(theta, phi, distance);
+    }
 
     function updateBlockInfo(theta, phi, distance) {
       var dir = new THREE.Vector3(
@@ -64,6 +73,7 @@ var PagesWorld = (function() {
 
       return function() {
         if (animFrame) cancelAnimationFrame(animFrame);
+        if (WorldBlocks.destroy) WorldBlocks.destroy();
         initialized = false;
       };
     }, [onControlsChange]);
@@ -94,12 +104,27 @@ var PagesWorld = (function() {
         }
       }, createCompassSVG()),
       React.createElement('div', {
-        style: { position: 'fixed', right: '20px', top: '110px', zIndex: 200, display: 'flex', flexDirection: 'column', gap: '8px' }
+        style: {
+          position: 'fixed', right: '20px', top: '110px', zIndex: 200,
+          display: 'grid', gridTemplateColumns: 'repeat(3, 48px)',
+          gridTemplateRows: 'repeat(3, 48px)', gap: '6px'
+        }
       },
+        React.createElement('div', null),
         createArrowButton('▲', 'rotateUp', 'Arriba'),
-        createArrowButton('▼', 'rotateDown', 'Abajo'),
+        React.createElement('div', null),
         createArrowButton('◀', 'rotateLeft', 'Izquierda'),
-        createArrowButton('▶', 'rotateRight', 'Derecha')
+        React.createElement('div', {
+          style: {
+            width: '48px', height: '48px', borderRadius: '50%',
+            background: 'rgba(8,0,8,0.95)', border: '2px solid #FE3E00',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }
+        }, React.createElement('div', { style: { width: '8px', height: '8px', borderRadius: '50%', background: '#FE3E00' } })),
+        createArrowButton('▶', 'rotateRight', 'Derecha'),
+        React.createElement('div', null),
+        createArrowButton('▼', 'rotateDown', 'Abajo'),
+        React.createElement('div', null)
       ),
       React.createElement('div', {
         style: { position: 'fixed', right: '20px', bottom: '80px', zIndex: 200, display: 'flex', flexDirection: 'column', gap: '8px' }
@@ -161,14 +186,15 @@ var PagesWorld = (function() {
       onMouseDown: function(e) { e.preventDefault(); WorldControls[action] && WorldControls[action](); },
       title: title,
       style: {
-        width: '44px', height: '44px', borderRadius: '50%',
-        background: 'rgba(8,0,8,0.85)', border: '1px solid #2A2A2A',
-        color: '#B0B0B0', fontSize: '18px', cursor: 'pointer',
+        width: '48px', height: '48px', borderRadius: '50%',
+        background: 'rgba(8,0,8,0.95)', border: '2px solid #FE3E00',
+        color: '#FFFFFF', fontSize: '22px', fontWeight: 'bold', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
         transition: 'all 0.15s ease'
       },
-      onMouseEnter: function(e) { e.target.style.background = 'rgba(254,62,0,0.3)'; e.target.style.borderColor = '#FE3E00'; },
-      onMouseLeave: function(e) { e.target.style.background = 'rgba(8,0,8,0.85)'; e.target.style.borderColor = '#2A2A2A'; }
+      onMouseEnter: function(e) { e.target.style.background = '#FE3E00'; e.target.style.color = '#080008'; },
+      onMouseLeave: function(e) { e.target.style.background = 'rgba(8,0,8,0.95)'; e.target.style.color = '#FFFFFF'; }
     }, symbol);
   }
 
@@ -177,14 +203,15 @@ var PagesWorld = (function() {
       onClick: function() { WorldControls[action] && WorldControls[action](); },
       title: title,
       style: {
-        width: '44px', height: '44px', borderRadius: '50%',
-        background: 'rgba(8,0,8,0.85)', border: '1px solid #2A2A2A',
-        color: '#FE3E00', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer',
+        width: '48px', height: '48px', borderRadius: '50%',
+        background: 'rgba(8,0,8,0.95)', border: '2px solid #FE3E00',
+        color: '#FFFFFF', fontSize: '24px', fontWeight: 'bold', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
         transition: 'all 0.15s ease'
       },
-      onMouseEnter: function(e) { e.target.style.background = 'rgba(254,62,0,0.3)'; e.target.style.borderColor = '#FE3E00'; },
-      onMouseLeave: function(e) { e.target.style.background = 'rgba(8,0,8,0.85)'; e.target.style.borderColor = '#2A2A2A'; }
+      onMouseEnter: function(e) { e.target.style.background = '#FE3E00'; e.target.style.color = '#080008'; },
+      onMouseLeave: function(e) { e.target.style.background = 'rgba(8,0,8,0.95)'; e.target.style.color = '#FFFFFF'; }
     }, symbol);
   }
 
@@ -216,22 +243,7 @@ var PagesWorld = (function() {
 
     WorldBlocks.createBlockMesh(0, 1, '');
     WorldBlocks.loadChunk(initialState.theta, initialState.phi, initialState.distance, function() {
-      setTimeout(function() {
-        console.log('🌍 Iniciando descarga completa de todos los bloques...');
-        BlockCache.preloadAllAtOnce(function(done, progress, err) {
-          if (err) {
-            console.error('📦 Preload error:', err);
-            return;
-          }
-          if (progress) {
-            var pct = ((progress.current / progress.total) * 100).toFixed(1);
-            console.log('📦 Preload progreso: ' + pct + '% (' + progress.current + '/' + progress.total + ')');
-          }
-          if (done) {
-            console.log('📦 Preload completado. Todos los bloques en caché.');
-          }
-        });
-      }, 2000);
+      WorldBlocks.startBackgroundLoad();
     });
 
     animate();

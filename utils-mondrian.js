@@ -17,13 +17,13 @@ const MondrianGenerator = {
     options = options || {};
     var totalTransactions = options.totalTransactions || 0;
     var hash = options.hash || '';
-    var isPerfect = options.isPerfect || false;
+    var isGrid = options.isGrid || false;
     var isPunk = options.isPunk || false;
     var etiquetas = options.etiquetas || '';
     var transactions = options.transactions || [];
 
     if (totalTransactions === 0 && transactions.length > 0) totalTransactions = transactions.length;
-    if (totalTransactions === 0) { totalTransactions = Math.abs(blockNumber % 7 + 3); isPerfect = true; }
+    if (totalTransactions === 0) { totalTransactions = Math.abs(blockNumber % 7 + 3); isGrid = true; }
     totalTransactions = Math.max(totalTransactions, 1);
 
     var labelsLower = etiquetas.toLowerCase();
@@ -42,11 +42,11 @@ const MondrianGenerator = {
     } else if (totalTransactions === 2 && isSpecial2txPunk) {
       var neckType = isWideNeckPunk ? 1 : isStandarPunk ? 2 : isPristinePunk ? 3 : 4;
       this._draw2txPunk(ctx, size, neckType);
-    } else if ((isPerfect || isPunk) && totalTransactions <= 35) {
+    } else if ((isGrid || isPunk) && totalTransactions <= 35) {
       if (totalTransactions === 1) this._drawSingleCell(ctx, size);
       else this._drawPerfectGrid(ctx, totalTransactions, size, isPunk);
     } else {
-      this._drawMondrianPacking(ctx, totalTransactions, hash, isPerfect, size);
+      this._drawMondrianPacking(ctx, totalTransactions, hash, isGrid, size);
     }
   },
 
@@ -82,7 +82,7 @@ const MondrianGenerator = {
   },
 
   _drawPerfectGrid: function(ctx, tx, size, isPunk) {
-    var BASE = Math.max(Math.round(size * 0.015625), 1), EXTRA = Math.max(Math.round(size * 0.015625), 1), B = Math.max(Math.round(size * 0.009375), 1);
+    var BASE = 2, EXTRA = 5, B = 1;
     var spec = this._getPerfectSpec(tx, isPunk);
     var cols = spec[0], rows = spec[1], mtb = spec[2], mside = spec[3], negras = spec[4];
     var aw = size - B * 2 - mside * 2, ah = size - B * 2 - mtb * 2;
@@ -140,8 +140,8 @@ const MondrianGenerator = {
     return hash;
   },
 
-  _getSizes: function(hash, txCount, isPerfect) {
-    if (isPerfect) { var arr = []; for (var i = 0; i < txCount; i++) arr.push(1); return arr; }
+  _getSizes: function(hash, txCount, isGrid) {
+    if (isGrid) { var arr = []; for (var i = 0; i < txCount; i++) arr.push(1); return arr; }
     var lists = {
       tiny: [1, 4, 3.4, 4, 5, 6, 7, 8, 9, 10, 11, 12],
       small: [0.9, 1.4, 1.8, 2.3, 2.7, 3.2, 3.6, 4.5, 5, 5.5, 5.9, 6.3],
@@ -301,9 +301,9 @@ const MondrianGenerator = {
     };
   },
 
-  _drawMondrianPacking: function(ctx, totalTransactions, hash, isPerfect, size) {
+  _drawMondrianPacking: function(ctx, totalTransactions, hash, isGrid, size) {
     var B = this.BORDER;
-    var sizes = this._getSizes(hash, totalTransactions, isPerfect);
+    var sizes = this._getSizes(hash, totalTransactions, isGrid);
     var adj = this._adjustSizesAndArea(sizes);
 
     var gridW = Math.max(Math.ceil(Math.sqrt(adj.totalArea)), 1);

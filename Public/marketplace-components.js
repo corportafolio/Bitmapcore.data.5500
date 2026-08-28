@@ -243,7 +243,7 @@ function SelectorBubble(props) {
     var h = encodeURIComponent(p.hash || '');
     var isPerfect = (p.etiquetas || '').toLowerCase().indexOf('grid') !== -1;
     var isPunk = (p.etiquetas || '').toLowerCase().indexOf('punk') !== -1;
-    return '/api/v1/block-image/' + bn + '?v=3&size=80&etiquetas=' + et + '&tx=' + tx + '&hash=' + h + '&grid=' + isPerfect + '&punk=' + isPunk;
+    return '/api/v1/block-image/' + bn + '?v=5&size=80&etiquetas=' + et + '&tx=' + tx + '&hash=' + h + '&grid=' + isPerfect + '&punk=' + isPunk;
   }
 
   function firstTag(etiquetas) {

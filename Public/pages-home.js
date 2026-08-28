@@ -244,6 +244,9 @@ function MarketplaceSelectorPage(props) {
   var ta = StoreMarketplaces.get('tags');
   var sa = StoreMarketplaces.get('sales');
   var de = StoreMarketplaces.get('descuentos');
+  var _pp = React.useState({ listings:0, floor:0, sold:0 });
+  var parcelsData = _pp[0];
+  var setParcelsData = _pp[1];
 
   React.useEffect(function() {
     StoreMarketplaces.fetchOrdinalswallet();
@@ -255,10 +258,32 @@ function MarketplaceSelectorPage(props) {
     StoreMarketplaces.fetchDescuentos();
   }, []);
 
+  React.useEffect(function() {
+    var loadParcels = function() {
+      Promise.all([
+        ParcelMarketApi.getParcels().catch(function() { return { data: { items: [], total: 0 } }; }),
+        ParcelMarketApi.getStats().catch(function() { return { data: {} }; })
+      ]).then(function(results) {
+        var listings = (results[0].data && results[0].data.items) || [];
+        var stats = (results[1].data) || {};
+        var floor = 0;
+        if (listings.length > 0) {
+          floor = Math.min.apply(null, listings.map(function(l) { return (l.listedPrice || l.price) || Infinity; }).filter(function(p) { return p < Infinity; }));
+          if (floor === Infinity) floor = 0;
+        }
+        setParcelsData({ listings: listings.length, floor: floor, sold: stats.ventas || 0 });
+      }).catch(function() {});
+    };
+    loadParcels();
+    var interval = setInterval(loadParcels, 60000);
+    return function() { clearInterval(interval); };
+  }, []);
+
   var marketplaces = [
     { id:'ordinalswallet', label:'Ordinalswallet', icon:'\uD83D\uDFE7', path:'/ordinalswallet' },
     { id:'unisat', label:'Unisat', icon:'\uD83D\uDFE1', path:'/unisat' },
     { id:'local', label:'BitmapCore', icon:'\uD83D\uDFE0', path:'/local' },
+    { id:'parcels', label:'Mercado de Parcelas', icon:'\uD83D\uDFE7', path:'/mercado-parcelas' },
     { id:'discounts', label:'Descuentos', icon:'\uD83D\uDFE2', path:'/discounts', isDiscount:true },
     { id:'unified', label:'Unified', icon:'\uD83D\uDD35', path:'/unified' },
     { id:'tags', label:'Etiquetas', icon:'\uD83C\uDFF7\uFE0F', path:'/tag-tables' },
@@ -274,6 +299,7 @@ function MarketplaceSelectorPage(props) {
       case 'tags': return { listings:ta.tags.length, floor:0, sold:0 };
       case 'sales': return { listings:sa.sales.length, floor:0, sold:sa.totalSold };
       case 'discounts': return { listings:de.discounts.length, floor:0, sold:0 };
+      case 'parcels': return { listings:parcelsData.listings, floor:parcelsData.floor, sold:parcelsData.sold };
       default: return { listings:0, floor:0, sold:0 };
     }
   };

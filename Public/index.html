@@ -6,6 +6,22 @@
   <title>BitmapCore</title>
   <meta name="description" content="El marketplace de Bitmap en Bitcoin">
   <meta name="theme-color" content="#080008">
+  <script>
+    (function() {
+      var CUR = '52f';
+      var TS = Date.now();
+      var check = function() {
+        try {
+          fetch('/version.txt?t=' + Date.now()).then(function(r) { return r.text(); }).then(function(t) {
+            var s = (t || '').trim();
+            if (s && s !== CUR) { try { location.reload(true); } catch (e) { location.reload(); } }
+          }).catch(function() {});
+        } catch (e) {}
+      };
+      check();
+      setInterval(check, 30000);
+    })();
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Acme&family=Holtwood+One+SC&family=Alfa+Slab+One&display=swap');
     *{margin:0;padding:0;box-sizing:border-box}
@@ -127,12 +143,17 @@
       .fm-icon{width:28px;height:28px;cursor:pointer;margin:2px 0;padding:2px;border:none;background:none;display:flex;align-items:center;justify-content:center;transition:opacity 0.15s}
       .fm-icon:hover{opacity:0.7}
        .fm-icon img{width:24px;height:24px;object-fit:contain}
-       ::-webkit-scrollbar{width:6px}
-       ::-webkit-scrollbar-track{background:var(--bitmap-black)}
-       ::-webkit-scrollbar-thumb{background:var(--bitmap-surface);border-radius:3px}
-       ::-webkit-scrollbar-thumb:hover{background:var(--bitmap-border)}
-       *{scrollbar-width:thin;scrollbar-color:var(--bitmap-surface) var(--bitmap-black)}
-   </style>
+        ::-webkit-scrollbar{width:6px}
+        ::-webkit-scrollbar-track{background:var(--bitmap-black)}
+        ::-webkit-scrollbar-thumb{background:var(--bitmap-surface);border-radius:3px}
+        ::-webkit-scrollbar-thumb:hover{background:var(--bitmap-border)}
+        *{scrollbar-width:thin;scrollbar-color:var(--bitmap-surface) var(--bitmap-black)}
+        .parcel-scrollbar{scrollbar-width:thin;scrollbar-color:var(--bitmap-orange) var(--bitmap-black)}
+        .parcel-scrollbar::-webkit-scrollbar{height:6px;width:6px}
+        .parcel-scrollbar::-webkit-scrollbar-track{background:var(--bitmap-black)}
+        .parcel-scrollbar::-webkit-scrollbar-thumb{background:var(--bitmap-orange);border-radius:3px}
+        .parcel-scrollbar::-webkit-scrollbar-thumb:hover{background:var(--bitmap-orange-light)}
+    </style>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   .bitmap-check {
@@ -183,8 +204,8 @@
   <script src="/vendor/react-router.production.min.js"></script>
   <script src="/vendor/react-router-dom.production.min.js"></script>
   <script src="/utils.js?v=2"></script>
-  <script src="/utils-advanced.js?v=1"></script>
-  <script src="/api.js?v=8"></script>
+  <script src="/utils-advanced.js?v=6"></script>
+  <script src="/api.js?v=14"></script>
   <script src="/i18n.js?v=1"></script>
   <script src="/stores-app.js?v=4"></script>
   <script src="/stores-marketplaces.js?v=1"></script>
@@ -196,33 +217,34 @@
   <script src="/stores-tags.js?v=1"></script>
   <script src="/stores-listed-tags.js?v=1"></script>
   <script src="/stores-images.js?v=1"></script>
-  <script src="/components.js?v=8"></script>
+  <script src="/components.js?v=9"></script>
   <script src="/components-universal-tag.js?v=7"></script>
-  <script src="/marketplace-components.js?v=2"></script>
+  <script src="/marketplace-components.js?v=3"></script>
   <script src="/stores-selector.js?v=1"></script>
-  <script src="/image-components.js?v=1"></script>
+  <script src="/image-components.js?v=2"></script>
   <script src="/pages-home.js?v=1"></script>
   <script src="/pages-selector.js?v=1"></script>
-  <script src="/pages-marketplaces.js?v=6"></script>
-  <script src="/pages-local.js?v=17"></script>
-  <script src="/pages-unified.js?v=14"></script>
-  <script src="/pages-wallet.js?v=5"></script>
-  <script src="/pages-block.js?v=2"></script>
-  <script src="/pages-tables.js?v=2"></script>
+  <script src="/pages-marketplaces.js?v=7"></script>
+  <script src="/pages-local.js?v=18"></script>
+  <script src="/pages-wallet.js?v=22"></script>
+  <script src="/pages-parcels-market.js?v=1"></script>
+  <script src="/pages-block.js?v=3"></script>
+  <script src="/pages-tables.js?v=4"></script>
   <script src="/classification-tables.js?v=1"></script>
-  <script src="/pages-listed-tags.js?v=14"></script>
+  <script src="/pages-listed-tags.js?v=15"></script>
   <script src="/pages-settings.js?v=1"></script>
   <script src="/pages-admin.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="/pages-analytics.js?v=1"></script>
-  <script src="/world/scene-setup.js?v=15"></script>
-  <script src="/world/controls.js?v=15"></script>
-  <script src="/world/grid-renderer.js?v=15"></script>
-  <script src="/world/blocks.js?v=15"></script>
-  <script src="/world/block-cache.js?v=15"></script>
-  <script src="/world/interaction.js?v=15"></script>
-  <script src="/pages-world.js?v=15"></script>
+  <script src="/world/scene-setup.js?v=52"></script>
+  <script src="/world/controls.js?v=52"></script>
+  <script src="/world/grid-renderer.js?v=52"></script>
+  <script src="/world/parcel3d.js?v=52"></script>
+  <script src="/world/blocks.js?v=52"></script>
+  <script src="/world/block-cache.js?v=52"></script>
+  <script src="/world/interaction.js?v=52"></script>
+  <script src="/pages-world.js?v=52"></script>
   <script src="/core.js?v=5"></script>
   <script src="/analytics.js?v=1"></script>
 </body>

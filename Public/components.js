@@ -229,7 +229,7 @@ function Sidebar(props) {
                 onClick: function() { navigate('/blocks/' + (item.bitmapNumber || '')); onClose(); }
               },
             React.createElement('img', {
-              src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=3&size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + ((item.etiquetas || '').toLowerCase().indexOf('grid') !== -1) + '&punk=' + ((item.etiquetas || '').toLowerCase().indexOf('punk') !== -1),
+              src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=5&size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + ((item.etiquetas || '').toLowerCase().indexOf('grid') !== -1) + '&punk=' + ((item.etiquetas || '').toLowerCase().indexOf('punk') !== -1),
               style: { width: 35, height: 35, borderRadius: 4, background: '#1a1a1a', imageRendering: 'pixelated', flexShrink: 0 },
               loading: 'lazy', alt: ''
             }),
@@ -337,6 +337,7 @@ function FloatingMarketplaceMenu(props) {
     { id:'unisat', label:'Unisat', path:'/unisat', icon:'unisat_logo.png', isImage:true },
     { id:'satflow', label:'Satflow', path:'/satflow', icon:'satflow-logo.png', isImage:true },
     { id:'local', label:'BitmapCore', path:'/local', icon:'logo_bitmapcore_logo.png', isImage:true },
+    { id:'parcels', label:'Parcelas', path:'/mercado-parcelas', icon:'\uD83D\uDFE7', isImage:false },
     { id:'discounts', label:'Descuentos', path:'/discounts', icon:'discount.svg', isImage:true },
     { id:'unified', label:'Unified', path:'/unified', icon:'layers.svg', isImage:true },
     { id:'tags', label:'Etiquetas Listadas', path:'/listed-tags', icon:'\uD83C\uDFF7\uFE0F', isImage:false },

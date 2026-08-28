@@ -2,9 +2,11 @@ var WorldInteraction = (function() {
   var camera, renderer, scene;
   var raycaster = new THREE.Raycaster();
   var mouse = new THREE.Vector2();
-  var hoveredMesh = null;
+  var hoveredBlock = -1;
   var tooltipEl = null;
   var infoEl = null;
+  var lastRaycast = 0;
+  var CLICK_NAV_MIN_DIST = 110;
 
   function init(cam, ren, sceneRef, tooltipElement, infoElement) {
     camera = cam;
@@ -19,46 +21,70 @@ var WorldInteraction = (function() {
   }
 
   function onMouseMove(e) {
+    var now = performance.now();
+    if (now - lastRaycast < 80) return;
+    lastRaycast = now;
+
     var rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
 
-    var meshes = Object.values(WorldBlocks.getAllMeshes());
-    var intersects = raycaster.intersectObjects(meshes);
+    var allMeshes = WorldBlocks.getAllMeshes();
+    var meshKeys = Object.keys(allMeshes);
+    var intersected = null;
+    var minDistance = Infinity;
+    var hitMesh = null;
 
-    if (intersects.length > 0) {
-      var mesh = intersects[0].object;
-      if (hoveredMesh !== mesh) {
-        if (hoveredMesh) unhighlight(hoveredMesh);
-        hoveredMesh = mesh;
-        highlight(mesh);
+    for (var i = 0; i < meshKeys.length; i++) {
+      var mesh = allMeshes[meshKeys[i]];
+      if (!mesh) continue;
+      if (mesh.geometry && mesh.geometry.attributes.position && mesh.geometry.attributes.position.count === 0) continue;
+
+      var hits = raycaster.intersectObject(mesh, false);
+      if (hits.length > 0 && hits[0].distance < minDistance) {
+        minDistance = hits[0].distance;
+        intersected = hits[0];
+        hitMesh = mesh;
       }
-      showTooltip(e.clientX, e.clientY, mesh.userData);
+    }
+
+    var blockNumber = -1;
+
+    if (intersected && hitMesh) {
+      if (intersected.instanceId !== undefined && intersected.instanceId !== null) {
+        blockNumber = WorldBlocks.getBlockByInstanceIdInMesh(hitMesh, intersected.instanceId);
+      }
+
+      if (blockNumber < 0 && intersected.point) {
+        blockNumber = WorldGrid.sphereToBlock(intersected.point.x, intersected.point.y, intersected.point.z);
+      }
+    }
+
+    if (blockNumber >= 0) {
+      if (blockNumber !== hoveredBlock) {
+        hoveredBlock = blockNumber;
+        var data = WorldBlocks.getBlockData(blockNumber);
+        showTooltip(e.clientX, e.clientY, {
+          blockNumber: blockNumber,
+          tx: data ? data.tx : '?',
+          hash: data ? data.hash : ''
+        });
+      } else {
+        updateTooltipPos(e.clientX, e.clientY);
+      }
     } else {
-      if (hoveredMesh) {
-        unhighlight(hoveredMesh);
-        hoveredMesh = null;
-      }
+      hoveredBlock = -1;
       hideTooltip();
     }
   }
 
   function onClick(e) {
-    if (!hoveredMesh) return;
-    var data = hoveredMesh.userData;
-    window.location.hash = '/blocks/' + data.blockNumber;
-  }
-
-  function highlight(mesh) {
-    mesh.material.emissive = new THREE.Color(0xFE3E00);
-    mesh.material.emissiveIntensity = 0.3;
-  }
-
-  function unhighlight(mesh) {
-    mesh.material.emissive = new THREE.Color(0x000000);
-    mesh.material.emissiveIntensity = 0;
+    if (hoveredBlock < 0) return;
+    var state = WorldControls.getState();
+    if (state && state.distance < CLICK_NAV_MIN_DIST) return;
+    window.location.hash = '/blocks/' + hoveredBlock;
   }
 
   function showTooltip(x, y, data) {
@@ -68,6 +94,12 @@ var WorldInteraction = (function() {
     tooltipEl.style.top = (y + 15) + 'px';
     tooltipEl.innerHTML = '<div style="color:#FE3E00;font-weight:bold">Bloque #' + data.blockNumber + '</div>' +
       '<div>' + data.tx + ' transacciones</div>';
+  }
+
+  function updateTooltipPos(x, y) {
+    if (!tooltipEl) return;
+    tooltipEl.style.left = (x + 15) + 'px';
+    tooltipEl.style.top = (y + 15) + 'px';
   }
 
   function hideTooltip() {

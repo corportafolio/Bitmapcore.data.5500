@@ -16,7 +16,7 @@ var MondrianGenerator = {
     options = options || {};
     var totalTransactions = options.totalTransactions || 0;
     var hash = options.hash || '';
-    var isPerfect = options.isPerfect || false;
+    var isGrid = options.isGrid || false;
     var isPunk = options.isPunk || false;
     var etiquetas = options.etiquetas || '';
     var transactions = options.transactions || [];
@@ -27,7 +27,7 @@ var MondrianGenerator = {
     }
     if (totalTransactions === 0) {
       totalTransactions = Math.abs(blockNumber % 7 + 3);
-      isPerfect = true;
+      isGrid = true;
     }
     totalTransactions = Math.max(totalTransactions, 1);
 
@@ -52,14 +52,14 @@ var MondrianGenerator = {
     } else if (totalTransactions === 2 && isSpecial2txPunk) {
       var neckType = isWideNeckPunk ? 1 : isStandarPunk ? 2 : isPristinePunk ? 3 : 4;
       this._draw2txPunk(ctx, size, neckType);
-    } else if ((isPerfect || isPunk) && totalTransactions <= 35) {
+    } else if ((isGrid || isPunk) && totalTransactions <= 35) {
       if (totalTransactions === 1) {
         this._drawSingleCell(ctx, size);
       } else {
         this._drawPerfectGrid(ctx, totalTransactions, size, isPunk);
       }
     } else {
-      this._drawMondrianPacking(ctx, totalTransactions, hash, isPerfect, size);
+      this._drawMondrianPacking(ctx, totalTransactions, hash, isGrid, size);
     }
   },
 
@@ -203,8 +203,8 @@ var MondrianGenerator = {
     return hash;
   },
 
-  _getSizes: function(hash, txCount, isPerfect) {
-    if (isPerfect) {
+  _getSizes: function(hash, txCount, isGrid) {
+    if (isGrid) {
       var arr = [];
       for (var i = 0; i < txCount; i++) arr.push(1);
       return arr;
@@ -369,9 +369,9 @@ var MondrianGenerator = {
     };
   },
 
-  _drawMondrianPacking: function(ctx, totalTransactions, hash, isPerfect, size) {
+  _drawMondrianPacking: function(ctx, totalTransactions, hash, isGrid, size) {
     var B = this.BORDER;
-    var sizes = this._getSizes(hash, totalTransactions, isPerfect);
+    var sizes = this._getSizes(hash, totalTransactions, isGrid);
     var adj = this._adjustSizesAndArea(sizes);
 
     var gridW = Math.max(Math.ceil(Math.sqrt(adj.totalArea)), 1);
@@ -510,6 +510,16 @@ var IndexedDBCache = {
         var req = tx.objectStore('data').get(key);
         req.onsuccess = function() { resolve(req.result); };
         req.onerror = function(e) { reject(e.target.error); };
+      });
+    });
+  },
+  delete: function(dbName, key) {
+    return IndexedDBCache.open(dbName).then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var tx = db.transaction('data', 'readwrite');
+        tx.objectStore('data').delete(key);
+        tx.oncomplete = function() { resolve(); };
+        tx.onerror = function(e) { reject(e.target.error); };
       });
     });
   }

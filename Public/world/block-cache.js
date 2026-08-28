@@ -4,12 +4,11 @@ var BlockCache = (function() {
   var STORE_NAME = 'batches';
   var META_STORE = 'meta';
   var REFRESH_INTERVAL = 60 * 60 * 1000;
-  var BATCH_SIZE = 50000;
+  var SERVER_BATCH = 50000;
   var TOTAL_BLOCKS = 955001;
-  var TOTAL_BATCHES = Math.ceil(TOTAL_BLOCKS / BATCH_SIZE);
   var db = null;
   var isPreloading = false;
-  var preloadProgress = { current: 0, total: TOTAL_BLOCKS, startBlock: 0 };
+  var preloadProgress = { current: 0, total: TOTAL_BLOCKS };
   var preloadCallback = null;
 
   function openDB() {
@@ -17,14 +16,11 @@ var BlockCache = (function() {
       if (db) return resolve(db);
       var request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onerror = function() { reject(request.error); };
-      request.onsuccess = function() {
-        db = request.result;
-        resolve(db);
-      };
+      request.onsuccess = function() { db = request.result; resolve(db); };
       request.onupgradeneeded = function(e) {
         var database = e.target.result;
         if (!database.objectStoreNames.contains(STORE_NAME)) {
-          var store = database.createObjectStore(STORE_NAME, { keyPath: 'batchIndex' });
+          database.createObjectStore(STORE_NAME, { keyPath: 'batchIndex' });
         }
         if (!database.objectStoreNames.contains(META_STORE)) {
           database.createObjectStore(META_STORE, { keyPath: 'key' });
@@ -33,30 +29,16 @@ var BlockCache = (function() {
     });
   }
 
-  function getBatchIndex(blockNum) {
-    return Math.floor(blockNum / BATCH_SIZE);
-  }
-
-  function getBlockInBatch(blockNum, batch) {
-    var localIndex = blockNum % BATCH_SIZE;
-    return batch[localIndex] || null;
-  }
-
   function getBlock(blockNum) {
-    var batchIndex = getBatchIndex(blockNum);
+    var batchIndex = Math.floor(blockNum / SERVER_BATCH);
     return openDB().then(function(database) {
       return new Promise(function(resolve, reject) {
         var tx = database.transaction(STORE_NAME, 'readonly');
-        var store = tx.objectStore(STORE_NAME);
-        var request = store.get(batchIndex);
+        var request = tx.objectStore(STORE_NAME).get(batchIndex);
         request.onsuccess = function() {
           var batch = request.result;
-          if (!batch || !batch.blocks) {
-            resolve(null);
-            return;
-          }
-          var block = getBlockInBatch(blockNum, batch.blocks);
-          resolve(block);
+          if (!batch || !batch.blocks) return resolve(null);
+          resolve(batch.blocks[blockNum % SERVER_BATCH] || null);
         };
         request.onerror = function() { reject(request.error); };
       });
@@ -67,8 +49,7 @@ var BlockCache = (function() {
     return openDB().then(function(database) {
       return new Promise(function(resolve, reject) {
         var tx = database.transaction(STORE_NAME, 'readwrite');
-        var store = tx.objectStore(STORE_NAME);
-        var request = store.put({ batchIndex: batchIndex, blocks: blocks });
+        var request = tx.objectStore(STORE_NAME).put({ batchIndex: batchIndex, blocks: blocks });
         request.onsuccess = function() { resolve(); };
         request.onerror = function() { reject(request.error); };
       });
@@ -76,143 +57,32 @@ var BlockCache = (function() {
   }
 
   function saveBlocks(blocks) {
-    var startIndex = blocks[0] ? getBatchIndex(blocks[0].bloque) : 0;
-    return saveBatch(startIndex, blocks);
-  }
-
-  function getLastRefresh() {
-    return openDB().then(function(database) {
-      return new Promise(function(resolve, reject) {
-        var tx = database.transaction(META_STORE, 'readonly');
-        var store = tx.objectStore(META_STORE);
-        var request = store.get('lastRefresh');
-        request.onsuccess = function() {
-          resolve(request.result ? request.result.value : 0);
-        };
-        request.onerror = function() { reject(request.error); };
-      });
-    });
+    var batchIndex = blocks[0] ? Math.floor(blocks[0].bloque / SERVER_BATCH) : 0;
+    return saveBatch(batchIndex, blocks);
   }
 
   function setLastRefresh(timestamp) {
     return openDB().then(function(database) {
       return new Promise(function(resolve, reject) {
         var tx = database.transaction(META_STORE, 'readwrite');
-        var store = tx.objectStore(META_STORE);
-        var request = store.put({ key: 'lastRefresh', value: timestamp });
+        var request = tx.objectStore(META_STORE).put({ key: 'lastRefresh', value: timestamp });
         request.onsuccess = function() { resolve(); };
         request.onerror = function() { reject(request.error); };
       });
     });
   }
 
-  function getTotalBlocks() {
+  function getCacheStatus() {
     return openDB().then(function(database) {
       return new Promise(function(resolve, reject) {
         var tx = database.transaction(STORE_NAME, 'readonly');
-        var store = tx.objectStore(STORE_NAME);
-        var request = store.count();
+        var request = tx.objectStore(STORE_NAME).count();
         request.onsuccess = function() {
           var batchCount = request.result;
-          resolve(batchCount * BATCH_SIZE);
+          var totalBatchCount = Math.ceil(TOTAL_BLOCKS / SERVER_BATCH);
+          resolve({ batchCount: batchCount, totalBatches: totalBatchCount, complete: batchCount >= totalBatchCount });
         };
         request.onerror = function() { reject(request.error); };
-      });
-    });
-  }
-
-  function getCachedBatchesCount() {
-    return openDB().then(function(database) {
-      return new Promise(function(resolve, reject) {
-        var tx = database.transaction(STORE_NAME, 'readonly');
-        var store = tx.objectStore(STORE_NAME);
-        var request = store.count();
-        request.onsuccess = function() { resolve(request.result); };
-        request.onerror = function() { reject(request.error); };
-      });
-    });
-  }
-
-  function needsRefresh() {
-    return getLastRefresh().then(function(lastRefresh) {
-      return Date.now() - lastRefresh > REFRESH_INTERVAL;
-    });
-  }
-
-  function preloadAll(callback) {
-    if (isPreloading) return Promise.resolve();
-    isPreloading = true;
-    preloadCallback = callback || null;
-
-    return getCachedBatchesCount().then(function(cachedBatchCount) {
-      var cachedBlocks = cachedBatchCount * BATCH_SIZE;
-      console.log('📦 BlockCache: Iniciando preload. En caché:', cachedBlocks, 'bloques');
-      preloadProgress = { current: cachedBlocks, total: TOTAL_BLOCKS, startBlock: cachedBlocks };
-      return preloadNextBatch();
-    });
-  }
-
-  function preloadNextBatch() {
-    var start = preloadProgress.current;
-    if (start >= TOTAL_BLOCKS) {
-      console.log('📦 BlockCache: Preload completo. Total en caché:', preloadProgress.current);
-      isPreloading = false;
-      setLastRefresh(Date.now());
-      if (preloadCallback) preloadCallback(true);
-      return Promise.resolve();
-    }
-
-    var promises = [];
-    var limit = BATCH_SIZE;
-
-    for (var i = 0; i < 5; i++) {
-      var batchStart = start + i * limit;
-      if (batchStart >= TOTAL_BLOCKS) break;
-
-      promises.push(
-        fetch('/api/v1/blocks/batch?start=' + batchStart + '&limit=' + limit)
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (!data.success || !data.items || data.items.length === 0) {
-              return { blocks: [], start: batchStart };
-            }
-            return { blocks: data.items, start: batchStart };
-          })
-          .catch(function(err) {
-            console.error('📦 BlockCache: Error en batch:', err);
-            return { blocks: [], start: batchStart };
-          })
-      );
-    }
-
-    return Promise.all(promises).then(function(results) {
-      var allBlocks = [];
-      var resultsToSave = [];
-
-      results.forEach(function(result) {
-        if (result.blocks && result.blocks.length > 0) {
-          allBlocks = allBlocks.concat(result.blocks);
-          resultsToSave.push(result);
-        }
-      });
-
-      if (allBlocks.length === 0) {
-        console.log('📦 BlockCache: Sin más bloques');
-        isPreloading = false;
-        if (preloadCallback) preloadCallback(true);
-        return;
-      }
-
-      preloadProgress.current += allBlocks.length;
-
-      return Promise.all(resultsToSave.map(function(result) {
-        return saveBatch(Math.floor(result.start / BATCH_SIZE), result.blocks);
-      })).then(function() {
-        console.log('📦 BlockCache: Lotes guardados. Progreso:', preloadProgress.current, '/', TOTAL_BLOCKS);
-        if (preloadCallback) preloadCallback(false, preloadProgress);
-
-        if (!isPreloading) return;
-        preloadNextBatch();
       });
     });
   }
@@ -222,53 +92,66 @@ var BlockCache = (function() {
     isPreloading = true;
     preloadCallback = callback || null;
 
-    return getCachedBatchesCount().then(function(cachedBatchCount) {
-      var cachedBlocks = cachedBatchCount * BATCH_SIZE;
-      console.log('📦 BlockCache: Descarga completa de', TOTAL_BLOCKS, 'bloques...');
-      preloadProgress = { current: cachedBlocks, total: TOTAL_BLOCKS, startBlock: cachedBlocks };
+    return getCacheStatus().then(function(status) {
+      var cachedBlocks = status.batchCount * SERVER_BATCH;
+      console.log('📦 BlockCache: Iniciando preload. Batches en caché:', status.batchCount, '/', status.totalBatches);
+      preloadProgress = { current: cachedBlocks, total: TOTAL_BLOCKS };
 
-      return fetch('/api/v1/blocks/batch?start=' + cachedBlocks + '&limit=' + (TOTAL_BLOCKS - cachedBlocks))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (!data.success || !data.items || data.items.length === 0) {
-            console.log('📦 BlockCache: Sin más bloques');
-            isPreloading = false;
-            if (preloadCallback) preloadCallback(true);
-            return;
-          }
+      if (status.complete) {
+        console.log('📦 BlockCache: Ya completo en caché.');
+        isPreloading = false;
+        if (preloadCallback) preloadCallback(true);
+        return;
+      }
 
-          var blocks = data.items;
-          console.log('📦 BlockCache: Recibidos', blocks.length, 'bloques en 1 request');
-
-          return Promise.all(
-            Array.from({ length: Math.ceil(blocks.length / BATCH_SIZE) }, function(_, i) {
-              var start = i * BATCH_SIZE;
-              var batchBlocks = blocks.slice(start, start + BATCH_SIZE);
-              var batchIndex = Math.floor((cachedBlocks + start) / BATCH_SIZE);
-              return saveBatch(batchIndex, batchBlocks);
-            })
-          ).then(function() {
-            preloadProgress.current = TOTAL_BLOCKS;
-            console.log('📦 BlockCache: Preload completo. Total en caché:', TOTAL_BLOCKS);
-            isPreloading = false;
-            setLastRefresh(Date.now());
-            if (preloadCallback) preloadCallback(true);
-          });
-        })
-        .catch(function(err) {
-          console.error('📦 BlockCache: Error en preloadAllAtOnce:', err);
-          isPreloading = false;
-          if (preloadCallback) preloadCallback(false, preloadProgress, err);
-        });
+      return downloadNextBatch(status.batchCount);
     });
   }
 
-  function getPreloadProgress() {
-    return preloadProgress;
-  }
+  function downloadNextBatch(startBatch) {
+    var start = startBatch * SERVER_BATCH;
+    var remaining = TOTAL_BLOCKS - start;
+    if (remaining <= 0) {
+      console.log('📦 BlockCache: Preload completo.');
+      isPreloading = false;
+      setLastRefresh(Date.now());
+      if (preloadCallback) preloadCallback(true);
+      return;
+    }
 
-  function isPreloadingActive() {
-    return isPreloading;
+    var limit = Math.min(remaining, SERVER_BATCH);
+
+    return fetch('/api/v1/blocks/batch?start=' + start + '&limit=' + limit)
+      .then(function(r) { return r.json(); })
+      .then(function(response) {
+        var data = response.data || {};
+        var items = data.items || [];
+        if (!response.success || items.length === 0) {
+          console.log('📦 BlockCache: Sin más bloques (start=' + start + ', limit=' + limit + ')');
+          isPreloading = false;
+          setLastRefresh(Date.now());
+          if (preloadCallback) preloadCallback(true);
+          return;
+        }
+
+        var blocks = items;
+        preloadProgress.current += blocks.length;
+
+        return saveBatch(startBatch, blocks).then(function() {
+          var pct = ((preloadProgress.current / preloadProgress.total) * 100).toFixed(1);
+          console.log('📦 BlockCache: Batch #' + startBatch + ' guardado (' + blocks.length + ' bloques). Progreso:', pct + '%');
+
+          if (preloadCallback) preloadCallback(false, preloadProgress);
+
+          if (!isPreloading) return;
+          setTimeout(function() { downloadNextBatch(startBatch + 1); }, 0);
+        });
+      })
+      .catch(function(err) {
+        console.error('📦 BlockCache: Error en batch:', err);
+        isPreloading = false;
+        if (preloadCallback) preloadCallback(false, preloadProgress, err);
+      });
   }
 
   function clearCache() {
@@ -286,18 +169,234 @@ var BlockCache = (function() {
   return {
     openDB: openDB,
     getBlock: getBlock,
-    saveBlock: saveBlock,
+    saveBlock: function() {},
     saveBlocks: saveBlocks,
-    getLastRefresh: getLastRefresh,
-    setLastRefresh: setLastRefresh,
-    getTotalBlocks: getTotalBlocks,
-    needsRefresh: needsRefresh,
-    preloadAll: preloadAll,
+    getCacheStatus: getCacheStatus,
+    preloadAll: preloadAllAtOnce,
     preloadAllAtOnce: preloadAllAtOnce,
-    getPreloadProgress: getPreloadProgress,
-    isPreloadingActive: isPreloadingActive,
     clearCache: clearCache,
-    BATCH_SIZE: BATCH_SIZE,
+    getPreloadProgress: function() { return preloadProgress; },
+    isPreloadingActive: function() { return isPreloading; },
+    SERVER_BATCH: SERVER_BATCH,
+    TOTAL_BLOCKS: TOTAL_BLOCKS,
     REFRESH_INTERVAL: REFRESH_INTERVAL
+  };
+})();
+
+var AtlasCache = (function() {
+  var DB_NAME = 'BitmapCoreAtlasCache';
+  var DB_VERSION = 2;
+  var STORE_NAME = 'atlas';
+  var db = null;
+var inFlight = {};
+var cachedKeys = {};
+var loaded = false;
+var loadAllKeysPromise = null;
+var fetchQueue = [];
+var activeFetches = 0;
+var MAX_CONCURRENT_FETCHES = 6;
+
+  function openDB() {
+    return new Promise(function(resolve, reject) {
+      if (db) return resolve(db);
+      var request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onerror = function() { reject(request.error); };
+      request.onsuccess = function() { db = request.result; resolve(db); };
+      request.onupgradeneeded = function(e) {
+        var database = e.target.result;
+        if (!database.objectStoreNames.contains(STORE_NAME)) {
+          database.createObjectStore(STORE_NAME, { keyPath: 'gz' });
+        }
+      };
+    });
+  }
+
+  function getAtlasBlob(gz) {
+    console.log('🗺️ AtlasCache.getAtlasBlob: gz=', gz);
+    return openDB().then(function(database) {
+      return new Promise(function(resolve, reject) {
+        var tx = database.transaction(STORE_NAME, 'readonly');
+        var request = tx.objectStore(STORE_NAME).get(gz);
+        request.onsuccess = function() {
+          var row = request.result;
+          if (row && row.blob) {
+            cachedKeys[gz] = true;
+            console.log('🗺️ AtlasCache.getAtlasBlob: gz', gz, 'FOUND in IndexedDB, size=', row.blob.size);
+            resolve(row.blob);
+          } else {
+            console.log('🗺️ AtlasCache.getAtlasBlob: gz', gz, 'NOT FOUND in IndexedDB');
+            resolve(null);
+          }
+        };
+        request.onerror = function() { reject(request.error); };
+      });
+    });
+  }
+
+  function saveAtlasBlob(gz, blob) {
+    console.log('🗺️ AtlasCache.saveAtlasBlob: gz=', gz, 'blob size=', blob.size);
+    cachedKeys[gz] = true;
+    return openDB().then(function(database) {
+      return new Promise(function(resolve, reject) {
+        var tx = database.transaction(STORE_NAME, 'readwrite');
+        var request = tx.objectStore(STORE_NAME).put({ gz: gz, blob: blob });
+        request.onsuccess = function() { console.log('🗺️ AtlasCache.saveAtlasBlob: gz', gz, 'saved OK'); resolve(); };
+        request.onerror = function() { console.error('🗺️ AtlasCache.saveAtlasBlob: gz', gz, 'ERROR'); reject(request.error); };
+      });
+    });
+  }
+
+  function loadAllKeys() {
+    if (loaded) {
+      console.log('🗺️ AtlasCache.loadAllKeys: already loaded, cachedKeys count=', Object.keys(cachedKeys).length);
+      return Promise.resolve();
+    }
+    if (loadAllKeysPromise) {
+      console.log('🗺️ AtlasCache.loadAllKeys: already loading, waiting for existing Promise');
+      return loadAllKeysPromise;
+    }
+    console.log('🗺️ AtlasCache.loadAllKeys: loading from IndexedDB...');
+    loadAllKeysPromise = openDB().then(function(database) {
+      return new Promise(function(resolve) {
+        var tx = database.transaction(STORE_NAME, 'readonly');
+        var request = tx.objectStore(STORE_NAME).openCursor();
+        var count = 0;
+        request.onsuccess = function(e) {
+          var cursor = e.target.result;
+          if (cursor) {
+            cachedKeys[cursor.key] = true;
+            count++;
+            cursor.continue();
+          } else {
+            loaded = true;
+            loadAllKeysPromise = null;
+            console.log('🗺️ AtlasCache.loadAllKeys: DONE, cachedKeys count=', count);
+            resolve();
+          }
+        };
+        request.onerror = function() {
+          console.error('🗺️ AtlasCache.loadAllKeys: ERROR');
+          loaded = true;
+          loadAllKeysPromise = null;
+          resolve();
+        };
+      });
+    });
+    return loadAllKeysPromise;
+  }
+
+  function hasAtlas(gz) {
+    return cachedKeys[gz] === true;
+  }
+
+  var ATLAS_TOTAL = 956;
+  var ATLAS_CONCURRENT = 20;
+  var preloadRunning = false;
+
+  function preloadAll(callback) {
+    if (preloadRunning) return;
+    preloadRunning = true;
+    var done = 0;
+    var errors = 0;
+
+    console.log('🗺️ AtlasCache: Precargando ' + ATLAS_TOTAL + ' atlas (' + ATLAS_CONCURRENT + ' en paralelo)...');
+
+    loadAllKeys().then(function() {
+      var pending = [];
+      for (var gz = 0; gz < ATLAS_TOTAL; gz++) {
+        if (!hasAtlas(gz)) pending.push(gz);
+      }
+      console.log('🗺️ AtlasCache: ' + (ATLAS_TOTAL - pending.length) + ' ya en caché, ' + pending.length + ' por descargar.');
+      if (pending.length === 0) {
+        preloadRunning = false;
+        console.log('🗺️ AtlasCache: Todos los atlas ya estaban en caché.');
+        if (callback) callback(true);
+        return;
+      }
+      var i = 0;
+      function next() {
+        if (i >= pending.length) {
+          if (done + errors >= pending.length) {
+            preloadRunning = false;
+            console.log('🗺️ AtlasCache: Precarga completa. OK: ' + done + ', Errores: ' + errors);
+            if (callback) callback(true);
+          }
+          return;
+        }
+        var gz = pending[i++];
+        fetchAtlas(gz, function(blob) {
+          if (blob) done++; else errors++;
+          if ((done + errors) % 50 === 0 || (done + errors) === pending.length) {
+            console.log('🗺️ AtlasCache: ' + (done + errors) + '/' + pending.length + ' (' + ((done + errors) / pending.length * 100).toFixed(1) + '%)');
+          }
+          next();
+        });
+      }
+      for (var c = 0; c < ATLAS_CONCURRENT && c < pending.length; c++) next();
+    });
+  }
+
+  function ensureAtlas(gz, callback) {
+    fetchAtlas(gz, callback);
+  }
+
+  function processFetchQueue() {
+    while (fetchQueue.length > 0 && activeFetches < MAX_CONCURRENT_FETCHES) {
+      var task = fetchQueue.shift();
+      activeFetches++;
+      doFetch(task.gz, task.callback);
+    }
+  }
+
+  function fetchAtlas(gz, callback) {
+    if (activeFetches < MAX_CONCURRENT_FETCHES) {
+      activeFetches++;
+      doFetch(gz, callback);
+    } else {
+      fetchQueue.push({ gz: gz, callback: callback });
+      processFetchQueue();
+    }
+  }
+
+  function doFetch(gz, callback) {
+    if (inFlight[gz]) {
+      inFlight[gz].push(callback);
+      activeFetches--;
+      processFetchQueue();
+      return;
+    }
+    inFlight[gz] = [callback];
+    var url = '/api/v1/world/atlas/' + gz;
+    fetch(url)
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(function(blob) {
+        activeFetches--;
+        var cbs = inFlight[gz] || [];
+        delete inFlight[gz];
+        for (var i = 0; i < cbs.length; i++) cbs[i](blob);
+        saveAtlasBlob(gz, blob).catch(function() {});
+        processFetchQueue();
+      })
+      .catch(function(err) {
+        activeFetches--;
+        console.error('🗺️ Atlas ' + gz + ' error:', err);
+        var cbs = inFlight[gz] || [];
+        delete inFlight[gz];
+        for (var i = 0; i < cbs.length; i++) cbs[i](null);
+        processFetchQueue();
+      });
+  }
+
+  return {
+    openDB: openDB,
+    ensureAtlas: ensureAtlas,
+    hasAtlas: hasAtlas,
+    getAtlasBlob: getAtlasBlob,
+    saveAtlasBlob: saveAtlasBlob,
+    loadAllKeys: loadAllKeys,
+    preloadAll: preloadAll
   };
 })();

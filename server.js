@@ -116,15 +116,6 @@ try {
     );
     CREATE INDEX IF NOT EXISTS idx_ow_listedAt ON ordinalswallet_cache(listedAt DESC);
     CREATE INDEX IF NOT EXISTS idx_ow_insertion ON ordinalswallet_cache(insertionOrder DESC);
-    CREATE TABLE IF NOT EXISTS block_images (
-      block_number  INTEGER NOT NULL,
-      size          INTEGER NOT NULL DEFAULT 80,
-      options_hash  TEXT NOT NULL,
-      image_data    BLOB NOT NULL,
-      created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (block_number, size, options_hash)
-    ) WITHOUT ROWID;
-    CREATE INDEX IF NOT EXISTS idx_block_images_block ON block_images(block_number);
     CREATE TABLE IF NOT EXISTS ordinalswallet_stats (
       key       TEXT PRIMARY KEY,
       value     INTEGER,
@@ -134,6 +125,28 @@ try {
   console.log('Ordinalswallet cache DB connected');
 } catch (err) {
   console.error('Ordinalswallet cache DB not created:', err.message);
+}
+
+let dbImages = null;
+try {
+  const fs2 = require('fs');
+  const dataDir2 = path.join(__dirname, 'data');
+  dbImages = new Database(path.join(dataDir2, 'block_images.db'));
+  dbImages.pragma('journal_mode = WAL');
+  dbImages.exec(`
+    CREATE TABLE IF NOT EXISTS block_images (
+      block_number  INTEGER NOT NULL,
+      size          INTEGER NOT NULL DEFAULT 80,
+      options_hash  TEXT NOT NULL,
+      image_data    BLOB NOT NULL,
+      created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (block_number, size, options_hash)
+    ) WITHOUT ROWID;
+    CREATE INDEX IF NOT EXISTS idx_block_images_block ON block_images(block_number);
+  `);
+  console.log('block_images.db connected (955k+ images)');
+} catch (err) {
+  console.error('block_images.db not connected:', err.message);
 }
 
 let dbUnisat = null;
@@ -1250,6 +1263,12 @@ async function pollOrdinalswallet() {
       const newEscrows = isFirstSync ? escrows : escrows.filter(e => parseCreatedTimestamp(e.created) > lastTs);
       console.error('[OW] Total escrows: ' + escrows.length + ', nuevos: ' + newEscrows.length);
 
+      const currentInsIds = new Set();
+      for (const e of escrows) {
+        const insId = e.inscription_id || '';
+        if (insId) currentInsIds.add(insId);
+      }
+
       for (const e of newEscrows) {
         const insId = e.inscription_id || '';
         if (!insId) continue;
@@ -1260,6 +1279,19 @@ async function pollOrdinalswallet() {
           null, now, insertionOrder++
         );
         totalSaved++;
+      }
+
+      if (!isFirstSync && currentInsIds.size > 0) {
+        const cacheRows = dbOw.prepare("SELECT bitmapId FROM ordinalswallet_cache WHERE bitmapId != ''").all();
+        const staleIds = cacheRows.filter(r => !currentInsIds.has(r.bitmapId)).map(r => r.bitmapId);
+        if (staleIds.length > 0) {
+          const delStmt = dbOw.prepare("DELETE FROM ordinalswallet_cache WHERE bitmapId=?");
+          const deleteStale = dbOw.transaction((ids) => {
+            for (const sid of ids) delStmt.run(sid);
+          });
+          deleteStale(staleIds);
+          console.error('[OW] Reconciled: ' + staleIds.length + ' stale listings removed (not in API)');
+        }
       }
     } catch (e) {
       console.error('[OW] Error fetching escrows: ' + e.message);
@@ -1417,14 +1449,16 @@ async function pollUnisat() {
     const isFirstSync = lastTs === 0;
     const lastSoldRow = dbUnisat.prepare("SELECT value FROM unisat_stats WHERE key='lastSoldTimestamp'").get();
     let uniSoldSince = lastSoldRow ? lastSoldRow.value : lastTs;
-    console.error("[UNI] lastTs=" + lastTs + ", isFirstSync=" + isFirstSync + ", soldSince=" + uniSoldSince);
+    const lastCancelRow = dbUnisat.prepare("SELECT value FROM unisat_stats WHERE key='lastCancelTimestamp'").get();
+    let uniCancelSince = lastCancelRow ? lastCancelRow.value : lastTs;
+    console.error("[UNI] lastTs=" + lastTs + ", isFirstSync=" + isFirstSync + ", soldSince=" + uniSoldSince + ", cancelSince=" + uniCancelSince);
 
     const insertStmt = dbUnisat.prepare("INSERT OR REPLACE INTO unisat_cache (bitmapNumber, bitmapId, listedPrice, listedAt, ownerAddress, extraData, extraData2, timestamp, insertionOrder) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     let totalSaved = 0;
     let insertionOrder = (dbUnisat.prepare("SELECT MAX(insertionOrder) as m FROM unisat_cache").get()?.m || 0) + 1;
     let newLastTs = lastTs;
 
-    for (const evt of ["Sold", "Cancel", "Listed"]) {
+    for (const evt of ["Listed", "Sold", "Cancel"]) {
       console.error("[UNI] " + evt + " phase...");
       let start = 0;
       let hasMore = true;
@@ -1451,6 +1485,10 @@ async function pollUnisat() {
               const insId = item.inscriptionId || item.inscription_id || "";
               const name = item.collectionItemName || item.collection_item_name || "";
               if (!insId) continue;
+              if (!isFirstSync && dbSales) {
+                const alreadySold = dbSales.prepare("SELECT 1 FROM all_sales WHERE inscription_id=? LIMIT 1").get(insId);
+                if (alreadySold) continue;
+              }
               insertStmt.run(
                 parseBitmapNumber(name), insId,
                 item.price || item.unitPrice || 0,
@@ -1462,7 +1500,7 @@ async function pollUnisat() {
             }
             console.error("[UNI] " + evt + " page " + pages + ": " + items.length + " total, " + newItems.length + " nuevos");
           } else {
-            const soldTs = (evt === 'Sold') ? uniSoldSince : lastTs;
+            const soldTs = (evt === 'Sold') ? uniSoldSince : uniCancelSince;
             const newItems = isFirstSync ? items : items.filter(i => (i.timestamp || 0) > soldTs);
             if (!isFirstSync && newItems.length === 0 && items.length > 0) {
               hasMore = false;
@@ -1471,6 +1509,7 @@ async function pollUnisat() {
             for (const item of newItems) {
               const insId = item.inscriptionId || item.inscription_id || "";
               if (insId) dbUnisat.prepare("DELETE FROM unisat_cache WHERE bitmapId=?").run(insId);
+              if (insId && evt === 'Cancel' && item.timestamp && item.timestamp > uniCancelSince) uniCancelSince = item.timestamp;
               if (insId && evt === 'Sold' && dbSales) {
                 try {
                   const soldName = item.collectionItemName || item.collection_item_name || '';
@@ -1488,7 +1527,7 @@ async function pollUnisat() {
 
           if (!isFirstSync && items.length > 0) {
             const oldestTs = items[items.length - 1].timestamp || 0;
-            const stopTs = (evt === 'Sold') ? uniSoldSince : lastTs;
+            const stopTs = (evt === 'Sold') ? uniSoldSince : uniCancelSince;
             if (oldestTs <= stopTs) {
               console.error("[UNI] " + evt + " stopping - reached old items");
               hasMore = false;
@@ -1509,6 +1548,9 @@ async function pollUnisat() {
 
     if (uniSoldSince > (lastSoldRow ? lastSoldRow.value : 0)) {
       dbUnisat.prepare("INSERT OR REPLACE INTO unisat_stats (key, value, updatedAt) VALUES ('lastSoldTimestamp',?,?)").run(uniSoldSince, now);
+    }
+    if (uniCancelSince > (lastCancelRow ? lastCancelRow.value : 0)) {
+      dbUnisat.prepare("INSERT OR REPLACE INTO unisat_stats (key, value, updatedAt) VALUES ('lastCancelTimestamp',?,?)").run(uniCancelSince, now);
     }
 
     const minRow = dbUnisat.prepare("SELECT MIN(listedPrice) as p FROM unisat_cache WHERE bitmapId != '' AND listedPrice > 0").get();
@@ -1745,6 +1787,26 @@ app.get('/api/v1/unified/cache/listings', (req, res) => {
     }
 
     sendSuccess(res, rows);
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/unified/cache/prices', (req, res) => {
+  if (!dbUnified) return sendSuccess(res, {});
+  try {
+    const numsRaw = req.query.bitmaps || '';
+    const nums = numsRaw.split(',').map(s => parseInt(s.trim())).filter(n => n > 0);
+    if (nums.length === 0) return sendSuccess(res, {});
+    const placeholders = nums.map(() => '?').join(',');
+    const rows = dbUnified.prepare(
+      `SELECT bitmapNumber, MIN(listedPrice) as floorPrice FROM unified_listings WHERE bitmapNumber IN (${placeholders}) GROUP BY bitmapNumber`
+    ).all(...nums);
+    const result = {};
+    for (const r of rows) {
+      if (r.bitmapNumber !== undefined && r.floorPrice) result[r.bitmapNumber] = r.floorPrice;
+    }
+    sendSuccess(res, result);
   } catch (err) {
     sendError(res, err.message);
   }
@@ -2095,15 +2157,16 @@ app.get('/api/v1/block-image/:blockNumber', (req, res) => {
     const hash = req.query.hash || '';
     const grid = req.query.grid === 'true';
     const punk = req.query.punk === 'true';
+    const imgVersion = req.query.v || '1';
 
     const cryptoModule = require('crypto');
     const optsHash = cryptoModule.createHash('md5')
-      .update(etiquetas + '|' + tx + '|' + (grid ? 1 : 0) + '|' + (punk ? 1 : 0) + '|' + hash)
+      .update(imgVersion + '|' + etiquetas + '|' + tx + '|' + (grid ? 1 : 0) + '|' + (punk ? 1 : 0) + '|' + hash)
       .digest('hex');
 
-    if (!dbOw) return res.status(503).send('DB not ready');
+    if (!dbImages) return res.status(503).send('DB not ready');
 
-    const row = dbOw.prepare(
+    const row = dbImages.prepare(
       'SELECT image_data FROM block_images WHERE block_number=? AND size=? AND options_hash=?'
     ).get(blockNumber, size, optsHash);
 
@@ -2121,17 +2184,67 @@ app.get('/api/v1/block-image/:blockNumber', (req, res) => {
       totalTransactions: tx,
       hash: hash,
       etiquetas: etiquetas,
-      isPerfect: grid,
+      isGrid: grid,
       isPunk: punk
     }, size);
 
     const png = canvas.toBuffer('image/png');
-    dbOw.prepare('INSERT OR REPLACE INTO block_images VALUES (?,?,?,?,CURRENT_TIMESTAMP)')
+    dbImages.prepare('INSERT OR REPLACE INTO block_images VALUES (?,?,?,?,CURRENT_TIMESTAMP)')
         .run(blockNumber, size, optsHash, png);
 
     res.set('Content-Type', 'image/png');
     res.set('Cache-Control', 'public, max-age=3600');
     res.send(png);
+  } catch(err) {
+    res.status(500).send('Internal error');
+  }
+});
+
+app.get('/api/v1/parcel-image', (req, res) => {
+  try {
+    const size = parseInt(req.query.size) || 80;
+    const { createCanvas } = require('canvas');
+    const canvas = createCanvas(size, size);
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, size, size);
+
+    const cols = 2, rows = 2;
+    const border = Math.max(Math.round(size * 0.02), 2);
+    const street = Math.max(Math.round(size * 0.015), 1);
+    const cell = (size - border * 2 - street * (cols - 1)) / cols;
+
+    ctx.fillStyle = '#FFA500';
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = border + c * (cell + street);
+        const y = border + r * (cell + street);
+        ctx.fillRect(x, y, cell, cell);
+      }
+    }
+
+    const png = canvas.toBuffer('image/png');
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(png);
+  } catch(err) {
+    res.status(500).send('Internal error');
+  }
+});
+
+app.get('/api/v1/world/atlas/:gz', (req, res) => {
+  try {
+    const gz = parseInt(req.params.gz);
+    if (isNaN(gz) || gz < 0) return res.status(400).send('Invalid gz');
+
+    if (!dbImages) return res.status(503).send('DB not ready');
+    const row = dbImages.prepare('SELECT image_data FROM atlas_images WHERE gz=?').get(gz);
+    if (!row) return res.status(404).send('Atlas not found');
+
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(row.image_data);
   } catch(err) {
     res.status(500).send('Internal error');
   }

@@ -5,16 +5,18 @@ var WorldControls = (function() {
   var theta = 0;
   var phi = 0;
   var distance = 300;
-  var MIN_DISTANCE = 101;
+  var MIN_DISTANCE = 101.4;
   var MAX_DISTANCE = 600;
-  var MIN_PHI = -1.3;
-  var MAX_PHI = 1.3;
-  var ZOOM_SPEED = 3;
+  var MIN_PHI = -1.55;
+  var MAX_PHI = 1.55;
+  var ZOOM_SPEED = 1.5;
   var ROTATE_SPEED = 0.005;
   var ARROW_SPEED = 0.08;
   var ON_CHANGE = null;
   var animTarget = null;
   var animFrame = null;
+  var zoomTarget = null;
+  var zoomFrame = null;
 
   function init(cam, ren) {
     camera = cam;
@@ -129,9 +131,32 @@ var WorldControls = (function() {
     updateCamera();
   }
 
+  function rotateUp() { rotateBy(0, -ARROW_SPEED); }
+  function rotateDown() { rotateBy(0, ARROW_SPEED); }
+  function rotateLeft() { rotateBy(-ARROW_SPEED, 0); }
+  function rotateRight() { rotateBy(ARROW_SPEED, 0); }
+
   function zoom(delta) {
-    distance = Math.max(MIN_DISTANCE, Math.min(MAX_DISTANCE, distance + delta));
+    if (zoomTarget === null) zoomTarget = distance;
+    zoomTarget = Math.max(MIN_DISTANCE, Math.min(MAX_DISTANCE, zoomTarget + delta));
+    if (!zoomFrame) {
+      zoomFrame = requestAnimationFrame(zoomStep);
+    }
+  }
+
+  function zoomStep() {
+    zoomFrame = null;
+    if (zoomTarget === null) return;
+    var diff = zoomTarget - distance;
+    if (Math.abs(diff) < 0.05) {
+      distance = zoomTarget;
+      zoomTarget = null;
+      updateCamera();
+      return;
+    }
+    distance += diff * 0.2;
     updateCamera();
+    zoomFrame = requestAnimationFrame(zoomStep);
   }
 
   function zoomIn() {
@@ -194,6 +219,10 @@ var WorldControls = (function() {
   return {
     init: init,
     rotateBy: rotateBy,
+    rotateUp: rotateUp,
+    rotateDown: rotateDown,
+    rotateLeft: rotateLeft,
+    rotateRight: rotateRight,
     zoom: zoom,
     zoomIn: zoomIn,
     zoomOut: zoomOut,

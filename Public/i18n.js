@@ -3,7 +3,7 @@ var I18n = {
   translations: {
     es: {
       app: { name:'BitmapCore', loading:'Cargando...', error:'Error', retry:'Reintentar', save:'Guardar', cancel:'Cancelar', confirm:'Confirmar', back:'Volver', search:'Buscar', noResults:'Sin resultados', lastUpdate:'Última actualización', connectWallet:'Conectar Wallet', disconnect:'Desconectar' },
-      nav: { home:'Inicio', marketplace:'Marketplace', blocks:'Bloques', tags:'Etiquetas', wallet:'Wallet', settings:'Configuración', misActivos:'Mis Activos', sales:'Ventas', discounts:'Descuentos', unified:'Listado Unificado', tagTables:'Tablas de Etiquetas', ordinalswallet:'Ordinalswallet', unisat:'Unisat', local:'Local' },
+      nav: { home:'Inicio', marketplace:'Marketplace', blocks:'Bloques', tags:'Etiquetas', wallet:'Wallet', settings:'Configuración', misActivos:'Mis Activos', sales:'Ventas', discounts:'Descuentos', unified:'Listado Unificado', tagTables:'Tablas de Etiquetas', ordinalswallet:'Ordinalswallet', unisat:'Unisat', local:'Local', parcelas:'Parcelas' },
       home: { title:'BitmapCore', subtitle:'El marketplace de Bitmap en Bitcoin', latestBlocks:'Últimos Bloques', latestSales:'Últimas Ventas', viewAll:'Ver todos', block:'Bloque' },
       marketplace: { title:'Marketplace', selectMarketplace:'Selecciona un marketplace', floorPrice:'Precio mínimo', totalListings:'Total listados', listedAt:'Listado el', price:'Precio', buyNow:'Comprar ahora', noListings:'No hay listados disponibles', filters:'Filtros', sort:'Ordenar', sortByPrice:'Precio', sortByDate:'Fecha', sortByBlock:'Bloque', asc:'Ascendente', desc:'Descendente' },
       block: { title:'Detalle de Bloque', transactions:'Transacciones', size:'Tamaño', date:'Fecha', viewMondrian:'Ver Mondrian Completo', bitmap:'Bitmap', inscription:'Inscripción', notFound:'Bloque no encontrado' },
@@ -18,7 +18,7 @@ var I18n = {
     },
     en: {
       app: { name:'BitmapCore', loading:'Loading...', error:'Error', retry:'Retry', save:'Save', cancel:'Cancel', confirm:'Confirm', back:'Back', search:'Search', noResults:'No results', lastUpdate:'Last update', connectWallet:'Connect Wallet', disconnect:'Disconnect' },
-      nav: { home:'Home', marketplace:'Marketplace', blocks:'Blocks', tags:'Tags', wallet:'Wallet', settings:'Settings', misActivos:'My Assets', sales:'Sales', discounts:'Discounts', unified:'Unified Listing', tagTables:'Tag Tables', ordinalswallet:'Ordinalswallet', unisat:'Unisat', local:'Local' },
+      nav: { home:'Home', marketplace:'Marketplace', blocks:'Blocks', tags:'Tags', wallet:'Wallet', settings:'Settings', misActivos:'My Assets', sales:'Sales', discounts:'Discounts', unified:'Unified Listing', tagTables:'Tag Tables', ordinalswallet:'Ordinalswallet', unisat:'Unisat', local:'Local', parcelas:'Parcels' },
       home: { title:'BitmapCore', subtitle:'The Bitmap marketplace on Bitcoin', latestBlocks:'Latest Blocks', latestSales:'Latest Sales', viewAll:'View all', block:'Block' },
       marketplace: { title:'Marketplace', selectMarketplace:'Select a marketplace', floorPrice:'Floor price', totalListings:'Total listings', listedAt:'Listed at', price:'Price', buyNow:'Buy now', noListings:'No listings available', filters:'Filters', sort:'Sort', sortByPrice:'Price', sortByDate:'Date', sortByBlock:'Block', asc:'Ascending', desc:'Descending' },
       block: { title:'Block Detail', transactions:'Transactions', size:'Size', date:'Date', viewMondrian:'View Full Mondrian', bitmap:'Bitmap', inscription:'Inscription', notFound:'Block not found' },

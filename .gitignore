@@ -7,3 +7,5 @@ PLAN-PANTALLA-PRINCIPAL-WEB.md
 .env.*
 *.db
 data/
+__pycache__/
+*.pyc

@@ -23,9 +23,8 @@ var WorldScene = (function() {
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(w, h);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.shadowMap.enabled = false;
     container.appendChild(renderer.domElement);
 
     var ambient = new THREE.AmbientLight(LIGHT_COLOR, AMBIENT_INTENSITY);
@@ -33,15 +32,6 @@ var WorldScene = (function() {
 
     var dir = new THREE.DirectionalLight(LIGHT_COLOR, DIR_INTENSITY);
     dir.position.set(100, 150, 100);
-    dir.castShadow = true;
-    dir.shadow.mapSize.width = 2048;
-    dir.shadow.mapSize.height = 2048;
-    dir.shadow.camera.near = 0.5;
-    dir.shadow.camera.far = 800;
-    dir.shadow.camera.left = -150;
-    dir.shadow.camera.right = 150;
-    dir.shadow.camera.top = 150;
-    dir.shadow.camera.bottom = -150;
     scene.add(dir);
 
     var hemi = new THREE.HemisphereLight(0x444466, 0x222233, 0.3);

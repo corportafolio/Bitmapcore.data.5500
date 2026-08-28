@@ -119,7 +119,7 @@ function BitmapBubble(props) {
     ),
     // Image 80x80
     React.createElement('img', {
-      src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=3&size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
+      src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=5&size=80&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
       style: { width: 80, height: 80, borderRadius: 2, imageRendering: 'pixelated', background: '#1a1a1a' },
       loading: 'lazy', alt: ''
     })
@@ -309,7 +309,7 @@ function ListedTagDetailPage(props) {
                     React.createElement('div', { className: 'flex items-center gap-2' },
                     React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                       React.createElement('img', {
-                        src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=3&size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
+                        src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=5&size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
                         width: 55, height: 55, loading: 'lazy',
                         style: { imageRendering: 'pixelated', background: '#1a1a1a', borderRadius: 4 }, alt: ''
                       })

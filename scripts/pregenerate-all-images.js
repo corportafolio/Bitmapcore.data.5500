@@ -4,25 +4,22 @@ const crypto = require('crypto');
 const MondrianGenerator = require('/root/bitmapcore-web/utils-mondrian');
 
 const mainDb = new Database('/root/bitmapcore-web/data/bitmapcorp_database.db', { readonly: true });
-const imgDb = new Database('/root/bitmapcore-web/data/ordinalswallet_cache.db');
+const imgDb = new Database('/root/bitmapcore-web/data/block_images.db');
 
 imgDb.pragma('journal_mode = WAL');
-imgDb.exec(`
-  CREATE TABLE IF NOT EXISTS block_images (
-    block_number  INTEGER NOT NULL,
-    size          INTEGER NOT NULL DEFAULT 80,
-    options_hash  TEXT NOT NULL,
-    image_data    BLOB NOT NULL,
-    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (block_number, size, options_hash)
-  ) WITHOUT ROWID;
-  CREATE INDEX IF NOT EXISTS idx_block_images_block ON block_images(block_number);
-`);
+imgDb.pragma('synchronous = NORMAL');
 
 const insert = imgDb.prepare(`
   INSERT OR REPLACE INTO block_images (block_number, size, options_hash, image_data)
   VALUES (?, ?, ?, ?)
 `);
+
+const SIZE = 240;
+
+const lastBlock = imgDb.prepare('SELECT MAX(block_number) as max FROM block_images WHERE size = ?').get(SIZE);
+const startBlock = lastBlock?.max !== null ? lastBlock.max + 1 : 0;
+
+console.log('Resuming from block: ' + startBlock);
 
 const blocks = mainDb.prepare(`
   SELECT 
@@ -31,12 +28,12 @@ const blocks = mainDb.prepare(`
     totalTransacciones,
     etiquetas
   FROM blocks
+  WHERE bloque >= ?
   ORDER BY bloque
-`).all();
+`).all(startBlock);
 
 console.log('Total blocks to process: ' + blocks.length);
 
-const SIZE = 80;
 let done = 0;
 let generated = 0;
 let skipped = 0;
@@ -46,11 +43,11 @@ for (const b of blocks) {
   const etiquetas = b.etiquetas || '';
   const tx = parseInt(b.totalTransacciones) || 0;
   const hash = b.hash || '';
-  const perfect = etiquetas.toLowerCase().indexOf('perfect') !== -1;
+  const grid = etiquetas.toLowerCase().indexOf('grid') !== -1;
   const punk = etiquetas.toLowerCase().indexOf('punk') !== -1;
 
   const optsHash = crypto.createHash('md5')
-    .update(etiquetas + '|' + tx + '|' + (perfect ? 1 : 0) + '|' + (punk ? 1 : 0) + '|' + hash)
+    .update(etiquetas + '|' + tx + '|' + (grid ? 1 : 0) + '|' + (punk ? 1 : 0) + '|' + hash)
     .digest('hex');
 
   const existing = imgDb.prepare(
@@ -65,7 +62,7 @@ for (const b of blocks) {
       totalTransactions: tx,
       hash: hash,
       etiquetas: etiquetas,
-      isPerfect: perfect,
+      isGrid: grid,
       isPunk: punk
     }, SIZE);
 

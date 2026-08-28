@@ -1,4 +1,81 @@
-function LocalPage(props) {
+var parcelLast4 = function(addr) { return addr ? addr.slice(-4) : '----'; };
+
+var parcelSameWalletInBoth = function(confs) {
+  var tx1 = confs && confs[0];
+  var tx2 = confs && confs[1];
+  if (!tx1 || !tx2 || !tx1.confirmed || !tx2.confirmed) return false;
+  var inscriber = tx1.inscriberWallet;
+  if (!inscriber) return false;
+  var froms = String(tx2.selfTransferFrom || '').split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s !== ''; });
+  var tos = String(tx2.selfTransferTo || '').split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s !== ''; });
+  if (froms.indexOf(inscriber) === -1) return false;
+  if (tos.indexOf(inscriber) === -1) return false;
+  return true;
+};
+
+var parcelBlockMarginOk = function(confs) {
+  var tx1 = confs && confs[0];
+  var tx2 = confs && confs[1];
+  if (!tx1 || !tx2) return false;
+  var b1 = tx1.genesisHeight;
+  var b2 = tx2.selfTransferHeight;
+  if (b1 === undefined || b1 === null || b2 === undefined || b2 === null) return false;
+  return Math.abs(parseInt(b1, 10) - parseInt(b2, 10)) <= 10;
+};
+
+var isParcelEligible = function(confs) {
+  if (!confs || !confs[0] || !confs[1]) return false;
+  if (!(confs[0].confirmed && confs[1].confirmed)) return false;
+  if (!parcelSameWalletInBoth(confs)) return false;
+  if (!parcelBlockMarginOk(confs)) return false;
+  return true;
+};
+
+function ParcelConfBubble(props) {
+  var confs = props.confs;
+  var tx1 = confs ? confs[0] : null;
+  var tx2 = confs ? confs[1] : null;
+  var checkIcon = React.createElement('svg', { width:10, height:10, viewBox:'0 0 24 24', fill:'none', stroke:'#00AA00', strokeWidth:3 },
+    React.createElement('path', { d:'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
+    React.createElement('polyline', { points:'22 4 12 14.01 9 11.01' })
+  );
+  var txLink = function(txid) {
+    return txid ? React.createElement('a', {
+      className:'font-mono text-blue-400 underline cursor-pointer',
+      style:{ color:'#3b82f6' },
+      title: txid,
+      onClick: function(e) { e.stopPropagation(); window.open('https://unisat.io/explorer/tx/' + txid, '_blank'); }
+    }, txid.slice(0, 16) + '...') : null;
+  };
+  return React.createElement('div', { className:'text-[8px] leading-tight' },
+    tx1 ? React.createElement('div', { className:'flex items-center gap-1 text-green-400' },
+      checkIcon,
+      React.createElement('span', { className:'font-mono text-white' }, 'wallet inscribe: '),
+      React.createElement('span', { className:'font-mono' }, parcelLast4(tx1.inscriberWallet)),
+      txLink(tx1.txid)
+    ) : null,
+    tx1 ? React.createElement('div', { className:'font-mono text-gray-300' }, 'bloque: ' + (tx1.genesisHeight || '---')) : null,
+    tx2 && tx2.confirmed ? React.createElement('div', { className:'mt-0.5 flex items-center gap-1 text-green-400' },
+      checkIcon,
+      React.createElement('span', { className:'font-mono text-white' }, 'de '),
+      React.createElement('span', { className:'font-mono' }, parcelLast4(tx2.selfTransferFrom ? tx2.selfTransferFrom.split(',')[0].trim() : null)),
+      React.createElement('span', { className:'font-mono text-white' }, ' a '),
+      React.createElement('span', { className:'font-mono' }, parcelLast4(tx2.selfTransferTo ? tx2.selfTransferTo.split(',')[0].trim() : null)),
+      txLink(tx2.txid)
+    ) : null,
+    tx2 && tx2.confirmed ? React.createElement('div', { className:'font-mono text-gray-300' }, 'bloque: ' + (tx2.selfTransferHeight !== undefined ? tx2.selfTransferHeight : '---')) : null,
+    tx2 && !tx2.confirmed ? React.createElement('div', { className:'mt-0.5 flex items-center gap-1 text-gray-500' },
+      React.createElement('svg', { width:10, height:10, viewBox:'0 0 24 24', fill:'none', stroke:'#666', strokeWidth:3 },
+        React.createElement('path', { d:'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
+        React.createElement('polyline', { points:'22 4 12 14.01 9 11.01' })
+      ),
+      React.createElement('span', { className:'font-mono' }, 'de --- a ---')
+    ) : null,
+    tx2 && !tx2.confirmed ? React.createElement('div', { className:'font-mono text-gray-500' }, 'bloque: ---') : null
+  );
+}
+
+function ParcelsMarketPage(props) {
   var navigate = props.navigate;
   var _a = React.useState([]);
   var listings = _a[0];
@@ -97,10 +174,27 @@ function LocalPage(props) {
   var _mempoolFees = React.useState(null);
   var mempoolFees = _mempoolFees[0];
   var setMempoolFees = _mempoolFees[1];
+  var _pcs = React.useState({});
+  var parcelConfs = _pcs[0];
+  var setParcelConfs = _pcs[1];
+  var _myListings = React.useState({});
+  var myListings = _myListings[0];
+  var setMyListings = _myListings[1];
+  var _editMenuFor = React.useState(null);
+  var editMenuFor = _editMenuFor[0];
+  var setEditMenuFor = _editMenuFor[1];
+  var _editingListing = React.useState(null);
+  var editingListing = _editingListing[0];
+  var setEditingListing = _editingListing[1];
+  var _editPriceStr = React.useState('');
+  var editPriceStr = _editPriceStr[0];
+  var setEditPriceStr = _editPriceStr[1];
+  var _confirmAction = React.useState(null);
+  var confirmAction = _confirmAction[0];
+  var setConfirmAction = _confirmAction[1];
 
   var fetchStats = function() {
-    fetch('/api/v1/local/stats')
-      .then(function(r) { return r.json(); })
+    ParcelMarketApi.getStats()
       .then(function(d) {
         if (d.success && d.data) {
           setVentas(d.data.ventas || 0);
@@ -134,21 +228,12 @@ function LocalPage(props) {
       .catch(function() {});
   }, []);
 
-  var extractBlockNumber = function(name) {
-    if (!name) return null;
-    var m = name.match(/^(\d+)\.bitmap$/);
-    if (m) return parseInt(m[1], 10);
-    var m2 = name.match(/^\d+\.(\d+)\.bitmap$/);
-    if (m2) return parseInt(m2[1], 10);
-    return null;
-  };
-
   var fetchListings = function() {
     setIsLoading(true);
-    MarketplaceApi.getLocal()
+    ParcelMarketApi.getParcels()
       .then(function(res) {
         var items = (res.data && res.data.items) || [];
-        var total = (res.data && res.data.total) || (res.data && res.data.items ? res.data.items.length : 0);
+        var total = (res.data && res.data.total) || items.length;
         setListings(items);
         setTotalListings(total);
         setIsLoading(false);
@@ -157,7 +242,58 @@ function LocalPage(props) {
       .catch(function() { setIsLoading(false); });
   };
 
-  var fetchUserBitmapsForListing = function() {
+  var loadListingsConfs = function(listingsArr) {
+    if (!listingsArr || listingsArr.length === 0) return;
+    var w = StoreApp.get('wallet');
+    var ids = [];
+    listingsArr.forEach(function(l) {
+      var id = l.inscriptionId || l.id;
+      if (id && ids.indexOf(id) === -1) ids.push(id);
+    });
+    if (ids.length === 0) return;
+    AssetApi.getBulkParcelConfirmations(ids, w && w.address ? w.address : '').then(function(res) {
+      if (res && res.success && res.data) {
+        setParcelConfs(function(prev) {
+          var updated = {};
+          for (var k in prev) updated[k] = prev[k];
+          for (var pid in res.data) {
+            var confs = res.data[pid];
+            if (confs && confs.confirmations) {
+              updated[pid] = confs.confirmations;
+              if (typeof ParcelConfirmationCache !== 'undefined') ParcelConfirmationCache.save(pid, confs.confirmations);
+            }
+          }
+          return updated;
+        });
+      }
+    }).catch(function() {});
+  };
+
+  var loadMyListings = function() {
+    var w = StoreApp.get('wallet');
+    if (!w || !w.address) return;
+    ParcelMarketApi.getOwnerListings(w.address).then(function(ownerListings) {
+      var map = {};
+      ownerListings.forEach(function(l) { map[l.inscriptionId || l.id] = l; });
+      setMyListings(map);
+    }).catch(function() {});
+  };
+
+  React.useEffect(function() {
+    fetchListings();
+    var interval = setInterval(fetchListings, 60000);
+    return function() { clearInterval(interval); };
+  }, []);
+
+  React.useEffect(function() {
+    loadListingsConfs(listings);
+  }, [listings]);
+
+  React.useEffect(function() {
+    loadMyListings();
+  }, []);
+
+  var fetchUserParcelsForListing = function() {
     var wallet = StoreApp.get('wallet');
     if (!wallet || !wallet.address) {
       setNoWalletForListing(true);
@@ -171,66 +307,68 @@ function LocalPage(props) {
 
     Promise.all([
       AssetApi.getUserAssets(wallet.address),
-      MarketplaceApi.getLocal().catch(function() { return { data: { items: [] } }; })
+      ParcelMarketApi.getOwnerListings(wallet.address).catch(function() { return []; })
     ]).then(function(results) {
       var res = results[0];
-      var listingsRes = results[1];
-      var localListings = (listingsRes && listingsRes.data && listingsRes.data.items) || [];
+      var ownerListings = results[1] || [];
       var listingMap = {};
-      localListings.forEach(function(l) {
-        if (l.bitmapNumber) listingMap[l.bitmapNumber] = l;
-        if (l.bitmapId) listingMap[l.bitmapId] = l;
+      ownerListings.forEach(function(l) {
+        if (l.inscriptionId) listingMap[l.inscriptionId] = l;
       });
 
       if (res.success && res.data) {
-        var bitmapCollection = res.data.collections.find(function(c) { return c.name === 'Bitmaps'; });
-        if (bitmapCollection && bitmapCollection.items) {
-          var items = bitmapCollection.items
-            .filter(function(it) { return it.isBitmap && !it.isParcel; })
-            .map(function(it) {
-              var blockNum = extractBlockNumber(it.name);
-              var existing = listingMap[blockNum] || listingMap[it.id] || null;
-              return {
-                id: it.id,
-                name: it.name,
-                inscriptionNumber: it.inscriptionNumber,
-                output: it.output,
-                value: it.value,
-                blockNum: blockNum,
-                etiquetas: '',
-                hash: '',
-                totalTransacciones: 0,
-                isSelected: false,
-                priceStr: (existing && existing.listedPrice) ? BitmapUtils.formatBtcSat(existing.listedPrice) : '',
-                priceSatoshis: existing ? existing.listedPrice : 0,
-                isListed: !!existing,
-                listingId: existing ? (existing.bitmapId || '') : '',
-                existingPrice: existing ? existing.listedPrice : 0
-              };
-            });
+        var parcelCol = null;
+        var cols = res.data.collections || [];
+        for (var i = 0; i < cols.length; i++) {
+          if (cols[i].name === 'Parcelas') { parcelCol = cols[i]; break; }
+        }
+        if (parcelCol && parcelCol.items) {
+          var items = parcelCol.items.map(function(it) {
+            var existing = listingMap[it.id] || null;
+            return {
+              id: it.id,
+              name: it.name || '#' + it.inscriptionNumber,
+              inscriptionNumber: it.inscriptionNumber,
+              output: it.output,
+              value: it.value,
+              isSelected: false,
+              priceStr: (existing && existing.listedPrice) ? BitmapUtils.formatBtcSat(existing.listedPrice) : '',
+              priceSatoshis: existing ? existing.listedPrice : 0,
+              isListed: !!existing,
+              listingId: existing ? (existing.id || '') : '',
+              existingPrice: existing ? existing.listedPrice : 0,
+              confs: null,
+              eligible: false
+            };
+          });
 
-          var uniqueBlockNums = [];
-          items.forEach(function(it) { if (it.blockNum && uniqueBlockNums.indexOf(it.blockNum) === -1) uniqueBlockNums.push(it.blockNum); });
+          var allIds = [];
+          items.forEach(function(it) { if (it.id) allIds.push(it.id); });
 
-          Promise.all(uniqueBlockNums.map(function(bn) {
-            return fetch('/api/v1/blocks/' + bn).then(function(r) { return r.json(); }).catch(function() { return null; });
-          })).then(function(blocksRes) {
-            var blockMap = {};
-            blocksRes.forEach(function(r) { if (r && r.success && r.data) blockMap[r.data.blockNumber || r.data.bloque] = r.data; });
-            items = items.map(function(item) {
-              var bd = blockMap[item.blockNum] || {};
-              return Object.assign({}, item, {
-                etiquetas: bd.etiquetas || '',
-                hash: bd.hash || '',
-                totalTransacciones: parseInt(bd.totalTransacciones || bd.txCount) || 0
+          if (allIds.length === 0) {
+            setListItems(items);
+            setIsLoadingDropdown(false);
+            return;
+          }
+
+          AssetApi.getBulkParcelConfirmations(allIds, wallet.address).then(function(res2) {
+            if (res2 && res2.success && res2.data) {
+              items = items.map(function(it) {
+                var c = res2.data[it.id];
+                var confs = (c && c.confirmations) ? c.confirmations : null;
+                if (confs && typeof ParcelConfirmationCache !== 'undefined') ParcelConfirmationCache.save(it.id, confs);
+                return Object.assign({}, it, { confs: confs, eligible: isParcelEligible(confs) });
               });
-            });
+            }
             setListItems(items);
             setIsLoadingDropdown(false);
           }).catch(function() {
             setListItems(items);
             setIsLoadingDropdown(false);
           });
+        } else {
+          setListItems([]);
+          setIsLoadingDropdown(false);
         }
       }
     }).catch(function() { setIsLoadingDropdown(false); });
@@ -239,6 +377,7 @@ function LocalPage(props) {
   var toggleListItemSelection = function(itemId, checked) {
     var updated = listItems.map(function(item) {
       if (item.id === itemId) {
+        if (checked && !item.eligible) return item;
         var newItem = Object.assign({}, item, { isSelected: checked });
         if (checked && bulkPrice && parseFloat(bulkPrice) > 0) {
           newItem.priceStr = bulkPrice;
@@ -295,6 +434,12 @@ function LocalPage(props) {
     var selected = listItems.filter(function(it) { return it.isSelected && it.priceSatoshis > 0; });
     if (selected.length === 0) return;
 
+    var invalid = selected.filter(function(it) { return !it.eligible; });
+    if (invalid.length > 0) {
+      setListingStatus({ toast: 'Solo se aceptan parcelas cuyas 2 confirmaciones tengan la misma wallet que inscribio la parcela' });
+      return;
+    }
+
     var wallet = StoreApp.get('wallet');
     if (!wallet || !wallet.address) return;
 
@@ -304,69 +449,78 @@ function LocalPage(props) {
     var listingActivated = false;
 
     try {
-      setListingStatus({ toast:'Preparando listings...' });
+      setListingStatus({ toast: 'Preparando listings...' });
       var pubKey = wallet.publicKey;
       if (!pubKey) {
-        setListingStatus({ toast:'Obteniendo clave publica...' });
+        setListingStatus({ toast: 'Obteniendo clave publica...' });
         try {
           pubKey = await StoreApp.getPublicKeyFresh();
         } catch(pke) {
-          setListingStatus({ toast:'Error: no se pudo obtener la clave publica de la wallet' });
+          setListingStatus({ toast: 'Error: no se pudo obtener la clave publica de la wallet' });
           return;
         }
       }
       if (!pubKey) {
-        setListingStatus({ toast:'Error: reconecta la wallet para obtener la clave publica' });
+        setListingStatus({ toast: 'Error: reconecta la wallet para obtener la clave publica' });
         return;
       }
 
-      var batchItems = selected.map(function(item) {
+      var batchItems = [];
+      for (var j = 0; j < selected.length; j++) {
+        var item = selected[j];
+        if (!item.output || !item.value) {
+          setListingStatus({ toast: item.name + ': sin datos UTXO, saltado' });
+          continue;
+        }
         var isPriceUpdate = item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice;
-        return {
+        batchItems.push({
           inscriptionId: item.id,
           price: item.priceSatoshis,
           sellerAddress: wallet.address,
           sellerOrdinalPublicKey: pubKey,
           sellerPaymentAddress: wallet.paymentAddress || wallet.address,
-          name: item.name || ('Bitmap #' + item.inscriptionNumber),
+          name: item.name || ('Parcela #' + item.inscriptionNumber),
           imageUrl: '',
-          bitmapNumber: item.blockNum || extractBlockNumber(item.name),
+          parcelId: item.id,
           inscriptionNumber: item.inscriptionNumber,
           inscriptionUtxo: item.output,
           inscriptionValue: item.value,
           inscriptionContentType: '',
           inscriptionHeight: 0,
           isPriceUpdate: isPriceUpdate
-        };
-      });
+        });
+      }
+      if (batchItems.length === 0) {
+        setListingStatus({ toast: 'Ninguna parcela tiene datos UTXO validos' });
+        return;
+      }
 
-      setListingStatus({ toast:'Creando listings...' });
-      var createRes = await MarketplaceApi.batchList(batchItems);
+      setListingStatus({ toast: 'Creando listings...' });
+      var createRes = await ParcelMarketApi.batchList(batchItems);
       var createJson = await createRes;
 
       if (createJson.success && createJson.data) {
         var psbtToSigns = createJson.data.psbtToSigns || [];
         var psbtHexArray = psbtToSigns.map(function(p) { return p.unsignedPsbtHex; });
-        var combinedPsbtB64 = createJson.data.psbtToSign || null;
 
         if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
           try {
-            setListingStatus({ toast:'Firmando en Xverse...' });
+            setListingStatus({ toast: 'Firmando en Xverse...' });
             signedPsbtHexs = [];
             for (var xi = 0; xi < psbtToSigns.length; xi++) {
-              setListingStatus({ toast:'Firmando listing ' + (xi + 1) + ' de ' + psbtToSigns.length + ' en Xverse...' });
+              setListingStatus({ toast: 'Firmando listing ' + (xi + 1) + ' de ' + psbtToSigns.length + ' en Xverse...' });
               var singleSigned = await StoreApp._xverseSignPsbt(psbtToSigns[xi].unsignedPsbtHex, wallet.address, [0]);
               signedPsbtHexs.push(singleSigned);
             }
           } catch(xe) {
-            setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
+            setListingStatus({ toast: 'Xverse: firma cancelada o fallida' });
           }
         } else if (window.unisat && window.unisat.signPsbt) {
           try {
-            setListingStatus({ toast:'Firmando en Unisat...' });
+            setListingStatus({ toast: 'Firmando en Unisat...' });
             signedPsbtHexs = [];
             for (var ui = 0; ui < psbtHexArray.length; ui++) {
-              setListingStatus({ toast:'Firmando listing ' + (ui + 1) + ' de ' + psbtHexArray.length + ' en Unisat...' });
+              setListingStatus({ toast: 'Firmando listing ' + (ui + 1) + ' de ' + psbtHexArray.length + ' en Unisat...' });
               var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
                 autoFinalized: false,
                 toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
@@ -374,38 +528,34 @@ function LocalPage(props) {
               signedPsbtHexs.push(singleSigned);
             }
           } catch(ue) {
-            setListingStatus({ toast:'Unisat: firma cancelada o fallida' });
+            setListingStatus({ toast: 'Unisat: firma cancelada o fallida' });
           }
         } else {
-          setListingStatus({ toast:'Wallet no disponible para firmar' });
+          setListingStatus({ toast: 'Wallet no disponible para firmar' });
         }
 
         if (signedPsbtHexs && signedPsbtHexs.length > 0) {
           var listingIds = createJson.data.listingIds || [];
           if (listingIds.length > 0) {
-            setListingStatus({ toast:'Activando listings...' });
-            await MarketplaceApi.batchSign(listingIds, signedPsbtHexs, pubKey);
+            setListingStatus({ toast: 'Activando listings...' });
+            await ParcelMarketApi.batchSign(listingIds, signedPsbtHexs, pubKey);
             listingActivated = true;
           }
           setSuccessItems(selected);
           setShowSuccessMenu(true);
         } else {
-          setListingStatus({ toast:'Firma cancelada. Los listings permanecen inactivos.' });
+          setListingStatus({ toast: 'Firma cancelada. Los listings permanecen inactivos.' });
         }
       } else {
-        setListingStatus({ toast:'Error al crear listings' });
+        setListingStatus({ toast: 'Error al crear listings' });
       }
     } catch(e) {
-      setListingStatus({ toast:'Error: ' + e.message });
+      setListingStatus({ toast: 'Error: ' + e.message });
     } finally {
       await fetchListings();
-      fetch('/api/v1/internal/refresh-local', { method: 'POST' }).then(function() {
-        if (typeof UnifiedViewModel !== 'undefined') {
-          UnifiedViewModel.loadFromCacheOnly();
-        }
-      }).catch(function() {});
+      loadMyListings();
       if (listingActivated) {
-        setSuccessToast({ message: selected.length + ' bitmaps listados correctamente', type: 'success' });
+        setSuccessToast({ message: selected.length + ' parcelas listadas correctamente', type: 'success' });
         setTimeout(function() { setSuccessToast(null); }, 20000);
       } else if (signedPsbtHexs) {
         setSuccessToast({ message: 'No se pudo completar el listado', type: 'error' });
@@ -414,18 +564,45 @@ function LocalPage(props) {
     }
   };
 
-  React.useEffect(function() {
-    fetchListings();
-    var interval = setInterval(fetchListings, 60000);
-    return function() { clearInterval(interval); };
-  }, []);
+  var handleSort = function(sort) {
+    setCurrentSort(sort);
+    setShowSortMenu(false);
+  };
 
-  React.useEffect(function() {
-    if (!showSortMenu && !showListDropdown && !showBuyMenu) return;
-    var close = function() { setShowSortMenu(false); setShowListDropdown(false); setShowBuyMenu(false); };
-    window.addEventListener('click', close);
-    return function() { window.removeEventListener('click', close); };
-  }, [showSortMenu, showListDropdown, showBuyMenu]);
+  var handleRefresh = function() {
+    fetchListings();
+  };
+
+  var sortButtons = [
+    { key: 'listedAtDesc', label: 'Recientes' },
+    { key: 'priceDesc', label: '$ Alto' },
+    { key: 'priceAsc', label: '$ Bajo' }
+  ];
+  var sortLabel = { listedAtDesc: 'Recientes', priceDesc: '$ Alto', priceAsc: '$ Bajo' };
+
+  var filtered = listings.filter(function(l) {
+    return !searchQuery || String(l.name || l.inscriptionNumber || '').indexOf(searchQuery) !== -1;
+  }).sort(function(a, b) {
+    var pa = a.listedPrice || a.price || 0;
+    var pb = b.listedPrice || b.price || 0;
+    if (currentSort === 'priceAsc') return pa - pb;
+    if (currentSort === 'priceDesc') return pb - pa;
+    return (b.listedAt || 0) - (a.listedAt || 0);
+  });
+
+  var floorPrice = listings.length > 0
+    ? Math.min.apply(null, listings.map(function(l) { return (l.listedPrice || l.price) || Infinity; }).filter(function(p) { return p < Infinity; }))
+    : 0;
+  var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
+
+  var volumeBtc = volumen > 0 ? BitmapUtils.formatBtcSat(volumen) + ' BTC' : '0 BTC';
+  var volume24hBtc = volumen24h > 0 ? BitmapUtils.formatBtcSat(volumen24h) + ' BTC' : '0 BTC';
+  var pisoBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : '0';
+
+  var usd = function(sats) { return btcPrice ? '$' + ((sats / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'; };
+  var pisoUsd = floorPrice > 0 ? usd(floorPrice) : '-';
+  var volumeUsd = volumen > 0 ? '$' + ((volumen / 100000000) * (btcPrice || 0)).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-';
+  var volume24hUsd = volumen24h > 0 ? '$' + ((volumen24h / 100000000) * (btcPrice || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-';
 
   var getFeeRateSats = function() {
     if (selectedFeeRate === 'custom') {
@@ -452,11 +629,11 @@ function LocalPage(props) {
     }
 
     var selected = filtered.filter(function(item) {
-      return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1;
+      return selectedBuyItems.indexOf(item.inscriptionId || item.id) !== -1;
     });
 
     if (selected.length === 0) return;
-    if (window.bcAnalytics) window.bcAnalytics.track('buy_initiated', { itemCount: selected.length });
+    if (window.bcAnalytics) window.bcAnalytics.track('parcel_buy_initiated', { itemCount: selected.length });
 
     setShowBuyMenu(true);
     setBuyStatus({ message: 'Preparando compra batch...', type: 'loading' });
@@ -464,12 +641,12 @@ function LocalPage(props) {
     setBuySuccessData(null);
 
     var buyResult = null;
-    var idempotencyKey = 'batch_buy_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
-    var bitmapIds = selected.map(function(item) { return item.bitmapId || item.id; });
+    var idempotencyKey = 'parcel_batch_buy_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+    var parcelIds = selected.map(function(item) { return item.inscriptionId || item.id; });
     var feeRate = getFeeRateSats();
 
     try {
-      setBuyStatus({ message: 'Creando PSBT batch para ' + selected.length + ' bitmaps...', type: 'loading' });
+      setBuyStatus({ message: 'Creando PSBT batch para ' + selected.length + ' parcelas...', type: 'loading' });
 
       if (!wallet.publicKey) {
         try {
@@ -482,7 +659,7 @@ function LocalPage(props) {
               localStorage.setItem(StoreApp.WALLET_STORAGE_KEY, JSON.stringify(sw));
             }
           }
-        } catch(pkErr) { /* continue without publicKey */ }
+        } catch(pkErr) { }
       }
 
       if (!wallet.publicKey) {
@@ -524,11 +701,11 @@ function LocalPage(props) {
               localStorage.setItem(StoreApp.WALLET_STORAGE_KEY, JSON.stringify(sw));
             }
           }
-        } catch(pkErr) { /* continue without paymentPublicKey */ }
+        } catch(pkErr) { }
       }
 
       var bodyPayload = {
-          bitmapIds: bitmapIds,
+          parcelIds: parcelIds,
           buyerAddress: wallet.address,
           buyerPaymentAddress: wallet.paymentAddress || wallet.address,
           buyerPaymentPublicKey: wallet.paymentPublicKey || wallet.publicKey,
@@ -537,18 +714,13 @@ function LocalPage(props) {
           feeRate: feeRate
         };
 
-      var buyRes = await fetch('/api/v1/transaction/batch-buy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyPayload)
-      });
-      var buyJson = await buyRes.json();
-      if (window.bcAnalytics) window.bcAnalytics.track('buy_api_response', { success: buyJson.success, itemCount: selected.length });
+      var buyJson = await ParcelMarketApi.parcelBatchBuy(bodyPayload);
+      if (window.bcAnalytics) window.bcAnalytics.track('parcel_buy_api_response', { success: buyJson.success, itemCount: selected.length });
 
       if (!buyJson.success || !buyJson.data || !buyJson.data.psbt) {
         var errMsg = buyJson.error && buyJson.error.message ? buyJson.error.message : (buyJson.error || 'Error al crear PSBT batch');
         if (typeof errMsg === 'string' && errMsg.indexOf('Saldo disponible insuficiente') !== -1) {
-          throw new Error('Operación cancelada: no tienes fondos suficientes. Recarga tu billetera y vuelve a intentar la compra.');
+          throw new Error('Operacion cancelada: no tienes fondos suficientes. Recarga tu billetera y vuelve a intentar la compra.');
         }
         throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
       }
@@ -594,25 +766,20 @@ function LocalPage(props) {
         throw new Error('Firma cancelada');
       }
 
-      setBuyStatus({ message: 'IMPORTANTE: No cierre esta pestaña hasta que se complete la transacción. Enviando a la mempool, esperando confirmación...', type: 'loading' });
+      setBuyStatus({ message: 'IMPORTANTE: No cierre esta pestana hasta que se complete la transaccion. Enviando a la mempool, esperando confirmacion...', type: 'loading' });
 
-      var broadcastRes = await fetch('/api/v1/transaction/batch-broadcast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          signedPsbt: signedPsbt,
-          transactionId: transactionId
-        })
+      var broadcastText = await ParcelMarketApi.parcelBatchBroadcast({
+        signedPsbt: signedPsbt,
+        transactionId: transactionId
       });
-      var broadcastText = await broadcastRes.text();
       var broadcastJson;
       try {
         broadcastJson = JSON.parse(broadcastText);
       } catch(parseErr) {
-        if (broadcastRes.ok) {
+        if (broadcastText && broadcastText.indexOf('{') === -1) {
           broadcastJson = { success: true, data: { txid: 'unknown_' + transactionId } };
         } else {
-          throw new Error('Error del servidor (' + broadcastRes.status + '): ' + broadcastText.substring(0, 200));
+          throw new Error('Error del servidor: ' + broadcastText.substring(0, 200));
         }
       }
 
@@ -626,7 +793,7 @@ function LocalPage(props) {
       var totalPaid = items.reduce(function(sum, item) { return sum + item.price; }, 0);
       var totalFees = serverMarketplaceFee > 0 ? serverMarketplaceFee : Math.max(546 * items.length, Math.floor(totalPaid * 0.02));
       var successItems = items.map(function(item) {
-        return { name: item.name || 'Bitmap comprado', status: 'success', txid: txid, price: item.price, fee: Math.round(totalFees / items.length) };
+        return { name: item.name || 'Parcela comprada', status: 'success', txid: txid, price: item.price, fee: Math.round(totalFees / items.length) };
       });
       var errorItems = [];
 
@@ -645,12 +812,12 @@ function LocalPage(props) {
         btcPrice: btcPrice
       };
 
-      setBuyStatus({ message: 'Compra batch exitosa: ' + successItems.length + ' bitmaps', type: 'done' });
-      if (window.bcAnalytics) window.bcAnalytics.track('buy_completed', { successCount: successItems.length, errorCount: errorItems.length, totalPaid: totalPaid });
+      setBuyStatus({ message: 'Compra batch exitosa: ' + successItems.length + ' parcelas', type: 'done' });
+      if (window.bcAnalytics) window.bcAnalytics.track('parcel_buy_completed', { successCount: successItems.length, errorCount: errorItems.length, totalPaid: totalPaid });
 
     } catch(e) {
       var errorItems = selected.map(function(item) {
-        return { name: (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: e.message };
+        return { name: item.name || 'Parcela', status: 'error', reason: e.message };
       });
       var totalPaid = 0;
       var totalFees = 0;
@@ -668,86 +835,174 @@ function LocalPage(props) {
 
       setBuyStatus({ message: 'Error: ' + e.message, type: 'error' });
     } finally {
-      if (buyResult && buyResult.type === 'success' && bitmapIds && bitmapIds.length > 0) {
+      if (buyResult && buyResult.type === 'success' && parcelIds && parcelIds.length > 0) {
         var soldSet = {};
-        bitmapIds.forEach(function(id) { soldSet[id] = true; });
+        parcelIds.forEach(function(id) { soldSet[id] = true; });
         setListings(listings.filter(function(l) {
-          return !soldSet[l.bitmapId || l.id];
+          return !soldSet[l.inscriptionId || l.id];
         }));
       }
       setBuySuccessData(buyResult);
       setSelectedBuyItems([]);
       setShowBuyMenu(false);
       fetchListings();
-      fetch('/api/v1/internal/refresh-local', { method: 'POST' }).catch(function() {});
     }
   };
 
-  var handleSort = function(sort) {
-    setCurrentSort(sort);
-    setShowSortMenu(false);
+  var handleEditPrice = function(listing) {
+    setEditingListing(listing);
+    setEditPriceStr(BitmapUtils.formatBtcSat(listing.listedPrice || listing.price || 0));
+    setEditMenuFor(null);
   };
 
-  var handleRefresh = function() {
-    fetchListings();
-  };
+  var handleSavePrice = async function() {
+    if (!editingListing) return;
+    var btcPriceVal = parseFloat(editPriceStr);
+    if (isNaN(btcPriceVal) || btcPriceVal <= 0) {
+      setListingStatus({ toast: 'Precio invalido' });
+      setEditingListing(null);
+      return;
+    }
+    var sats = Math.round(btcPriceVal * 100000000);
+    var wallet = StoreApp.get('wallet');
+    if (!wallet || !wallet.address) {
+      setListingStatus({ toast: 'No hay wallet conectada' });
+      setEditingListing(null);
+      return;
+    }
+    try {
+      setListingStatus({ listing: true, count: 1, toast: 'Generando PSBT...' });
+      var assetItem = null;
+      var col = null;
+      var assets = await AssetApi.getUserAssets(wallet.address);
+      if (assets && assets.success && assets.data && assets.data.collections) {
+        for (var i = 0; i < assets.data.collections.length; i++) {
+          if (assets.data.collections[i].name === 'Parcelas') { col = assets.data.collections[i]; break; }
+        }
+      }
+      if (col && col.items) {
+        for (var k = 0; k < col.items.length; k++) {
+          if (col.items[k].id === editingListing.inscriptionId) { assetItem = col.items[k]; break; }
+        }
+      }
+      if (!assetItem || !assetItem.output || !assetItem.value) {
+        setListingStatus({ toast: 'No se encontraron datos UTXO para esta parcela' });
+        setEditingListing(null);
+        return;
+      }
 
-  var sortButtons = [
-    { key: 'listedAtDesc', label: 'Recientes' },
-    { key: 'priceDesc', label: '$ Alto' },
-    { key: 'priceAsc', label: '$ Bajo' }
-  ];
-  var sortLabel = { listedAtDesc: 'Recientes', priceDesc: '$ Alto', priceAsc: '$ Bajo' };
+      var pubKey;
+      try {
+        pubKey = await StoreApp.getPublicKeyFresh();
+      } catch(pke) {
+        setListingStatus({ toast: 'Error: no se pudo obtener la clave publica de la wallet' });
+        setEditingListing(null);
+        return;
+      }
+      if (!pubKey) {
+        setListingStatus({ toast: 'Error: reconecta la wallet para obtener la clave publica' });
+        setEditingListing(null);
+        return;
+      }
 
-  var filtered = listings.filter(function(l) {
-    return !searchQuery || String(l.bitmapNumber || l.name || '').indexOf(searchQuery) !== -1;
-  }).sort(function(a, b) {
-    var pa = a.listedPrice || a.price || 0;
-    var pb = b.listedPrice || b.price || 0;
-    if (currentSort === 'priceAsc') return pa - pb;
-    if (currentSort === 'priceDesc') return pb - pa;
-    return (b.listedAt || 0) - (a.listedAt || 0);
-  });
+      var psbtRes = await ParcelMarketApi.updateListingPrice(
+        editingListing.id,
+        sats,
+        wallet.address,
+        assetItem.output,
+        assetItem.value
+      );
 
-  var floorPrice = listings.length > 0
-    ? Math.min.apply(null, listings.map(function(l) { return (l.listedPrice || l.price) || Infinity; }).filter(function(p) { return p < Infinity; }))
-    : 0;
-  var floorBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : 'N/A';
+      if (!psbtRes.success || !psbtRes.data || !psbtRes.data.unsignedPsbt) {
+        throw new Error('Error generando PSBT: ' + ((psbtRes.error && psbtRes.error.message) || 'desconocido'));
+      }
 
-  var volumeBtc = volumen > 0 ? BitmapUtils.formatBtcSat(volumen) + ' BTC' : '0 BTC';
-  var volume24hBtc = volumen24h > 0 ? BitmapUtils.formatBtcSat(volumen24h) + ' BTC' : '0 BTC';
-  var pisoBtc = floorPrice > 0 ? BitmapUtils.formatBtcSat(floorPrice) : '0';
+      var unsignedPsbt = psbtRes.data.unsignedPsbt;
+      var signedPsbt = null;
 
-  var usd = function(sats) { return btcPrice ? '$' + ((sats / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-'; };
-  var pisoUsd = floorPrice > 0 ? usd(floorPrice) : '-';
-  var volumeUsd = volumen > 0 ? '$' + ((volumen / 100000000) * (btcPrice || 0)).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-';
-  var volume24hUsd = volumen24h > 0 ? '$' + ((volumen24h / 100000000) * (btcPrice || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-';
-
-  var renderMarketplaceTags = function(etiquetas) {
-    var tags = etiquetas ? etiquetas.split('|').filter(function(t) { return t.trim() !== ''; }) : [];
-    var count = tags.length;
-    return React.createElement('div', { className: 'flex items-center gap-1 min-w-0 overflow-hidden whitespace-nowrap' },
-      React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted flex-shrink-0' },
-        count + ' tags'
-      ),
-      React.createElement('div', { className: 'flex items-center gap-1 min-w-0 overflow-hidden' },
-        tags.map(function(tag, i) {
-          return React.createElement(UniversalTag, {
-            key: i,
-            text: tag.trim(),
-            fontSize: 9
+      if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
+        try {
+          setListingStatus({ listing: true, count: 1, toast: 'Firmando en Xverse...' });
+          signedPsbt = await StoreApp._xverseSignPsbt(unsignedPsbt, wallet.address);
+        } catch(xe) {
+          throw new Error('Xverse: ' + (xe.message || 'Firma cancelada'));
+        }
+      } else if (window.unisat && window.unisat.signPsbt) {
+        try {
+          setListingStatus({ listing: true, count: 1, toast: 'Firmando en Unisat...' });
+          var signPromise = window.unisat.signPsbt(unsignedPsbt, { autoFinalized: false, toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }] });
+          var signTimeout = new Promise(function(_, reject) {
+            setTimeout(function() { reject(new Error('timeout')); }, 30000);
           });
-        })
-      )
-    );
+          signedPsbt = await Promise.race([signPromise, signTimeout]);
+        } catch(ue) {
+          throw new Error('Unisat: ' + (ue.message || 'Firma cancelada'));
+        }
+      } else {
+        throw new Error('Wallet no disponible para firmar');
+      }
+
+      if (!signedPsbt) throw new Error('Firma cancelada o vacia');
+
+      var signRes = await ParcelMarketApi.signPriceUpdate(editingListing.id, signedPsbt, pubKey, sats);
+
+      if (signRes.success) {
+        setListingStatus({ toast: 'Precio actualizado y firmado correctamente' });
+      } else {
+        throw new Error((signRes.error && signRes.error.message) || 'Error firmando');
+      }
+
+      setEditingListing(null);
+      loadMyListings();
+      fetchListings();
+    } catch(e) {
+      setListingStatus({ toast: 'Error: ' + e.message });
+      setEditingListing(null);
+    }
   };
+
+  var handleDelist = function(listing) {
+    setConfirmAction({ type: 'delist', listing: listing });
+    setEditMenuFor(null);
+  };
+
+  var handleConfirmDelist = async function() {
+    if (!confirmAction || confirmAction.type !== 'delist') return;
+    var listing = confirmAction.listing;
+    var wallet = StoreApp.get('wallet');
+    setConfirmAction(null);
+    try {
+      await ParcelMarketApi.delistListing(listing.id, wallet.address);
+      setListingStatus({ toast: 'Parcela deslistada' });
+      loadMyListings();
+      fetchListings();
+    } catch(e) {
+      setListingStatus({ toast: 'Error: ' + e.message });
+    }
+  };
+
+  React.useEffect(function() {
+    if (!editMenuFor) return;
+    var close = function() { setEditMenuFor(null); };
+    window.addEventListener('click', close);
+    return function() { window.removeEventListener('click', close); };
+  }, [editMenuFor]);
+
+  React.useEffect(function() {
+    if (!showSortMenu && !showListDropdown && !showBuyMenu) return;
+    var close = function() { setShowSortMenu(false); setShowListDropdown(false); setShowBuyMenu(false); };
+    window.addEventListener('click', close);
+    return function() { window.removeEventListener('click', close); };
+  }, [showSortMenu, showListDropdown, showBuyMenu]);
+
+  var walletNow = StoreApp.get('wallet');
 
   return React.createElement('div', { className: 'flex flex-col h-full' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-stretch justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
           React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[45px] w-[45px] object-contain rounded my-[2px]' }),
-          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Bitmapcore Marketplace')
+          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Mercado de Parcelas')
         ),
         React.createElement('div', { className: 'flex items-stretch' },
           React.createElement('div', { className: 'flex flex-col items-center px-2 border-r border-[#555]' },
@@ -786,7 +1041,7 @@ function LocalPage(props) {
         type: 'text',
         value: searchQuery,
         onChange: function(e) { setSearchQuery(e.target.value); },
-        placeholder: 'Buscar por numero de bitmap...',
+        placeholder: 'Buscar por nombre o # de parcela...',
         className: 'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-1 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
       }),
       React.createElement('div', { className: 'relative flex-shrink-0' },
@@ -823,7 +1078,7 @@ function LocalPage(props) {
               React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Resultado de compra')
             ),
             React.createElement('div', { className: 'px-3 py-2 max-h-48 overflow-y-auto' },
-              buyResult.results.map(function(r, i) {
+              buyResult.items.map(function(r, i) {
                 return React.createElement('div', { key: i, className: 'flex items-center justify-between py-1 border-b border-bitmap-border/30 last:border-0' },
                   React.createElement('span', { className: 'font-acme text-xs text-white truncate' }, r.name),
                   r.status === 'success' ? React.createElement('span', { className: 'font-acme text-[10px] text-green-400 flex-shrink-0 ml-2' }, '\u2713 Comprado') :
@@ -852,11 +1107,11 @@ function LocalPage(props) {
             ),
             React.createElement('div', { className: 'px-3 py-2 max-h-32 overflow-y-auto' },
               filtered.filter(function(item) {
-                return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1;
+                return selectedBuyItems.indexOf(item.inscriptionId || item.id) !== -1;
               }).map(function(item) {
                 var priceSats = item.listedPrice || item.price || 0;
-                return React.createElement('div', { key: item.bitmapId || item.id, className: 'flex items-center justify-between py-1 border-b border-bitmap-border/30 last:border-0' },
-                  React.createElement('span', { className: 'font-acme text-xs text-white truncate' }, (item.bitmapNumber || '?') + '.bitmap'),
+                return React.createElement('div', { key: item.inscriptionId || item.id, className: 'flex items-center justify-between py-1 border-b border-bitmap-border/30 last:border-0' },
+                  React.createElement('span', { className: 'font-acme text-xs text-white truncate' }, item.name || '#' + item.inscriptionNumber),
                   React.createElement('span', { className: 'font-acme text-xs text-white flex-shrink-0 ml-2' }, BitmapUtils.formatBtcSat(priceSats) + ' BTC')
                 );
               })
@@ -865,26 +1120,26 @@ function LocalPage(props) {
               React.createElement('div', { className: 'flex justify-between mb-1' },
                 React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Subtotal (' + selectedBuyItems.length + ' items):'),
                 React.createElement('span', { className: 'font-acme text-[10px] text-white' },
-                  BitmapUtils.formatBtcSat(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + (item.listedPrice || item.price || 0); }, 0)) + ' BTC'
+                  BitmapUtils.formatBtcSat(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.inscriptionId || item.id) !== -1; }).reduce(function(sum, item) { return sum + (item.listedPrice || item.price || 0); }, 0)) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-1' },
                 React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Fee marketplace (2%):'),
                 React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange' },
-                  BitmapUtils.formatBtcSat(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + Math.max(546, Math.floor((item.listedPrice || item.price || 0) * 0.02)); }, 0)) + ' BTC'
+                  BitmapUtils.formatBtcSat(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.inscriptionId || item.id) !== -1; }).reduce(function(sum, item) { return sum + Math.max(546, Math.floor((item.listedPrice || item.price || 0) * 0.02)); }, 0)) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-2 border-t border-bitmap-border/50 pt-1' },
                 React.createElement('span', { className: 'font-acme text-[10px] text-white font-bold' }, 'Total a pagar:'),
                 React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold' },
-                  BitmapUtils.formatBtcSat(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.max(546, Math.floor(p * 0.02)); }, 0)) + ' BTC'
+                  BitmapUtils.formatBtcSat(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.inscriptionId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.max(546, Math.floor(p * 0.02)); }, 0)) + ' BTC'
                 )
               ),
               (function() {
                 var w = StoreApp.get('wallet');
                 var buyerOrd = w && w.address ? w.address : '';
                 var buyerPay = w && w.paymentAddress ? w.paymentAddress : '';
-                var sellerItem = filtered.find(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; });
+                var sellerItem = filtered.find(function(item) { return selectedBuyItems.indexOf(item.inscriptionId || item.id) !== -1; });
                 var sellerOrd = sellerItem ? (sellerItem.sellerAddress || sellerItem.ownerAddress || '') : '';
                 var sellerPay = sellerItem ? (sellerItem.sellerPaymentAddress || '') : '';
                 var hasSellerPay = sellerPay && sellerPay !== sellerOrd;
@@ -1005,201 +1260,206 @@ function LocalPage(props) {
       ),
       React.createElement('div', { className: 'relative flex-shrink-0' },
         React.createElement('button', {
-          onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
+          onClick: function(e) { e.stopPropagation(); fetchUserParcelsForListing(); setShowListDropdown(true); },
           disabled: isLoadingDropdown,
           className: 'px-3 py-1 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
         }, isLoadingDropdown ? 'Cargando...' : 'Listar'),
-showListDropdown ? React.createElement('div', {
-            className: 'absolute right-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-[32rem] overflow-y-auto'
-          },
-            isLoadingDropdown ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'Cargando bitmaps...') :
-            showConfirmMenu ? React.createElement(React.Fragment, null,
-              React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border flex items-center gap-2' },
-                React.createElement('button', {
-                  onClick: function(e) { e.stopPropagation(); setShowConfirmMenu(false); },
-                  className: 'text-bitmap-muted hover:text-white transition-colors'
-                }, '\u2190'),
-                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Confirmar listado')
-              ),
-              React.createElement('div', { className: 'px-3 py-2 max-h-64 overflow-y-auto' },
-                confirmItems.map(function(item) {
-                  var isIncomplete = !item.priceStr || item.priceSatoshis <= 0;
-                  return React.createElement('div', {
-                    key: item.id,
-                    className: 'flex items-center justify-between py-1.5 border-b border-bitmap-border/30 last:border-0'
-                  },
-                    React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
-                      React.createElement('span', { className: 'font-acme text-xs text-white truncate' },
-                        (item.blockNum || '?') + '.bitmap'
-                      ),
-                      item.isListed ? React.createElement('span', {
-                        className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'Listado') : React.createElement('span', {
-                        className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'No Listado')
-                    ),
-                    React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2', style: { color: '#666666' } },
-                      item.priceStr + ' BTC'
-                    )
-                  );
-                })
-              ),
-              React.createElement('div', { className: 'p-2 border-t border-bitmap-border flex gap-2' },
-                React.createElement('button', {
-                  onClick: function(e) { e.stopPropagation(); setShowConfirmMenu(false); },
-                  className: 'flex-1 px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
-                }, 'Atr\u00e1s'),
-                React.createElement('button', {
-                  onClick: function(e) { e.stopPropagation(); if (window.bcAnalytics) window.bcAnalytics.track('list_confirmed', { itemCount: confirmItems.length }); handleListFromDropdown(); },
-                  className: 'flex-1 px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 transition-colors'
-                }, 'Confirmar')
-              )
-            ) :
-            showSuccessMenu ? React.createElement(React.Fragment, null,
-              React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border flex items-center gap-2' },
-                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, '\u2713 \u00c9xito')
-              ),
-              React.createElement('div', { className: 'px-3 py-2 max-h-64 overflow-y-auto' },
-                successItems.map(function(item) {
-                  return React.createElement('div', {
-                    key: item.id,
-                    className: 'flex items-center justify-between py-1.5 border-b border-bitmap-border/30 last:border-0'
-                  },
-                    React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
-                      React.createElement('span', { className: 'font-acme text-xs text-white truncate' },
-                        (item.blockNum || '?') + '.bitmap'
-                      ),
-                      item.isListed ? React.createElement('span', {
-                        className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'Listado') : React.createElement('span', {
-                        className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'No Listado')
-                    ),
-                    React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2', style: { color: '#666666' } },
-                      item.priceStr + ' BTC'
-                    )
-                  );
-                })
-              ),
-              React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
-                React.createElement('button', {
-                  onClick: function(e) { e.stopPropagation(); setShowSuccessMenu(false); setShowListDropdown(false); },
-                  className: 'w-full px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
-                }, 'Cerrar')
-              )
-            ) :
-            noWalletForListing ? React.createElement('div', { className: 'p-4 text-center' },
-              React.createElement('div', { className: 'font-acme text-sm text-bitmap-muted mb-2' }, 'No hay wallet conectada'),
-              React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted' }, 'Conecte una wallet para listar sus activos.')
-            ) :
-            listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay bitmaps disponibles') :
-            React.createElement(React.Fragment, null,
-              React.createElement('div', { className: 'px-3 pb-2 border-b border-bitmap-border/50 flex items-center gap-2' },
-                React.createElement('input', {
-                  type: 'text',
-                  value: dropdownSearch,
-                  onChange: function(e) { setDropdownSearch(e.target.value); },
-                  placeholder: 'Buscar por # de bloque...',
-                  className: 'flex-1 min-w-0 bg-bitmap-surface border border-bitmap-border rounded px-2 py-1 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange',
-                  onClick: function(e) { e.stopPropagation(); }
-                }),
-                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0' },
-                  listItems.length + ' bitmaps'
-                )
-              ),
-              React.createElement('div', { className: 'flex items-center justify-between px-3 py-2 border-b border-bitmap-border/50' },
-                React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' },
-                  selectedCount > 0 ? selectedCount + ' seleccionado' + (selectedCount > 1 ? 's' : '') : 'Sin seleccionar'
-                ),
-                React.createElement('input', {
-                  type: 'text',
-                  value: bulkPrice,
-                  onChange: function(e) { applyBulkPrice(e.target.value); },
-                  onClick: function(e) { e.stopPropagation(); },
-                  placeholder: 'Precio BTC',
-                  className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white text-right placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
-                })
-              ),
-              listItems.filter(function(item) {
-                if (!dropdownSearch) return true;
-                var q = dropdownSearch.toLowerCase();
-                return (item.blockNum && String(item.blockNum).indexOf(q) !== -1) ||
-                       (item.name && item.name.toLowerCase().indexOf(q) !== -1) ||
-                       (item.inscriptionNumber && String(item.inscriptionNumber).indexOf(q) !== -1);
-              }).map(function(item, idx) {
-                var imgSrc = item.blockNum ? '/api/v1/block-image/' + item.blockNum + '?v=5&size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + ((item.etiquetas || '').toLowerCase().indexOf('grid') !== -1) + '&punk=' + ((item.etiquetas || '').toLowerCase().indexOf('punk') !== -1) : '';
+        showListDropdown ? React.createElement('div', {
+          className: 'absolute right-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-[32rem] overflow-y-auto'
+        },
+          isLoadingDropdown ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'Cargando parcelas...') :
+          showConfirmMenu ? React.createElement(React.Fragment, null,
+            React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border flex items-center gap-2' },
+              React.createElement('button', {
+                onClick: function(e) { e.stopPropagation(); setShowConfirmMenu(false); },
+                className: 'text-bitmap-muted hover:text-white transition-colors'
+              }, '\u2190'),
+              React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Confirmar listado')
+            ),
+            React.createElement('div', { className: 'px-3 py-2 max-h-64 overflow-y-auto' },
+              confirmItems.map(function(item) {
+                var isIncomplete = !item.priceStr || item.priceSatoshis <= 0;
                 return React.createElement('div', {
                   key: item.id,
-                  className: 'px-3 py-2 hover:bg-bitmap-surface transition-colors border-b border-bitmap-border/50'
+                  className: 'flex items-center justify-between py-1.5 border-b border-bitmap-border/30 last:border-0'
                 },
-                  React.createElement('div', { className: 'flex items-center gap-2' },
-                    React.createElement('input', {
-                      type: 'checkbox',
-                      checked: item.isSelected,
-                      onChange: function(e) { toggleListItemSelection(item.id, e.target.checked); },
-                      onClick: function(e) { e.stopPropagation(); },
-                      className: 'bitmap-check'
-                    }),
-                    imgSrc ? React.createElement('img', {
-                      src: imgSrc,
-                      className: 'w-[30px] h-[30px] rounded object-cover flex-shrink-0',
-                      onError: function(e) { e.target.style.display = 'none'; }
-                    }) : null,
-                    React.createElement('div', { className: 'flex-1 min-w-0' },
-                      React.createElement('div', { className: 'flex items-center gap-1' },
-                        React.createElement('span', { className: 'font-acme text-xs text-white truncate' },
-                          (item.blockNum || '?') + '.bitmap'
-                        ),
-                        item.isListed ? React.createElement('span', {
-                          className: 'px-1 py-0.5 bg-bitmap-orange/20 text-bitmap-orange font-acme text-[8px] rounded flex-shrink-0'
-                        }, 'Listado') : React.createElement('span', {
-                          className: 'px-1 py-0.5 bg-green-500/20 text-green-400 font-acme text-[8px] rounded flex-shrink-0'
-                        }, 'No Listado')
-                      ),
-                      React.createElement('div', { className: 'font-acme text-[10px] text-bitmap-muted' },
-                        '#' + (item.inscriptionNumber || '')
-                      )
+                  React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
+                    React.createElement('span', { className: 'font-acme text-xs text-white truncate' },
+                      item.name || '#' + item.inscriptionNumber
                     ),
-                    React.createElement('input', {
-                      type: 'text',
-                      value: item.priceStr,
-                      onChange: function(e) { updateListItemPrice(item.id, e.target.value); },
-                      onClick: function(e) { e.stopPropagation(); },
-                      placeholder: 'BTC',
-                      className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
-                    })
+                    item.isListed ? React.createElement('span', {
+                      className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
+                    }, 'Listado') : React.createElement('span', {
+                      className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
+                    }, 'No Listado')
+                  ),
+                  React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2', style: { color: '#666666' } },
+                    item.priceStr + ' BTC'
                   )
                 );
+              })
+            ),
+            React.createElement('div', { className: 'p-2 border-t border-bitmap-border flex gap-2' },
+              React.createElement('button', {
+                onClick: function(e) { e.stopPropagation(); setShowConfirmMenu(false); },
+                className: 'flex-1 px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
+              }, 'Atr\u00e1s'),
+              React.createElement('button', {
+                onClick: function(e) { e.stopPropagation(); if (window.bcAnalytics) window.bcAnalytics.track('parcel_list_confirmed', { itemCount: confirmItems.length }); handleListFromDropdown(); },
+                className: 'flex-1 px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 transition-colors'
+              }, 'Confirmar')
+            )
+          ) :
+          showSuccessMenu ? React.createElement(React.Fragment, null,
+            React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border flex items-center gap-2' },
+              React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, '\u2713 \u00c9xito')
+            ),
+            React.createElement('div', { className: 'px-3 py-2 max-h-64 overflow-y-auto' },
+              successItems.map(function(item) {
+                return React.createElement('div', {
+                  key: item.id,
+                  className: 'flex items-center justify-between py-1.5 border-b border-bitmap-border/30 last:border-0'
+                },
+                  React.createElement('div', { className: 'flex items-center gap-2 min-w-0' },
+                    React.createElement('span', { className: 'font-acme text-xs text-white truncate' },
+                      item.name || '#' + item.inscriptionNumber
+                    ),
+                    item.isListed ? React.createElement('span', {
+                      className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
+                    }, 'Listado') : React.createElement('span', {
+                      className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
+                    }, 'No Listado')
+                  ),
+                  React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2', style: { color: '#666666' } },
+                    item.priceStr + ' BTC'
+                  )
+                );
+              })
+            ),
+            React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
+              React.createElement('button', {
+                onClick: function(e) { e.stopPropagation(); setShowSuccessMenu(false); setShowListDropdown(false); },
+                className: 'w-full px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
+              }, 'Cerrar')
+            )
+          ) :
+          noWalletForListing ? React.createElement('div', { className: 'p-4 text-center' },
+            React.createElement('div', { className: 'font-acme text-sm text-bitmap-muted mb-2' }, 'No hay wallet conectada'),
+            React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted' }, 'Conecte una wallet para listar sus parcelas.')
+          ) :
+          listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay parcelas disponibles') :
+          React.createElement(React.Fragment, null,
+            React.createElement('div', { className: 'px-3 pb-2 border-b border-bitmap-border/50 flex items-center gap-2' },
+              React.createElement('input', {
+                type: 'text',
+                value: dropdownSearch,
+                onChange: function(e) { setDropdownSearch(e.target.value); },
+                placeholder: 'Buscar parcela...',
+                className: 'flex-1 min-w-0 bg-bitmap-surface border border-bitmap-border rounded px-2 py-1 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange',
+                onClick: function(e) { e.stopPropagation(); }
               }),
-              React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
-                React.createElement('button', {
-                  onClick: function(e) {
-                    e.stopPropagation();
-                    var selected = listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0; });
-                    if (selected.length === 0) return;
-                    if (window.bcAnalytics) window.bcAnalytics.track('list_initiated', { itemCount: selected.length });
-                    setConfirmItems(selected);
-                    setShowConfirmMenu(true);
-                  },
-                  disabled: listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0; }).length === 0,
-                  className: 'w-full px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 disabled:opacity-50'
-                }, 'Listar seleccionados')
+              React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0' },
+                listItems.length + ' parcelas'
               )
+            ),
+            React.createElement('div', { className: 'flex items-center justify-between px-3 py-2 border-b border-bitmap-border/50' },
+              React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' },
+                selectedCount > 0 ? selectedCount + ' seleccionado' + (selectedCount > 1 ? 's' : '') : 'Sin seleccionar'
+              ),
+              React.createElement('input', {
+                type: 'text',
+                value: bulkPrice,
+                onChange: function(e) { applyBulkPrice(e.target.value); },
+                onClick: function(e) { e.stopPropagation(); },
+                placeholder: 'Precio BTC',
+                className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white text-right placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
+              })
+            ),
+            listItems.filter(function(item) {
+              if (!dropdownSearch) return true;
+              var q = dropdownSearch.toLowerCase();
+              return (item.name && item.name.toLowerCase().indexOf(q) !== -1) ||
+                     (item.inscriptionNumber && String(item.inscriptionNumber).indexOf(q) !== -1);
+            }).map(function(item, idx) {
+              return React.createElement('div', {
+                key: item.id,
+                className: 'px-3 py-2 hover:bg-bitmap-surface transition-colors border-b border-bitmap-border/50'
+              },
+                React.createElement('div', { className: 'flex items-center gap-2' },
+                  React.createElement('input', {
+                    type: 'checkbox',
+                    checked: item.isSelected,
+                    disabled: !item.eligible,
+                    onChange: function(e) { toggleListItemSelection(item.id, e.target.checked); },
+                    onClick: function(e) { e.stopPropagation(); },
+                    className: 'bitmap-check'
+                  }),
+                  React.createElement('img', {
+                    src: '/api/v1/parcel-image',
+                    className: 'w-[30px] h-[30px] rounded object-cover flex-shrink-0',
+                    onError: function(e) { e.target.style.display = 'none'; }
+                  }),
+                  React.createElement('div', { className: 'flex-1 min-w-0' },
+                    React.createElement('div', { className: 'flex items-center gap-1' },
+                      React.createElement('span', { className: 'font-acme text-xs text-white truncate' },
+                        item.name || '#' + item.inscriptionNumber
+                      ),
+                      item.isListed ? React.createElement('span', {
+                        className: 'px-1 py-0.5 bg-bitmap-orange/20 text-bitmap-orange font-acme text-[8px] rounded flex-shrink-0'
+                      }, 'Listado') : React.createElement('span', {
+                        className: 'px-1 py-0.5 bg-green-500/20 text-green-400 font-acme text-[8px] rounded flex-shrink-0'
+                      }, 'No Listado')
+                    ),
+                    React.createElement('div', { className: 'font-acme text-[10px] text-bitmap-muted' },
+                      '#' + (item.inscriptionNumber || '')
+                    ),
+                    React.createElement(ParcelConfBubble, { confs: item.confs }),
+                    !item.eligible ? React.createElement('div', { className: 'font-acme text-[8px] text-bitmap-red mt-0.5' },
+                      'Solo se aceptan parcelas cuyas 2 confirmaciones tengan la misma wallet que inscribio la parcela'
+                    ) : null
+                  ),
+                  React.createElement('input', {
+                    type: 'text',
+                    value: item.priceStr,
+                    onChange: function(e) { updateListItemPrice(item.id, e.target.value); },
+                    onClick: function(e) { e.stopPropagation(); },
+                    placeholder: 'BTC',
+                    className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
+                  })
+                )
+              );
+            }),
+            React.createElement('div', { className: 'p-2 border-t border-bitmap-border' },
+              React.createElement('button', {
+                onClick: function(e) {
+                  e.stopPropagation();
+                  var selected = listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0 && i.eligible; });
+                  if (selected.length === 0) {
+                    setListingStatus({ toast: 'Selecciona al menos una parcela con precio y con las 2 confirmaciones validas' });
+                    return;
+                  }
+                  if (window.bcAnalytics) window.bcAnalytics.track('parcel_list_initiated', { itemCount: selected.length });
+                  setConfirmItems(selected);
+                  setShowConfirmMenu(true);
+                },
+                disabled: listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0; }).length === 0,
+                className: 'w-full px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 disabled:opacity-50'
+              }, 'Listar seleccionados')
             )
-            )
-          : null
-        ),
-        React.createElement('div', { className: 'flex items-center gap-1 flex-shrink-0' },
+          )
+        ) : null
+      ),
+      React.createElement('div', { className: 'flex items-center gap-1 flex-shrink-0' },
+        React.createElement('button', {
+          onClick: function(e) { e.stopPropagation(); setViewMode(viewMode === 'list' ? 'grid' : 'list'); },
+          className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors',
+          title: viewMode === 'list' ? 'Vista cuadros' : 'Vista lista'
+        }, viewMode === 'list' ? '\u25A6' : '\u2261'),
+        React.createElement('div', { className: 'relative' },
           React.createElement('button', {
-            onClick: function(e) { e.stopPropagation(); setViewMode(viewMode === 'list' ? 'grid' : 'list'); },
-            className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors',
-            title: viewMode === 'list' ? 'Vista cuadros' : 'Vista lista'
-          }, viewMode === 'list' ? '\u25A6' : '\u2261'),
-          React.createElement('div', { className: 'relative' },
-            React.createElement('button', {
-              onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
-              className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
-            }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+            onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
+            className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
+          }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
           showSortMenu ? React.createElement('div', {
             className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
           },
@@ -1212,7 +1472,7 @@ showListDropdown ? React.createElement('div', {
               }, btn.label);
             })
           ) : null
-          )
+        )
       )
     ),
 
@@ -1228,20 +1488,19 @@ showListDropdown ? React.createElement('div', {
                   filtered.map(function(item, i) {
                     var btcPriceStr = BitmapUtils.formatBtcSat(item.listedPrice || item.price || 0);
                     var addr = BitmapUtils.truncateAddress(item.sellerAddress || item.ownerAddress || '', 6);
-                    var etiquetas = item.etiquetas || '';
-var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
-  var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
-                    var bn = item.bitmapNumber || 0;
-                    var hash = item.hash || '';
-                    var txs = item.totalTransacciones || 0;
+                    var confs = parcelConfs[item.inscriptionId || item.id] || null;
+                    var isSelected = selectedBuyItems.indexOf(item.inscriptionId || item.id) !== -1;
+                    var isOwn = walletNow && walletNow.address && (item.sellerAddress === walletNow.address);
+                    var listingId = item.id || '';
+                    var menuOpen = editMenuFor === listingId;
                     return React.createElement('div', {
-                      key: (item.source || '') + '_' + (item.bitmapId || item.id || i),
-                      className: 'px-4 py-0.5 hover:bg-bitmap-surface transition-colors cursor-pointer border-b border-bitmap-border/30'
+                      key: (item.source || '') + '_' + (item.inscriptionId || item.id || i),
+                      className: 'px-4 py-1 hover:bg-bitmap-surface transition-colors cursor-pointer border-b border-bitmap-border/30'
                     },
                       React.createElement('div', { className: 'flex items-center gap-3' },
                         React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                           React.createElement('img', {
-                            src: '/api/v1/block-image/' + bn + '?v=5&size=55&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + txs + '&hash=' + encodeURIComponent(hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
+                            src: '/api/v1/parcel-image',
                             width: 55,
                             height: 55,
                             loading: 'lazy',
@@ -1250,34 +1509,53 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
                           })
                         ),
                         React.createElement('div', { className: 'flex-1 min-w-0' },
-                          React.createElement('div', { className: 'flex items-center justify-between' },
-                            React.createElement('div', { className: 'flex items-center gap-2' },
-                              React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
-                                bn + '.bitmap'
-                              ),
-                              React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
+                          React.createElement('div', { className: 'flex items-center gap-2' },
+                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold truncate' },
+                              item.name || '#' + item.inscriptionNumber
                             ),
-                            React.createElement('span', { className: 'font-acme text-sm font-semibold', style:{ color:'#666666' } },
-                              btcPriceStr + ' BTC'
-                            )
+                            React.createElement('span', { className: 'font-acme text-xs text-white flex-shrink-0' }, BitmapUtils.timeAgo(item.listedAt))
                           ),
-                          React.createElement('div', { className: 'flex items-center justify-between mt-0.5' },
-                            React.createElement('div', { className: 'flex-1 min-w-0' },
-                              renderMarketplaceTags(etiquetas)
-                            ),
-                            React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted flex-shrink-0 ml-2 truncate' }, addr)
+                          React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted truncate' }, addr),
+                          React.createElement('div', { className: 'mt-0.5' },
+                            React.createElement(ParcelConfBubble, { confs: confs })
                           )
                         ),
-                        React.createElement('div', {
-                          onClick: function() { toggleBuySelection(item.bitmapId || item.id); },
-                          className: 'w-5 h-5 flex-shrink-0 cursor-pointer rounded flex items-center justify-center',
-                          style: { backgroundColor: selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1 ? '#00AA00' : '#444', border: '1px solid #666' }
-                        },
-                          selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1
-                            ? React.createElement('svg', { width: 12, height: 12, viewBox: '0 0 12 12', fill: 'none' },
-                                React.createElement('path', { d: 'M2 6l3 3 5-5', stroke: '#000', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
-                              )
-                            : null
+                        React.createElement('div', { className: 'flex flex-col items-end gap-1 flex-shrink-0' },
+                          React.createElement('span', { className: 'font-acme text-sm font-semibold', style: { color: '#666666' } },
+                            btcPriceStr + ' BTC'
+                          ),
+                          isOwn ? React.createElement('div', { className: 'relative' },
+                            React.createElement('button', {
+                              onClick: function(e) { e.stopPropagation(); setEditMenuFor(menuOpen ? null : listingId); },
+                              className: 'p-1 rounded hover:bg-bitmap-border transition-colors'
+                            }, React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, className: 'text-bitmap-muted' },
+                              React.createElement('path', { d: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' }),
+                              React.createElement('path', { d: 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' })
+                            )),
+                            menuOpen ? React.createElement('div', {
+                              onClick: function(e) { e.stopPropagation(); },
+                              className: 'absolute right-0 top-full mt-1 w-44 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
+                            },
+                              React.createElement('button', {
+                                onClick: function() { handleEditPrice(item); },
+                                className: 'w-full px-3 py-2 text-left font-acme text-xs text-bitmap-text hover:bg-bitmap-surface transition-colors'
+                              }, '\u270F Actualizar precio'),
+                              React.createElement('button', {
+                                onClick: function() { handleDelist(item); },
+                                className: 'w-full px-3 py-2 text-left font-acme text-xs text-bitmap-red hover:bg-bitmap-surface transition-colors'
+                              }, '\u2716 Deslistar')
+                            ) : null
+                          ) : React.createElement('div', {
+                            onClick: function() { toggleBuySelection(item.inscriptionId || item.id); },
+                            className: 'w-5 h-5 flex-shrink-0 cursor-pointer rounded flex items-center justify-center',
+                            style: { backgroundColor: isSelected ? '#00AA00' : '#444', border: '1px solid #666' }
+                          },
+                            isSelected
+                              ? React.createElement('svg', { width: 12, height: 12, viewBox: '0 0 12 12', fill: 'none' },
+                                  React.createElement('path', { d: 'M2 6l3 3 5-5', stroke: '#000', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
+                                )
+                              : null
+                          )
                         )
                       )
                     );
@@ -1286,21 +1564,15 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
               : React.createElement('div', { className: 'flex flex-wrap gap-2 py-2' },
                   filtered.map(function(item, i) {
                     var btcPriceStr = BitmapUtils.formatBtcSat(item.listedPrice || item.price || 0);
-                    var etiquetas = item.etiquetas || '';
-var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
-  var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
-                    var bn = item.bitmapNumber || 0;
-                    var hash = item.hash || '';
-                    var txs = item.totalTransacciones || 0;
-                    var isSelected = selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1;
+                    var isSelected = selectedBuyItems.indexOf(item.inscriptionId || item.id) !== -1;
                     return React.createElement('div', {
-                      key: (item.source || '') + '_' + (item.bitmapId || item.id || i),
+                      key: (item.source || '') + '_' + (item.inscriptionId || item.id || i),
                       className: 'bg-bitmap-surface border border-bitmap-border rounded-lg overflow-hidden hover:border-bitmap-orange transition-colors cursor-pointer',
                       style: { width: 'calc(20% - 7px)', minWidth: 140 }
                     },
                       React.createElement('div', { className: 'flex items-center justify-between px-2 py-1.5' },
                         React.createElement('div', {
-                          onClick: function() { toggleBuySelection(item.bitmapId || item.id); },
+                          onClick: function() { toggleBuySelection(item.inscriptionId || item.id); },
                           className: 'w-4 h-4 cursor-pointer rounded flex items-center justify-center flex-shrink-0',
                           style: { backgroundColor: isSelected ? '#00AA00' : '#444', border: '1px solid #666' }
                         },
@@ -1315,12 +1587,17 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
                         )
                       ),
                       React.createElement('img', {
-                        src: '/api/v1/block-image/' + bn + '?v=5&size=200&etiquetas=' + encodeURIComponent(etiquetas || '') + '&tx=' + txs + '&hash=' + encodeURIComponent(hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
+                        src: '/api/v1/parcel-image',
                         width: '100%',
                         loading: 'lazy',
                         style: { imageRendering: 'pixelated', background: '#1a1a1a', display: 'block' },
                         alt: ''
-                      })
+                      }),
+                      React.createElement('div', { className: 'px-2 py-1' },
+                        React.createElement('div', { className: 'font-alfaslab text-[10px] text-white truncate' },
+                          item.name || '#' + item.inscriptionNumber
+                        )
+                      )
                     );
                   })
                 )
@@ -1353,9 +1630,9 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
                 buySuccessData.type === 'error' ? 'Error en la compra' : buySuccessData.type === 'partial' ? 'Compra parcial' : 'Compra exitosa'
               ),
               React.createElement('p', { className: 'font-acme text-xs', style: { color: '#888' } },
-                buySuccessData.type === 'error' ? 'No se completó la compra. Ningún bitmap fue comprado.' :
-                buySuccessData.type === 'partial' ? buySuccessData.items.length + ' bitmap' + (buySuccessData.items.length > 1 ? 's' : '') + ' comprado' + (buySuccessData.items.length > 1 ? 's' : '') + ' exitosamente' :
-                buySuccessData.items.length + ' bitmap' + (buySuccessData.items.length > 1 ? 's' : '') + ' comprado' + (buySuccessData.items.length > 1 ? 's' : '') + ' exitosamente'
+                buySuccessData.type === 'error' ? 'No se completo la compra. Ninguna parcela fue comprada.' :
+                buySuccessData.type === 'partial' ? buySuccessData.items.length + ' parcela' + (buySuccessData.items.length > 1 ? 's' : '') + ' comprada' + (buySuccessData.items.length > 1 ? 's' : '') + ' exitosamente' :
+                buySuccessData.items.length + ' parcela' + (buySuccessData.items.length > 1 ? 's' : '') + ' comprada' + (buySuccessData.items.length > 1 ? 's' : '') + ' exitosamente'
               )
             )
           ),
@@ -1441,7 +1718,7 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
             )
           ) : null,
           buySuccessData.errors && buySuccessData.errors.length > 0 ? React.createElement('div', { className: 'mb-4 rounded-lg p-3', style: { backgroundColor: 'rgba(255,51,51,0.08)', border: '1px solid rgba(255,51,51,0.2)' } },
-            React.createElement('span', { className: 'font-acme text-[10px] block mb-1', style: { color: '#FF5555' } }, 'Bitmaps no comprados:'),
+            React.createElement('span', { className: 'font-acme text-[10px] block mb-1', style: { color: '#FF5555' } }, 'Parcelas no compradas:'),
             buySuccessData.errors.map(function(err, i) {
               return React.createElement('div', { key: i, className: 'font-acme text-[10px]', style: { color: '#aa5555' } },
                 err.name + ' \u2014 ' + (err.reason || 'Error')
@@ -1460,176 +1737,53 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
         )
       )
     ) : null,
-    successToast ? React.createElement(Toast, { message: successToast.message, type: successToast.type, duration: 20000, onDone: function() { setSuccessToast(null); } }) : null
-  );
-}
 
-function DescuentosPage(props) {
-  var navigate = props.navigate;
-  var _a = React.useState([]);
-  var discounts = _a[0];
-  var setDiscounts = _a[1];
-  var _b = React.useState(true);
-  var isLoading = _b[0];
-  var setIsLoading = _b[1];
-  var _c = React.useState('');
-  var searchQuery = _c[0];
-  var setSearchQuery = _c[1];
-  var _d = React.useState(null);
-  var btcPrice = _d[0];
-  var setBtcPrice = _d[1];
-
-  React.useEffect(function() {
-    fetch('/api/v1/live/rates')
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (d && d.data && d.data.btcPrice !== null) setBtcPrice(d.data.btcPrice); })
-      .catch(function() {});
-  }, []);
-
-  React.useEffect(function() {
-    setIsLoading(true);
-    fetch('/api/v1/descuentos')
-      .then(function(r) { return r.json(); })
-      .then(function(res) {
-        var items = (res && res.data) || [];
-        setDiscounts(Array.isArray(items) ? items : []);
-        setIsLoading(false);
-      })
-      .catch(function() { setIsLoading(false); });
-  }, []);
-
-  React.useEffect(function() {
-    var interval = setInterval(function() {
-      fetch('/api/v1/descuentos')
-        .then(function(r) { return r.json(); })
-        .then(function(res) {
-          var items = (res && res.data) || [];
-          setDiscounts(Array.isArray(items) ? items : []);
-        })
-        .catch(function() {});
-    }, 60000);
-    return function() { clearInterval(interval); };
-  }, []);
-
-  var filtered = discounts.filter(function(d) {
-    if (!searchQuery) return true;
-    return d.tagName.toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1;
-  });
-
-  var avgDiscount = discounts.length > 0
-    ? Math.round(discounts.reduce(function(s, d) { return s + d.discountPercentage; }, 0) / discounts.length)
-    : 0;
-
-  var totalFloorItems = discounts.reduce(function(s, d) { return s + (d.floorItemCount || 0); }, 0);
-
-  var usd = function(sats) {
-    if (!btcPrice) return '';
-    return '$' + ((sats / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 0 });
-  };
-
-  var sourceLogo = function(source) {
-    if (source === 'ordinalswallet') return 'ordinalswallet_logo.png';
-    if (source === 'unisat') return 'unisat_logo.png';
-    return 'logo_bitmapcore_logo.png';
-  };
-
-  var sourceColor = function(source) {
-    if (source === 'ordinalswallet') return '#8B5CF6';
-    if (source === 'unisat') return '#F59E0B';
-    return '#FE3E00';
-  };
-
-  return React.createElement('div', { className: 'flex flex-col h-full' },
-    React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
-      React.createElement('div', { className: 'flex items-stretch justify-between' },
-        React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
-          React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[30px] w-[30px] object-contain rounded my-[2px]' }),
-          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Descuentos')
+    editingListing ? React.createElement('div', { className: 'fixed inset-0 z-50 flex items-center justify-center bg-black/50' },
+      React.createElement('div', { className: 'bg-bitmap-surface border border-bitmap-border rounded-xl p-6 max-w-sm w-full mx-4' },
+        React.createElement('h3', { className: 'font-alfaslab text-lg text-white mb-2' }, 'Actualizar precio'),
+        React.createElement('p', { className: 'font-acme text-xs text-bitmap-muted mb-4' }, editingListing.name),
+        React.createElement('input', {
+          type: 'text',
+          inputMode: 'decimal',
+          value: editPriceStr,
+          onChange: function(e) { setEditPriceStr(e.target.value.replace(/[^0-9.]/g, '')); },
+          className: 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-4 py-3 font-acme text-sm text-white focus:outline-none focus:border-bitmap-orange mb-1'
+        }),
+        React.createElement('div', { className: 'font-acme text-[10px] text-bitmap-muted mb-4' },
+          editPriceStr ? BitmapUtils.formatBtcSat(parseFloat(editPriceStr) * 100000000) + ' BTC' : ''
         ),
-        React.createElement('div', { className: 'flex items-stretch' },
-          React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Etiquetas'),
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, discounts.length)
-          ),
-          React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Promedio'),
-            React.createElement('span', { className: 'font-acme text-[10px] text-green-400 font-bold leading-tight' }, '-' + avgDiscount + '%')
-          ),
-          React.createElement('div', { className: 'flex flex-col items-center px-3' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Bitmaps baratos'),
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, totalFloorItems)
-          )
+        React.createElement('div', { className: 'flex gap-3' },
+          React.createElement('button', {
+            onClick: function() { setEditingListing(null); },
+            className: 'flex-1 py-2 bg-bitmap-border text-white font-alfaslab text-sm rounded-lg'
+          }, 'Cancelar'),
+          React.createElement('button', {
+            onClick: handleSavePrice,
+            className: 'flex-1 py-2 bg-bitmap-orange text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-orange/80 transition-colors'
+          }, 'Guardar')
         )
       )
-    ),
-    React.createElement('div', { className: 'flex-1 overflow-y-auto pl-14 pr-4 py-3' },
-      isLoading
-        ? React.createElement('div', { className: 'flex items-center justify-center h-64' },
-            React.createElement('div', { className: 'w-8 h-8 border-2 border-bitmap-orange border-t-transparent rounded-full animate-spin' })
-          )
-        : filtered.length === 0
-          ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' },
-              discounts.length === 0 ? 'No hay descuentos disponibles' : 'No se encontraron resultados'
-            )
-          : React.createElement('div', { className: 'space-y-3' },
-              filtered.map(function(d, i) {
-                var floorBtc = BitmapUtils.formatBtcSat(d.floorPrice);
-                var floorUsd = usd(d.floorPrice);
+    ) : null,
 
-                return React.createElement('div', {
-                  key: d.tagName + '-' + i,
-                  className: 'border border-bitmap-border rounded-xl overflow-hidden',
-                  style: { backgroundColor: '#1A1A1A' }
-                },
-                  React.createElement('div', { className: 'flex items-center justify-between px-3 py-2 border-b border-bitmap-border' },
-                    React.createElement('div', { className: 'flex items-center gap-2' },
-                      React.createElement(UniversalTag, { text: d.tagName, fontSize: 11 }),
-                      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
-                        d.floorItemCount + ' de ' + d.totalItems + ' listados'
-                      )
-                    ),
-                    React.createElement('div', { className: 'flex items-center gap-2' },
-                      React.createElement('span', { className: 'px-2 py-0.5 rounded font-acme text-[11px] font-bold', style: { backgroundColor: '#0a4a2a', color: '#4ade80', border: '1px solid #166534' } },
-                        floorBtc + ' BTC'
-                      ),
-                      floorUsd ? React.createElement('span', { className: 'font-acme text-[9px] text-bitmap-muted' }, floorUsd) : null,
-                      React.createElement('span', { className: 'px-1.5 py-0.5 rounded font-acme text-[10px] font-bold', style: { backgroundColor: '#166534', color: '#4ade80' } },
-                        d.discountPercentage + '%'
-                      )
-                    )
-                  ),
-                  React.createElement('div', { className: 'px-3 py-2' },
-                    React.createElement('div', { className: 'flex gap-2 overflow-x-auto pb-1', style: { scrollbarWidth: 'thin' } },
-                      d.floorItems.map(function(item, j) {
-                        var isPerfect = (item.etiquetas || '').indexOf('Grid') !== -1;
-                        var isPunk = (item.etiquetas || '').indexOf('Punk') !== -1;
-                        return React.createElement('div', {
-                          key: (item.bitmapId || '') + '-' + j,
-                          onClick: function() { navigate('/blocks/' + item.bitmapNumber); },
-                          className: 'flex flex-col items-center rounded border border-green-900 cursor-pointer hover:border-green-500 transition-colors',
-                          style: { minWidth: 84, padding: 2, gap: 2, flexShrink: 0, backgroundColor: '#0a1a0a' }
-                        },
-                          React.createElement('div', { className: 'flex items-center gap-[2px] w-full justify-center' },
-                            React.createElement('span', { className: 'font-acme text-[11px] text-green-400 whitespace-nowrap overflow-hidden text-ellipsis', style: { maxWidth: 58 } },
-                              BitmapUtils.formatBtcSat(item.listedPrice)
-                            ),
-                            React.createElement('img', { src: sourceLogo(item.source), style: { width: 10, height: 10, flexShrink: 0 }, alt: '' })
-                          ),
-                          React.createElement('img', {
-                            src: '/api/v1/block-image/' + (item.bitmapNumber || 0) + '?v=5&size=80&etiquetas=' + encodeURIComponent(item.etiquetas || '') + '&tx=' + (item.totalTransacciones || 0) + '&hash=' + encodeURIComponent(item.hash || '') + '&grid=' + isPerfect + '&punk=' + isPunk,
-                            style: { width: 80, height: 80, borderRadius: 2, imageRendering: 'pixelated', background: '#1a1a1a' },
-                            loading: 'lazy', alt: ''
-                          }),
-                          React.createElement('span', { className: 'font-alfaslab text-[9px] text-white' },
-                            (item.bitmapNumber || '?') + '.bitmap'
-                          )
-                        );
-                      })
-                    )
-                  )
-                );
-              })
-            )
-    )
+    confirmAction && confirmAction.type === 'delist' ? React.createElement('div', { className: 'fixed inset-0 z-50 flex items-center justify-center bg-black/50' },
+      React.createElement('div', { className: 'bg-bitmap-surface border border-bitmap-border rounded-xl p-6 max-w-sm w-full mx-4' },
+        React.createElement('h3', { className: 'font-alfaslab text-lg text-white mb-2' }, 'Deslistar parcela'),
+        React.createElement('p', { className: 'font-acme text-sm text-bitmap-text mb-1' }, 'Vas a deslistar:'),
+        React.createElement('p', { className: 'font-acme text-sm text-bitmap-orange font-bold mb-4' }, confirmAction.listing.name),
+        React.createElement('p', { className: 'font-acme text-xs text-bitmap-muted mb-4' }, 'La parcela sera removida de tu mercado de parcelas.'),
+        React.createElement('div', { className: 'flex gap-3' },
+          React.createElement('button', {
+            onClick: function() { setConfirmAction(null); },
+            className: 'flex-1 py-2 bg-bitmap-border text-white font-alfaslab text-sm rounded-lg'
+          }, 'Cancelar'),
+          React.createElement('button', {
+            onClick: handleConfirmDelist,
+            className: 'flex-1 py-2 bg-bitmap-red text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-red/80 transition-colors'
+          }, 'Deslistar')
+        )
+      )
+    ) : null,
+
+    successToast ? React.createElement(Toast, { message: successToast.message, type: successToast.type, duration: 20000, onDone: function() { setSuccessToast(null); } }) : null
   );
 }

@@ -91,7 +91,7 @@ function WalletDashboardPage(props) {
 }
 
 var AssetCache = {
-  dbName: 'bitmapcore-assets',
+  dbName: 'bitmapcore-assets-v2',
   key: function(address) { return 'assets-' + address.toLowerCase(); },
   load: function(address) {
     return IndexedDBCache.load(AssetCache.dbName, AssetCache.key(address)).then(function(v) {
@@ -129,6 +129,25 @@ var AssetCache = {
   }
 };
 
+var ParcelConfirmationCache = {
+  dbName: 'bitmapcore-parcel-confs-v3',
+  version: 3,
+  key: function(parcelId) { return 'conf-v3-' + parcelId; },
+  load: function(parcelId) {
+    return IndexedDBCache.load(ParcelConfirmationCache.dbName, ParcelConfirmationCache.key(parcelId)).then(function(v) {
+      if (v && v.confirmations && v.version === ParcelConfirmationCache.version && v.updatedAt && (Date.now() - v.updatedAt < 3600000)) return v.confirmations;
+      return null;
+    }).catch(function() { return null; });
+  },
+  save: function(parcelId, confirmations) {
+    return IndexedDBCache.save(ParcelConfirmationCache.dbName, ParcelConfirmationCache.key(parcelId), {
+      confirmations: confirmations,
+      version: ParcelConfirmationCache.version,
+      updatedAt: Date.now()
+    }).catch(function() {});
+  }
+};
+
 function MisActivosPage(props) {
   var navigate = props.navigate;
   var wallet = StoreApp.get('wallet');
@@ -144,6 +163,21 @@ function MisActivosPage(props) {
   var _d = React.useState(null);
   var walletRef = _d[0];
   var setWalletRef = _d[1];
+  var _e = React.useState({});
+  var parcelPreviewConfs = _e[0];
+  var setParcelPreviewConfs = _e[1];
+  var _f = React.useState({});
+  var bitmapBlockData = _f[0];
+  var setBitmapBlockData = _f[1];
+  var _g = React.useState({});
+  var bitmapTagPrices = _g[0];
+  var setBitmapTagPrices = _g[1];
+  var _h = React.useState({});
+  var bitmapListingPrices = _h[0];
+  var setBitmapListingPrices = _h[1];
+  var _i = React.useState(null);
+  var unifiedFloorPrice = _i[0];
+  var setUnifiedFloorPrice = _i[1];
 
   React.useEffect(function() {
     var unsub = StoreApp.subscribe('wallet', function(w) { wallet = w; setWalletRef(w); });
@@ -190,7 +224,102 @@ function MisActivosPage(props) {
     loadAssets();
     var pollTimer = setInterval(loadAssets, 60000);
     return function() { clearInterval(pollTimer); };
-  }, [wallet.address]);
+  }, [walletRef]);
+
+  React.useEffect(function() {
+    if (!data || !data.collections || !walletRef || !walletRef.address) return;
+    var parcelCol = null;
+    for (var i = 0; i < data.collections.length; i++) {
+      if (data.collections[i].name === 'Parcelas') { parcelCol = data.collections[i]; break; }
+    }
+    if (!parcelCol || !parcelCol.items || parcelCol.items.length === 0) return;
+    var items = parcelCol.items;
+    var allIds = [];
+    items.forEach(function(item) {
+      if (item.id) allIds.push(item.id);
+    });
+    if (allIds.length === 0) return;
+    var tryFetch = function(attempt) {
+      AssetApi.getBulkParcelConfirmations(allIds, walletRef.address).then(function(res) {
+        if (res && res.success && res.data) {
+          setParcelPreviewConfs(function(prev) {
+            var updated = {};
+            for (var k in prev) updated[k] = prev[k];
+            for (var pid in res.data) {
+              var confs = res.data[pid];
+              if (confs && confs.confirmations) {
+                updated[pid] = confs.confirmations;
+                ParcelConfirmationCache.save(pid, confs.confirmations);
+              }
+            }
+            return updated;
+          });
+        }
+      }).catch(function() {
+        if (attempt < 2) setTimeout(function() { tryFetch(attempt + 1); }, 2000);
+      });
+    };
+    tryFetch(0);
+  }, [data, walletRef]);
+
+  React.useEffect(function() {
+    if (!data || !data.collections) return;
+    var bitmapsCol = null;
+    for (var i = 0; i < data.collections.length; i++) {
+      if (data.collections[i].name === 'Bitmaps') { bitmapsCol = data.collections[i]; break; }
+    }
+    if (!bitmapsCol || !bitmapsCol.items || bitmapsCol.items.length === 0) return;
+    var blockNums = [];
+    for (var j = 0; j < bitmapsCol.items.length; j++) {
+      var num = extractBlockNumber(bitmapsCol.items[j].name);
+      if (num && blockNums.indexOf(num) === -1) blockNums.push(num);
+    }
+    var fetches = blockNums.map(function(num) {
+      return fetch('/api/v1/blocks/' + num)
+        .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function(res) {
+          if (res && res.success && res.data) return { key:num, data:res.data };
+          return null;
+        }).catch(function() { return null; });
+    });
+    Promise.all(fetches).then(function(results) {
+      var map = {};
+      for (var k = 0; k < results.length; k++) {
+        if (results[k]) map[results[k].key] = results[k].data;
+      }
+      setBitmapBlockData(map);
+    });
+    var normalizeTagKey = function(t) {
+      return String(t || '').toLowerCase().replace(/(\d+) txs?$/i, '$1 txs').trim();
+    };
+    fetch('/api/v1/unified/cache/tags').then(function(r) { return r.json(); }).then(function(res) {
+      if (res && res.success && res.data) {
+        var prices = {};
+        res.data.forEach(function(t) {
+          if (t && t.tagName) prices[normalizeTagKey(t.tagName)] = t.floorPrice || 0;
+        });
+        setBitmapTagPrices(prices);
+      }
+    }).catch(function() {});
+    var ids = blockNums.join(',');
+    if (ids) {
+      fetch('/api/v1/unified/cache/prices?bitmaps=' + ids).then(function(r) { return r.json(); }).then(function(res) {
+        if (res && res.success && res.data) {
+          var lprices = {};
+          for (var n in res.data) {
+            var p = parseInt(res.data[n]) || 0;
+            if (p > 0) lprices[parseInt(n)] = p;
+          }
+          setBitmapListingPrices(lprices);
+        }
+      }).catch(function() {});
+    }
+    fetch('/api/v1/unified/cache/stats').then(function(r) { return r.json(); }).then(function(res) {
+      if (res && res.success && res.data && res.data.floorPrice) {
+        setUnifiedFloorPrice(parseInt(res.data.floorPrice) || null);
+      }
+    }).catch(function() {});
+  }, [data]);
 
   var total = data ? data.total : 0;
   var collections = data ? data.collections : [];
@@ -202,6 +331,59 @@ function MisActivosPage(props) {
     var m2 = name.match(/^\d+\.(\d+)\.bitmap$/);
     if (m2) return parseInt(m2[1], 10);
     return null;
+  };
+
+  var bitmapNormalizeTag = function(t) {
+    return String(t || '').toLowerCase().replace(/(\d+) txs?$/i, '$1 txs').trim();
+  };
+
+  var bitmapBlockTags = function(blockNum) {
+    var bd = bitmapBlockData[blockNum] || {};
+    var etiquetas = bd.etiquetas || '';
+    return etiquetas.split('|').map(function(t) { return t.trim(); }).filter(function(t) { return t !== ''; });
+  };
+
+  var bitmapMainTagPrice = function(blockNum) {
+    var tags = bitmapBlockTags(blockNum);
+    if (tags.length === 0) {
+      if (unifiedFloorPrice !== null && unifiedFloorPrice !== undefined) return unifiedFloorPrice;
+      var lp = bitmapListingPrices[blockNum];
+      return lp !== undefined ? lp : null;
+    }
+    var best = null;
+    for (var i = 0; i < tags.length; i++) {
+      var p = bitmapTagPrices[bitmapNormalizeTag(tags[i])];
+      if (p !== undefined) {
+        if (best === null || p > best) best = p;
+      }
+    }
+    return best;
+  };
+
+  var bitmapMainTagName = function(blockNum) {
+    var tags = bitmapBlockTags(blockNum);
+    if (tags.length === 0) return null;
+    var bestTag = null;
+    var bestPrice = null;
+    for (var i = 0; i < tags.length; i++) {
+      var p = bitmapTagPrices[bitmapNormalizeTag(tags[i])];
+      if (p !== undefined) {
+        if (bestPrice === null || p > bestPrice) { bestPrice = p; bestTag = tags[i]; }
+      }
+    }
+    if (bestTag) return bestTag;
+    return tags[0];
+  };
+
+  var bitmapNumFontSize = function(name) {
+    if (!name) return 11;
+    var len = name.length;
+    var size = 11;
+    if (len > 10) size = 10;
+    if (len > 11) size = 9;
+    if (len > 12) size = 8;
+    if (len > 14) size = 7;
+    return size;
   };
 
   return React.createElement('div', { className:'p-4 lg:p-6' },
@@ -255,24 +437,152 @@ function MisActivosPage(props) {
                 className:'font-alfaslab text-base',
                 style:{ color: isSpecial ? '#FE3E00' : '#fff' }
               }, col.name + ' (' + col.count + ')'),
-              React.createElement('span', { className:'font-acme text-xs text-bitmap-muted' }, 'Ver todos \u2192')
+              col.name === 'Bitmaps'
+                ? (function() {
+                    var totalSats = 0;
+                    col.items.forEach(function(it) {
+                      var bn = extractBlockNumber(it.name);
+                      var p = bn !== null ? bitmapMainTagPrice(bn) : null;
+                      if (p !== null) totalSats += p;
+                    });
+                    return React.createElement('span', { className:'font-acme text-xs text-bitmap-muted', title:'Total value' },
+                      'Total value: ' + BitmapUtils.formatBtcSat(totalSats) + ' BTC'
+                    );
+                  })()
+                : React.createElement('span', { className:'font-acme text-xs text-bitmap-muted' }, 'Ver todos \u2192')
             ),
-            React.createElement('div', { className:'flex items-center gap-2 overflow-x-auto pb-1' },
-              col.items.slice(0, 5).map(function(item, idx) {
+            React.createElement('div', { className:'flex items-start gap-3 overflow-x-auto pb-1 parcel-scrollbar' },
+              col.items.slice().sort(function(a, b) {
+                if (col.name === 'Parcelas') {
+                  var ca = parcelPreviewConfs[a.id];
+                  var cb = parcelPreviewConfs[b.id];
+                  var aOk = ca && ca[0] && ca[0].confirmed && ca[1] && ca[1].confirmed ? 1 : 0;
+                  var bOk = cb && cb[0] && cb[0].confirmed && cb[1] && cb[1].confirmed ? 1 : 0;
+                  return bOk - aOk;
+                }
+                if (col.name === 'Bitmaps') {
+                  var bna = extractBlockNumber(a.name);
+                  var bnb = extractBlockNumber(b.name);
+                  var taga = bitmapMainTagPrice(bna);
+                  var tagb = bitmapMainTagPrice(bnb);
+                  if (taga === null && tagb === null) return 0;
+                  if (taga === null) return 1;
+                  if (tagb === null) return -1;
+                  return tagb - taga;
+                }
+                return 0;
+              }).map(function(item, idx) {
                 var blockNum = extractBlockNumber(item.name);
                 var displayNum = item.inscriptionNumber || item.inscription_number;
-                return React.createElement('div', { key:idx, className:'flex-shrink-0 flex items-center gap-2 min-w-0' },
-                  React.createElement('div', { className:'w-8 h-8 rounded overflow-hidden bg-bitmap-black flex-shrink-0' },
-                    blockNum ? React.createElement(MondrianCanvas, { blockNumber:blockNum, transactions:[], size:32 }) : null
-                  ),
-                  React.createElement('div', { className:'min-w-0' },
-                    React.createElement('div', { className:'font-acme text-xs text-white truncate' },
-                      item.name ? item.name : '#' + displayNum
+                var isParcel = col.name === 'Parcelas';
+                var isBitmap = col.name === 'Bitmaps';
+                var confs = isParcel ? (parcelPreviewConfs[item.id] || null) : null;
+                var pc1 = confs ? confs[0] : null;
+                var pc2 = confs ? confs[1] : null;
+                var bubbleSize = isParcel ? 'w-20 h-20' : 'w-20 h-20';
+                var iconSize = isParcel ? 80 : 80;
+                var inscriptionId = item.id ? item.id.slice(0, 12) + '...' : '';
+                var last4 = function(addr) { return addr ? addr.slice(-4) : '----'; };
+                var walletMatch = isParcel && pc1 && pc2 && pc1.inscriberWallet && pc2.selfTransferFrom && pc2.selfTransferTo
+                  ? (last4(pc1.inscriberWallet) === last4(pc2.selfTransferFrom.split(',')[0].trim()) &&
+                     last4(pc1.inscriberWallet) === last4(pc2.selfTransferTo.split(',')[0].trim()))
+                  : false;
+                var bd = isBitmap ? (bitmapBlockData[blockNum] || {}) : {};
+                var bTags = isBitmap ? bitmapBlockTags(blockNum) : [];
+                var bMainTag = isBitmap ? bitmapMainTagName(blockNum) : null;
+                var bMainPrice = isBitmap ? bitmapMainTagPrice(blockNum) : null;
+                var bImgUrl = '';
+                if (isBitmap && blockNum) {
+                  var btx = parseInt(bd.totalTransacciones) || 0;
+                  var bhash = bd.hash || '';
+                  var betiq = bd.etiquetas || '';
+                  var bPerfect = betiq.toLowerCase().indexOf('grid') !== -1;
+                  var bPunk = betiq.toLowerCase().indexOf('punk') !== -1;
+                  bImgUrl = '/api/v1/block-image/' + blockNum + '?v=5&size=80&etiquetas=' + encodeURIComponent(betiq) + '&tx=' + btx + '&hash=' + encodeURIComponent(bhash) + '&grid=' + bPerfect + '&punk=' + bPunk;
+                }
+                var confLines = isParcel && pc1 ? React.createElement('div', { className:'w-full text-center text-[8px] leading-tight' },
+                  React.createElement('div', { className:'flex items-center justify-center gap-1 text-green-400' },
+                    React.createElement('svg', { width:10, height:10, viewBox:'0 0 24 24', fill:'none', stroke:'#00AA00', strokeWidth:3 },
+                      React.createElement('path', { d:'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
+                      React.createElement('polyline', { points:'22 4 12 14.01 9 11.01' })
                     ),
-                    React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' },
-                      displayNum ? '#' + displayNum : ''
+                    React.createElement('span', { className:'font-mono text-white' }, 'wallet inscribe: '),
+                    React.createElement('span', { className:'font-mono' }, last4(pc1.inscriberWallet))
+                  ),
+                  React.createElement('div', { className:'font-mono text-gray-300' }, 'bloque: ' + (pc1.genesisHeight || '---')),
+                  pc1.txid ? React.createElement('a', {
+                    className:'font-mono text-blue-400 underline cursor-pointer',
+                    style:{ color:'#3b82f6' },
+                    title: pc1.txid,
+                    onClick: function(e) { e.stopPropagation(); window.open('https://unisat.io/explorer/tx/' + pc1.txid, '_blank'); }
+                  }, pc1.txid.slice(0, 16) + '...') : null
+                ) : null;
+                var conf2Lines = isParcel && pc2 && pc2.confirmed ? React.createElement('div', { className:'w-full text-center text-[8px] leading-tight mt-0.5' },
+                  React.createElement('div', { className:'flex items-center justify-center gap-1 text-green-400' },
+                    React.createElement('svg', { width:10, height:10, viewBox:'0 0 24 24', fill:'none', stroke:'#00AA00', strokeWidth:3 },
+                      React.createElement('path', { d:'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
+                      React.createElement('polyline', { points:'22 4 12 14.01 9 11.01' })
+                    ),
+                    React.createElement('span', { className:'font-mono text-white' }, 'de '),
+                    React.createElement('span', { className:'font-mono' }, last4(pc2.selfTransferFrom ? pc2.selfTransferFrom.split(',')[0].trim() : null)),
+                    React.createElement('span', { className:'font-mono text-white' }, ' a '),
+                    React.createElement('span', { className:'font-mono' }, last4(pc2.selfTransferTo ? pc2.selfTransferTo.split(',')[0].trim() : null))
+                  ),
+                  React.createElement('div', { className:'font-mono text-gray-300' }, 'bloque: ' + (pc2.selfTransferHeight !== undefined ? pc2.selfTransferHeight : '---')),
+                  pc2.txid ? React.createElement('a', {
+                    className:'font-mono text-blue-400 underline cursor-pointer',
+                    style:{ color:'#3b82f6' },
+                    title: pc2.txid,
+                    onClick: function(e) { e.stopPropagation(); window.open('https://unisat.io/explorer/tx/' + pc2.txid, '_blank'); }
+                  }, pc2.txid.slice(0, 16) + '...') : null
+                ) : (isParcel && pc2 ? React.createElement('div', { className:'w-full text-center text-[8px] leading-tight mt-0.5 text-gray-500' },
+                  React.createElement('div', { className:'flex items-center justify-center gap-1' },
+                    React.createElement('svg', { width:10, height:10, viewBox:'0 0 24 24', fill:'none', stroke:'#666', strokeWidth:3 },
+                      React.createElement('path', { d:'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
+                      React.createElement('polyline', { points:'22 4 12 14.01 9 11.01' })
+                    ),
+                    React.createElement('span', { className:'font-mono' }, 'de --- a ---')
+                  ),
+                  React.createElement('div', { className:'font-mono' }, 'bloque: ---')
+                ) : null);
+                return React.createElement('div', { key:idx, className:'flex-shrink-0 flex flex-col items-center min-w-0 ' + (isBitmap ? 'gap-[2px]' : 'gap-1') },
+                  confLines,
+                  conf2Lines,
+                  isBitmap ? React.createElement('div', { className:'w-full text-center whitespace-nowrap overflow-hidden', style:{ maxWidth:'80px' } },
+                    React.createElement('span', { className:'font-mono text-white leading-[1.1]', title: item.name, style:{ fontSize: bitmapNumFontSize(item.name || ('#' + displayNum)) } },
+                      item.name ? item.name : '#' + displayNum
                     )
-                  )
+                  ) : null,
+                  isBitmap && bMainTag ? React.createElement('div', { className:'w-full flex justify-center overflow-hidden', style:{ maxWidth:'80px' } },
+                    React.createElement(UniversalTag, { text: bMainTag, fontSize: 8 })
+                  ) : null,
+                  isBitmap ? React.createElement('div', { className:'w-full text-center whitespace-nowrap overflow-hidden', style:{ maxWidth:'80px' } },
+                    React.createElement('span', { className:'font-acme text-[10px] text-bitmap-muted leading-[1.1]' },
+                      bMainPrice !== null ? BitmapUtils.formatBtcSat(bMainPrice) + ' BTC' : 'N/A'
+                    )
+                  ) : null,
+                  React.createElement('div', { className:bubbleSize + ' rounded overflow-hidden bg-bitmap-black flex-shrink-0' },
+                    isParcel
+                      ? React.createElement('img', { src:'/api/v1/parcel-image', alt:'', className:'w-full h-full object-cover' })
+                      : (isBitmap && blockNum ? React.createElement('img', {
+                          src: bImgUrl,
+                          alt:'',
+                          className:'w-full h-full object-cover',
+                          onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=5&size=80'; }
+                        }) : (blockNum ? React.createElement(MondrianCanvas, { blockNumber:blockNum, transactions:[], size:iconSize }) : null))
+                  ),
+                  isParcel ? React.createElement('div', { className:'font-acme text-xs text-white truncate text-center w-full', style:{ maxWidth: '80px' } },
+                    item.name ? item.name : '#' + displayNum
+                  ) : null,
+                  isParcel && inscriptionId ? React.createElement('div', {
+                    className:'font-mono text-[9px] text-gray-400 truncate text-center w-full cursor-pointer select-all',
+                    style:{ maxWidth: '80px', userSelect: 'all' },
+                    title: item.id,
+                    onClick: function(e) {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(item.id);
+                    }
+                  }, inscriptionId) : null
                 );
               })
             )
@@ -302,6 +612,14 @@ function DetallePage(props) {
   var _c = React.useState(null);
   var error = _c[0];
   var setError = _c[1];
+  var _c2 = React.useState(null);
+  var walletRef = _c2[0];
+  var setWalletRef = _c2[1];
+
+  React.useEffect(function() {
+    var unsub = StoreApp.subscribe('wallet', function(w) { wallet = w; setWalletRef(w); });
+    return unsub;
+  }, []);
 
   React.useEffect(function() {
     if (!wallet.address) return;
@@ -332,7 +650,7 @@ function DetallePage(props) {
         setIsLoading(false);
       });
     });
-  }, [wallet.address]);
+  }, [walletRef]);
 
   var col = null;
   if (data && data.collections) {
@@ -372,6 +690,9 @@ function DetallePage(props) {
   var _l = React.useState(null);
   var editMenuFor = _l[0];
   var setEditMenuFor = _l[1];
+  var _m = React.useState({});
+  var parcelConfirmations = _m[0];
+  var setParcelConfirmations = _m[1];
 
   React.useEffect(function() {
     if (col && col.items) {
@@ -393,7 +714,38 @@ function DetallePage(props) {
     }).catch(function() {});
   };
 
-  React.useEffect(function() { loadMyListings(); }, [wallet.address]);
+  React.useEffect(function() { loadMyListings(); }, [walletRef]);
+
+  React.useEffect(function() {
+    if (!col || collectionName !== 'Parcelas' || !col.items || !walletRef || !walletRef.address) return;
+    var items = col.items;
+    var allIds = [];
+    items.forEach(function(item) {
+      if (item.id) allIds.push(item.id);
+    });
+    if (allIds.length === 0) return;
+    var tryFetch = function(attempt) {
+      AssetApi.getBulkParcelConfirmations(allIds, walletRef.address).then(function(res) {
+        if (res && res.success && res.data) {
+          setParcelConfirmations(function(prev) {
+            var updated = {};
+            for (var k in prev) updated[k] = prev[k];
+            for (var pid in res.data) {
+              var confs = res.data[pid];
+              if (confs && confs.confirmations) {
+                updated[pid] = confs.confirmations;
+                ParcelConfirmationCache.save(pid, confs.confirmations);
+              }
+            }
+            return updated;
+          });
+        }
+      }).catch(function() {
+        if (attempt < 2) setTimeout(function() { tryFetch(attempt + 1); }, 2000);
+      });
+    };
+    tryFetch(0);
+  }, [col, walletRef]);
 
   React.useEffect(function() {
     if (!col || !col.items || col.items.length === 0) return;
@@ -828,10 +1180,10 @@ function DetallePage(props) {
                 ) : null,
                 React.createElement('div', { className:'w-full aspect-square mb-1 rounded-lg overflow-hidden bg-bitmap-black' },
                   blockNum ? React.createElement('img', {
-                    src: '/api/v1/block-image/' + blockNum + '?v=3&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
+                    src: '/api/v1/block-image/' + blockNum + '?v=5&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
                     alt:'',
                     className:'w-full h-full object-cover',
-                    onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=3&size=150'; }
+                    onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
                   }) : null
                 ),
                 React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
@@ -865,10 +1217,10 @@ function DetallePage(props) {
             ) : null,
             React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black' },
               blockNum ? React.createElement('img', {
-                src: '/api/v1/block-image/' + blockNum + '?v=3&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
+                src: '/api/v1/block-image/' + blockNum + '?v=5&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
                 alt:'',
                 className:'w-full h-full object-cover',
-                onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=3&size=150'; }
+                onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
               }) : null
             ),
             React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
@@ -895,7 +1247,14 @@ function DetallePage(props) {
       ) :
 
       React.createElement('div', { className:'grid grid-cols-2 sm:grid-cols-4 gap-3' },
-        (col ? col.items : []).map(function(item, idx) {
+        (col ? col.items : []).slice().sort(function(a, b) {
+          if (collectionName !== 'Parcelas') return 0;
+          var ca = parcelConfirmations[a.id];
+          var cb = parcelConfirmations[b.id];
+          var aOk = ca && ca[0] && ca[0].confirmed && ca[1] && ca[1].confirmed ? 1 : 0;
+          var bOk = cb && cb[0] && cb[0].confirmed && cb[1] && cb[1].confirmed ? 1 : 0;
+          return bOk - aOk;
+        }).map(function(item, idx) {
           var blockNum = extractBlockNumber(item.name);
           var blockData = blockDataMap[blockNum] || {};
           var etiquetas = blockData.etiquetas || '';
@@ -904,25 +1263,94 @@ function DetallePage(props) {
           var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
           var isPunk = etiquetas.toLowerCase().indexOf('punk') !== -1;
           var tags = etiquetas.split('|').filter(function(t) { return t.trim() !== ''; });
-          return React.createElement('div', { key:idx, className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3' },
-            tags.length > 0 ? React.createElement('div', { className:'w-full mb-1 px-0.5' },
-              React.createElement(UniversalTagList, { etiquetas:etiquetas, fontSize:9 })
-            ) : null,
-            React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black' },
-              blockNum ? React.createElement('img', {
-                src: '/api/v1/block-image/' + blockNum + '?v=3&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk,
-                alt:'',
-                className:'w-full h-full object-cover',
-                onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=3&size=150'; }
-              }) : null
-            ),
-            React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
-              item.name || '#' + item.inscriptionNumber
-            ),
-            React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' },
-              item.inscriptionNumber ? '#' + item.inscriptionNumber : ''
-            )
-          );
+          var confs = parcelConfirmations[item.id] || null;
+          var tx1 = confs ? confs[0] : null;
+          var tx2 = confs ? confs[1] : null;
+          var inscriptionIdShort = item.id ? item.id.slice(0, 16) + '...' : '';
+          var isParcelItem = item.isParcel || collectionName === 'Parcelas';
+            var imgSrc = isParcelItem
+              ? '/api/v1/parcel-image'
+              : '/api/v1/block-image/' + blockNum + '?v=5&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk;
+            return React.createElement('div', { key:idx, className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3 flex flex-col items-center' },
+              tags.length > 0 ? React.createElement('div', { className:'w-full mb-1 px-0.5' },
+                React.createElement(UniversalTagList, { etiquetas:etiquetas, fontSize:9 })
+              ) : null,
+              isParcelItem ? React.createElement('div', { className:'w-full text-center mb-2 text-[9px] leading-tight' },
+                tx1 ? React.createElement('div', null,
+                  React.createElement('div', { className:'flex items-center justify-center gap-1 text-green-400 mb-0.5' },
+                    React.createElement('svg', { width:12, height:12, viewBox:'0 0 24 24', fill:'none', stroke:'#00AA00', strokeWidth:2.5 },
+                      React.createElement('path', { d:'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
+                      React.createElement('polyline', { points:'22 4 12 14.01 9 11.01' })
+                    ),
+                    React.createElement('span', { className:'font-mono text-white' }, 'wallet inscribe: '),
+                    React.createElement('span', { className:'font-mono' }, (tx1.inscriberWallet ? tx1.inscriberWallet.slice(-4) : '----'))
+                  ),
+                  React.createElement('div', { className:'font-mono text-gray-300' }, 'bloque: ' + (tx1.genesisHeight || '---')),
+                  tx1.txid ? React.createElement('a', {
+                    className:'font-mono text-blue-400 underline cursor-pointer',
+                    style:{ color:'#3b82f6' },
+                    title: tx1.txid,
+                    onClick: function(e) { e.stopPropagation(); window.open('https://unisat.io/explorer/tx/' + tx1.txid, '_blank'); }
+                  }, tx1.txid.slice(0, 16) + '...') : null
+                ) : null,
+                tx2 && tx2.confirmed ? (function() {
+                  var last4 = function(addr) { return addr ? addr.slice(-4) : '----'; };
+                  var from4 = tx2.selfTransferFrom ? last4(tx2.selfTransferFrom.split(',')[0].trim()) : '----';
+                  var to4 = tx2.selfTransferTo ? last4(tx2.selfTransferTo.split(',')[0].trim()) : '----';
+                  return React.createElement('div', { className:'mt-1' },
+                    React.createElement('div', { className:'flex items-center justify-center gap-1 text-green-400 mb-0.5' },
+                      React.createElement('svg', { width:12, height:12, viewBox:'0 0 24 24', fill:'none', stroke:'#00AA00', strokeWidth:2.5 },
+                        React.createElement('path', { d:'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
+                        React.createElement('polyline', { points:'22 4 12 14.01 9 11.01' })
+                      ),
+                      React.createElement('span', { className:'font-mono text-white' }, 'de '),
+                      React.createElement('span', { className:'font-mono' }, from4),
+                      React.createElement('span', { className:'font-mono text-white' }, ' a '),
+                      React.createElement('span', { className:'font-mono' }, to4)
+                    ),
+                    React.createElement('div', { className:'font-mono text-gray-300' }, 'bloque: ' + (tx2.selfTransferHeight !== undefined ? tx2.selfTransferHeight : '---')),
+                    tx2.txid ? React.createElement('a', {
+                      className:'font-mono text-blue-400 underline cursor-pointer',
+                      style:{ color:'#3b82f6' },
+                      title: tx2.txid,
+                      onClick: function(e) { e.stopPropagation(); window.open('https://unisat.io/explorer/tx/' + tx2.txid, '_blank'); }
+                    }, tx2.txid.slice(0, 16) + '...') : null
+                  );
+                })() : (tx2 ? React.createElement('div', { className:'mt-1 text-gray-500' },
+                  React.createElement('div', { className:'flex items-center justify-center gap-1 mb-0.5' },
+                    React.createElement('svg', { width:12, height:12, viewBox:'0 0 24 24', fill:'none', stroke:'#666', strokeWidth:2.5 },
+                      React.createElement('path', { d:'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
+                      React.createElement('polyline', { points:'22 4 12 14.01 9 11.01' })
+                    ),
+                    React.createElement('span', { className:'font-mono' }, 'de --- a ---')
+                  ),
+                  React.createElement('div', { className:'font-mono' }, 'bloque: ---')
+                ) : null)
+              ) : null,
+              React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black' },
+                blockNum ? React.createElement('img', {
+                  src: imgSrc,
+                  alt:'',
+                  className:'w-full h-full object-cover',
+                  onError: function(e) { e.target.src = isParcelItem ? '/api/v1/parcel-image' : '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
+                }) : null
+              ),
+              React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate text-center w-full' },
+                item.name || '#' + item.inscriptionNumber
+              ),
+              React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted text-center' },
+                item.inscriptionNumber ? '#' + item.inscriptionNumber : ''
+              ),
+              isParcelItem && inscriptionIdShort ? React.createElement('div', {
+                className:'font-mono text-[8px] text-gray-400 truncate text-center w-full cursor-pointer select-all mt-1',
+                style:{ userSelect: 'all' },
+                title: item.id,
+                onClick: function(e) {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(item.id);
+                }
+              }, inscriptionIdShort) : null
+            );
         })
       ),
 

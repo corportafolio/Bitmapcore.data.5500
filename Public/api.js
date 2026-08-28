@@ -57,6 +57,16 @@ var AssetApi = {
     if (since) q += '&since=' + since;
     return fetch(q)
       .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  getParcelConfirmations: function(parcelId, walletAddress) {
+    var q = '/api/v1/assets/parcels/' + encodeURIComponent(parcelId) + '/confirmations?address=' + encodeURIComponent(walletAddress) + '&t=' + Date.now();
+    return fetch(q)
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  getBulkParcelConfirmations: function(parcelIds, walletAddress) {
+    var q = '/api/v1/assets/parcels/confirmations?address=' + encodeURIComponent(walletAddress) + '&parcels=' + encodeURIComponent(parcelIds.join(',')) + '&t=' + Date.now();
+    return fetch(q)
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   }
 };
 
@@ -108,5 +118,63 @@ var MarketplaceApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ listingIds: listingIds, signedPsbtHexs: signedPsbtHexs, sellerOrdinalPublicKey: sellerOrdinalPublicKey })
     }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+};
+
+var ParcelMarketApi = {
+  getParcels: function() { return ApiClient.get('/api/v1/parcels?limit=100', false); },
+  getStats: function() { return ApiClient.get('/api/v1/parcels/stats', false); },
+  getOwnerListings: function(address) {
+    return ParcelMarketApi.getParcels().then(function(res) {
+      var items = (res && res.data && res.data.items) || [];
+      return items.filter(function(l) { return l.sellerAddress === address && l.isActive; });
+    });
+  },
+  updateListingPrice: function(id, newPrice, walletAddress, clientUtxo, clientValue) {
+    return fetch('/api/v1/parcels/' + id + '/price-psbt?newPrice=' + newPrice + '&clientUtxo=' + encodeURIComponent(clientUtxo) + '&clientValue=' + clientValue, {
+      method: 'GET',
+      headers: { 'wallet-address': walletAddress }
+    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  signPriceUpdate: function(id, signedPsbt, sellerOrdinalPublicKey, newPrice) {
+    return fetch('/api/v1/parcels/' + id + '/price-sign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signedPsbt: signedPsbt, sellerOrdinalPublicKey: sellerOrdinalPublicKey, newPrice: newPrice })
+    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  delistListing: function(id, walletAddress) {
+    return fetch('/api/v1/parcels/' + id, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'wallet-address': walletAddress }
+    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  batchList: function(items) {
+    return fetch('/api/v1/parcels/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: items })
+    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  batchSign: function(listingIds, signedPsbtHexs, sellerOrdinalPublicKey) {
+    return fetch('/api/v1/parcels/batch/sign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ listingIds: listingIds, signedPsbtHexs: signedPsbtHexs, sellerOrdinalPublicKey: sellerOrdinalPublicKey })
+    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  parcelBatchBuy: function(payload) {
+    return fetch('/api/v1/transaction/parcel-batch-buy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.json(); });
+  },
+  parcelBatchBroadcast: function(payload) {
+    return fetch('/api/v1/transaction/parcel-batch-broadcast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.text(); });
   }
 };
