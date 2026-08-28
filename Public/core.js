@@ -85,7 +85,7 @@
       React.createElement(Route, { path:'/unisat', element:wrapper(UnisatPage) }),
       React.createElement(Route, { path:'/satflow', element:wrapper(SatflowPage) }),
       React.createElement(Route, { path:'/local', element:wrapper(LocalPage) }),
-      React.createElement(Route, { path:'/mercado-parcelas', element:wrapper(ParcelsMarketPage) }),
+      React.createElement(Route, { path:'/mercado-parcelas', element:typeof ParcelsMarketPage !== 'undefined' ? wrapper(ParcelsMarketPage) : wrapper(LocalPage) }),
       React.createElement(Route, { path:'/discounts', element:wrapper(DescuentosPage) }),
       React.createElement(Route, { path:'/unified', element:wrapper(UnifiedPage) }),
       React.createElement(Route, { path:'/tag-tables/:tagName', element:wrapper(TagTableScreen) }),
