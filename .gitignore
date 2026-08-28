@@ -9,3 +9,4 @@ PLAN-PANTALLA-PRINCIPAL-WEB.md
 data/
 __pycache__/
 *.pyc
+node_modules/
