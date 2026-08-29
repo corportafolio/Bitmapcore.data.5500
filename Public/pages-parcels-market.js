@@ -192,6 +192,38 @@ function ParcelsMarketPage(props) {
   var _confirmAction = React.useState(null);
   var confirmAction = _confirmAction[0];
   var setConfirmAction = _confirmAction[1];
+  var _signRetry = React.useState(null);
+  var signRetryDialog = _signRetry[0];
+  var setSignRetryDialog = _signRetry[1];
+  var signDialogRef = React.useRef(null);
+
+  var askSignRetry = function(psbtIndex) {
+    return new Promise(function(resolve) {
+      signDialogRef.current = resolve;
+      setSignRetryDialog({ psbtIndex: psbtIndex });
+    });
+  };
+
+  var resolveSignDialog = function(decision) {
+    if (signDialogRef.current) {
+      signDialogRef.current(decision);
+      signDialogRef.current = null;
+    }
+    setSignRetryDialog(null);
+  };
+
+  var signOnePsbt = async function(psbtHex) {
+    if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
+      return await StoreApp._xverseSignPsbt(psbtHex, wallet.address, [0]);
+    }
+    if (window.unisat && window.unisat.signPsbt) {
+      return await window.unisat.signPsbt(psbtHex, {
+        autoFinalized: false,
+        toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
+      });
+    }
+    throw new Error('Wallet no disponible para firmar');
+  };
 
   var fetchStats = function() {
     ParcelMarketApi.getStats()
@@ -513,64 +545,77 @@ function ParcelsMarketPage(props) {
       if (createJson.success && createJson.data) {
         var psbtToSigns = createJson.data.psbtToSigns || [];
         var psbtHexArray = psbtToSigns.map(function(p) { return p.unsignedPsbtHex; });
+        var signedPairs = [];
+        var skipList = {};
+        var signFlowAborted = false;
+        var fullyActivated = false;
 
-        var signingDone = false;
-        var failedSignIndex = -1;
-
-        if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
-          try {
-            setListingStatus({ toast: 'Firmando en Xverse...' });
-            signedPsbtHexs = [];
-            for (var xi = 0; xi < psbtToSigns.length; xi++) {
-              setListingStatus({ toast: 'Firmando listing ' + (xi + 1) + ' de ' + psbtToSigns.length + ' en Xverse...' });
-              try {
-                var singleSigned = await StoreApp._xverseSignPsbt(psbtToSigns[xi].unsignedPsbtHex, wallet.address, [0]);
-                signedPsbtHexs.push(singleSigned);
-              } catch(xe) {
-                failedSignIndex = xi;
-                break;
-              }
-            }
-            if (failedSignIndex === -1) signingDone = true;
-          } catch(xe) {
-            setListingStatus({ toast: 'Xverse: firma cancelada o fallida' });
-          }
-        } else if (window.unisat && window.unisat.signPsbt) {
-          try {
-            setListingStatus({ toast: 'Firmando en Unisat...' });
-            signedPsbtHexs = [];
-            for (var ui = 0; ui < psbtHexArray.length; ui++) {
-              setListingStatus({ toast: 'Firmando listing ' + (ui + 1) + ' de ' + psbtHexArray.length + ' en Unisat...' });
-              try {
-                var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
-                  autoFinalized: false,
-                  toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
-                });
-                signedPsbtHexs.push(singleSigned);
-              } catch(ue) {
-                failedSignIndex = ui;
-                break;
-              }
-            }
-            if (failedSignIndex === -1) signingDone = true;
-          } catch(ue) {
-            setListingStatus({ toast: 'Unisat: firma cancelada o fallida' });
-          }
-        } else {
+        if (psbtToSigns.length === 0) {
+          setListingStatus({ toast: 'Error: el servidor no devolvio PSBTs para firmar' });
+        } else if (!((wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) || (window.unisat && window.unisat.signPsbt))) {
           setListingStatus({ toast: 'Wallet no disponible para firmar' });
+        } else {
+          try {
+            var idx = 0;
+            while (idx < psbtToSigns.length) {
+              if (skipList[idx]) { idx++; continue; }
+              var attempts = 0;
+              var signedHex = null;
+              while (attempts < 3 && !signedHex) {
+                attempts++;
+                setListingStatus({ toast: 'Firmando listing ' + (idx + 1) + ' de ' + psbtToSigns.length + (attempts > 1 ? ' (reintento ' + attempts + '/3)...' : '...') });
+                try {
+                  signedHex = await signOnePsbt(psbtHexArray[idx]);
+                } catch(se) {
+                  if (attempts < 3) {
+                    setListingStatus({ toast: 'Firma #' + (idx + 1) + ' no se completo - reintentando (' + (attempts + 1) + '/3)...' });
+                  }
+                }
+              }
+              if (signedHex) {
+                signedPairs.push({ listingId: psbtToSigns[idx].listingId, hex: signedHex });
+                idx++;
+                continue;
+              }
+              var decision = await askSignRetry(idx);
+              if (decision === 'retry') {
+                continue;
+              } else if (decision === 'continue') {
+                skipList[idx] = true;
+                idx++;
+              } else {
+                signFlowAborted = true;
+                break;
+              }
+            }
+          } catch(se2) {
+            setListingStatus({ toast: 'Error de firma: ' + (se2.message || se2) });
+          }
         }
 
-        if (signingDone && signedPsbtHexs && signedPsbtHexs.length === psbtToSigns.length) {
-          var listingIds = createJson.data.listingIds || [];
-          if (listingIds.length > 0) {
+        if (signedPairs.length > 0) {
+          var allSigned = signedPairs.length === psbtToSigns.length;
+          fullyActivated = allSigned;
+          var activeIds = allSigned ? (createJson.data.listingIds || []) : signedPairs.map(function(p) { return p.listingId; });
+          var activeHexs = signedPairs.map(function(p) { return p.hex; });
+          try {
             setListingStatus({ toast: 'Activando listings...' });
-            await ParcelMarketApi.batchSign(listingIds, signedPsbtHexs, pubKey);
+            await ParcelMarketApi.batchSign(activeIds, activeHexs, pubKey);
             listingActivated = true;
+            setSuccessItems(allSigned ? selected : selected.filter(function(item, sIdx) { return !skipList[sIdx]; }));
+            setShowSuccessMenu(true);
+            if (!allSigned) {
+              setSuccessToast({ message: 'Se activaron ' + signedPairs.length + ' de ' + psbtToSigns.length + ' parcelas. Las pendientes quedaron listables para reintentar.', type: 'success' });
+              setTimeout(function() { setSuccessToast(null); }, 20000);
+            }
+          } catch(signErr) {
+            setSuccessToast({ message: 'Error al activar listings: ' + (signErr.message || signErr), type: 'error' });
+            setTimeout(function() { setSuccessToast(null); }, 20000);
           }
-          setSuccessItems(selected);
-          setShowSuccessMenu(true);
+        } else if (signFlowAborted) {
+          setListingStatus({ toast: 'Firma cancelada. Se firmaron 0 de ' + psbtToSigns.length + '. Los listings NO fueron activados.' });
         } else {
-          setListingStatus({ toast: 'Firma #' + (failedSignIndex + 1) + ' cancelada o fallida. Se firmaron ' + (signedPsbtHexs ? signedPsbtHexs.length : 0) + ' de ' + psbtToSigns.length + '. Los listings NO fueron activados.' });
+          setListingStatus({ toast: 'Firma cancelada o fallida. Los listings permanecen inactivos.' });
         }
       } else {
         setListingStatus({ toast: 'Error al crear listings' });
@@ -580,7 +625,7 @@ function ParcelsMarketPage(props) {
     } finally {
       await fetchListings();
       loadMyListings();
-      if (listingActivated) {
+      if (listingActivated && fullyActivated) {
         setSuccessToast({ message: selected.length + ' parcelas listadas correctamente', type: 'success' });
         setTimeout(function() { setSuccessToast(null); }, 20000);
       }
@@ -1803,6 +1848,27 @@ function ParcelsMarketPage(props) {
             onClick: handleConfirmDelist,
             className: 'flex-1 py-2 bg-bitmap-red text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-red/80 transition-colors'
           }, 'Deslistar')
+        )
+      )
+    ) : null,
+
+    signRetryDialog ? React.createElement('div', { className: 'fixed inset-0 z-[60] flex items-center justify-center bg-black/50' },
+      React.createElement('div', { className: 'bg-bitmap-surface border border-bitmap-border rounded-xl p-6 max-w-sm w-full mx-4' },
+        React.createElement('h3', { className: 'font-alfaslab text-lg text-white mb-2' }, 'Firma #' + (signRetryDialog.psbtIndex + 1) + ' no se completo'),
+        React.createElement('p', { className: 'font-acme text-xs text-bitmap-muted mb-4' }, 'Se intento 3 veces. Asegurate de que la ventana de la wallet este abierta.'),
+        React.createElement('div', { className: 'flex flex-col gap-2' },
+          React.createElement('button', {
+            onClick: function() { resolveSignDialog('retry'); },
+            className: 'w-full py-2 bg-bitmap-orange text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-orange/80 transition-colors'
+          }, 'Reintentar'),
+          React.createElement('button', {
+            onClick: function() { resolveSignDialog('continue'); },
+            className: 'w-full py-2 bg-bitmap-surface border border-bitmap-border text-white font-alfaslab text-sm rounded-lg hover:border-bitmap-orange transition-colors'
+          }, 'Continuar con las restantes'),
+          React.createElement('button', {
+            onClick: function() { resolveSignDialog('cancel'); },
+            className: 'w-full py-2 text-bitmap-red font-alfaslab text-sm rounded-lg hover:bg-bitmap-red/10 transition-colors'
+          }, 'Cancelar')
         )
       )
     ) : null,
