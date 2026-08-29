@@ -91,3 +91,14 @@ var BitmapConstants = {
     { path: '/search', name: 'search' }
   ]
 };
+
+function getParcelTag(name, etiquetas) {
+  if (!name || !etiquetas) return null;
+  var m = String(name).match(/^(\d+)\.(\d+)\.bitmap$/i);
+  if (!m) return null;
+  var txNum = parseInt(m[1], 10);
+  var re = new RegExp('tx\\s+(millonaria|multimillonaria)\\s+\\(tx#' + txNum + '\\)\\s+([0-9.]+)\\s+BTC', 'i');
+  var mm = String(etiquetas).match(re);
+  if (!mm) return null;
+  return { label: mm[1].toLowerCase() + ' ' + mm[2] + ' BTC', tag: mm[1].toLowerCase() };
+}

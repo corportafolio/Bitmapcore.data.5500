@@ -289,6 +289,37 @@ function MisActivosPage(props) {
       }
       setBitmapBlockData(map);
     });
+    var parcelCol = null;
+    for (var pci = 0; pci < data.collections.length; pci++) {
+      if (data.collections[pci].name === 'Parcelas') { parcelCol = data.collections[pci]; break; }
+    }
+    if (parcelCol && parcelCol.items) {
+      var parcelBlocks = [];
+      for (var pj = 0; pj < parcelCol.items.length; pj++) {
+        var pnum = extractBlockNumber(parcelCol.items[pj].name);
+        if (pnum && parcelBlocks.indexOf(pnum) === -1) parcelBlocks.push(pnum);
+      }
+      var parcelFetches = parcelBlocks.map(function(num) {
+        return fetch('/api/v1/blocks/' + num)
+          .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+          .then(function(res) {
+            if (res && res.success && res.data) return { key:num, data:res.data };
+            return null;
+          }).catch(function() { return null; });
+      });
+      Promise.all(parcelFetches).then(function(results) {
+        var map = {};
+        for (var pk = 0; pk < results.length; pk++) {
+          if (results[pk]) map[results[pk].key] = results[pk].data;
+        }
+        setBitmapBlockData(function(prev) {
+          var updated = {};
+          for (var kk in prev) updated[kk] = prev[kk];
+          for (var kk2 in map) updated[kk2] = map[kk2];
+          return updated;
+        });
+      });
+    }
     var normalizeTagKey = function(t) {
       return String(t || '').toLowerCase().replace(/(\d+) txs?$/i, '$1 txs').trim();
     };
@@ -571,6 +602,14 @@ function MisActivosPage(props) {
                           onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=5&size=80'; }
                         }) : (blockNum ? React.createElement(MondrianCanvas, { blockNumber:blockNum, transactions:[], size:iconSize }) : null))
                   ),
+                  isParcel ? (function() {
+                    var pbn = extractBlockNumber(item.name);
+                    var pbd = pbn !== null ? (bitmapBlockData[pbn] || {}) : {};
+                    var pt = pbn !== null ? getParcelTag(item.name, pbd.etiquetas || '') : null;
+                    return pt ? React.createElement('div', { className:'mt-0.5 flex justify-center' },
+                      React.createElement(UniversalTag, { text: pt.label, fontSize: 7 })
+                    ) : null;
+                  })() : null,
                   isParcel ? React.createElement('div', { className:'font-acme text-xs text-white truncate text-center w-full', style:{ maxWidth: '80px' } },
                     item.name ? item.name : '#' + displayNum
                   ) : null,
@@ -775,6 +814,8 @@ function DetallePage(props) {
     if (!name) return null;
     var m = name.match(/^(\d+)\.bitmap$/);
     if (m) return parseInt(m[1], 10);
+    var m2 = name.match(/^\d+\.(\d+)\.bitmap$/);
+    if (m2) return parseInt(m2[1], 10);
     return null;
   };
 
@@ -1335,6 +1376,12 @@ function DetallePage(props) {
                   onError: function(e) { e.target.src = isParcelItem ? '/api/v1/parcel-image?v=2' : '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
                 }) : null
               ),
+              isParcelItem ? (function() {
+                var pt = getParcelTag(item.name, etiquetas);
+                return pt ? React.createElement('div', { className:'flex justify-center mb-1' },
+                  React.createElement(UniversalTag, { text: pt.label, fontSize: 7 })
+                ) : null;
+              })() : null,
               React.createElement('div', { className:'font-mono text-[11px] text-white truncate text-center w-full' },
                 item.name || '#' + item.inscriptionNumber
               ),

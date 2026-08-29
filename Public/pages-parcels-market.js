@@ -177,6 +177,9 @@ function ParcelsMarketPage(props) {
   var _pcs = React.useState({});
   var parcelConfs = _pcs[0];
   var setParcelConfs = _pcs[1];
+  var _bt = React.useState({});
+  var blockTags = _bt[0];
+  var setBlockTags = _bt[1];
   var _myListings = React.useState({});
   var myListings = _myListings[0];
   var setMyListings = _myListings[1];
@@ -305,6 +308,32 @@ function ParcelsMarketPage(props) {
     }).catch(function() {});
   };
 
+  var loadBlockTags = function(listingsArr) {
+    if (!listingsArr || listingsArr.length === 0) return;
+    var blocks = [];
+    listingsArr.forEach(function(l) {
+      var m = (l.name || '').match(/^(\d+)\.(\d+)\.bitmap$/i);
+      if (m) {
+        var b = parseInt(m[2], 10);
+        if (blocks.indexOf(b) === -1) blocks.push(b);
+      }
+    });
+    if (blocks.length === 0) return;
+    var fetches = blocks.map(function(b) {
+      return fetch('/api/v1/blocks/' + b)
+        .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function(res) { if (res && res.success && res.data) return { key: b, data: res.data }; return null; })
+        .catch(function() { return null; });
+    });
+    Promise.all(fetches).then(function(results) {
+      var map = {};
+      for (var k = 0; k < results.length; k++) {
+        if (results[k]) map[results[k].key] = results[k].data.etiquetas || '';
+      }
+      setBlockTags(map);
+    });
+  };
+
   var loadMyListings = function() {
     var w = StoreApp.get('wallet');
     if (!w || !w.address) return;
@@ -323,6 +352,7 @@ function ParcelsMarketPage(props) {
 
   React.useEffect(function() {
     loadListingsConfs(listings);
+    loadBlockTags(listings);
   }, [listings]);
 
   React.useEffect(function() {
@@ -1587,8 +1617,16 @@ function ParcelsMarketPage(props) {
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white flex-shrink-0' }, BitmapUtils.timeAgo(item.listedAt))
                           ),
-                          React.createElement('div', { className: 'mt-0.5' },
-                            React.createElement(ParcelConfBubble, { confs: confs })
+                          React.createElement('div', { className: 'mt-0.5 flex items-center gap-2' },
+                            React.createElement(ParcelConfBubble, { confs: confs }),
+                            (function() {
+                              var m = (item.name || '').match(/^(\d+)\.(\d+)\.bitmap$/i);
+                              if (!m) return null;
+                              var etq = blockTags[parseInt(m[2], 10)];
+                              if (!etq) return null;
+                              var pt = getParcelTag(item.name, etq);
+                              return pt ? React.createElement(UniversalTag, { text: pt.label, fontSize: 8 }) : null;
+                            })()
                           )
                         ),
                         React.createElement('div', { className: 'flex flex-col items-end gap-0.5 flex-shrink-0' },
