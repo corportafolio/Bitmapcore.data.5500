@@ -213,13 +213,17 @@ function ParcelsMarketPage(props) {
   };
 
   var signOnePsbt = async function(psbtHex) {
-    if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
-      return await StoreApp._xverseSignPsbt(psbtHex, wallet.address, [0]);
+    var w = StoreApp.get('wallet');
+    if (!w || !w.address) {
+      throw new Error('Wallet no disponible para firmar');
+    }
+    if (w.walletType === 'xverse' && StoreApp._getXverseProvider()) {
+      return await StoreApp._xverseSignPsbt(psbtHex, w.address, [0]);
     }
     if (window.unisat && window.unisat.signPsbt) {
       return await window.unisat.signPsbt(psbtHex, {
         autoFinalized: false,
-        toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
+        toSignInputs: [{ index: 0, address: w.address, sighashTypes: [0x83], useTweakedSigner: true }]
       });
     }
     throw new Error('Wallet no disponible para firmar');
