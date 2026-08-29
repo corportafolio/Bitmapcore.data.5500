@@ -1582,7 +1582,7 @@ function ParcelsMarketPage(props) {
                         ),
                         React.createElement('div', { className: 'flex-1 min-w-0' },
                           React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold truncate' },
+                            React.createElement('span', { className: 'font-mono text-sm text-bitmap-muted truncate' },
                               item.name || '#' + item.inscriptionNumber
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white flex-shrink-0' }, BitmapUtils.timeAgo(item.listedAt))
@@ -1666,7 +1666,7 @@ function ParcelsMarketPage(props) {
                         alt: ''
                       }),
                       React.createElement('div', { className: 'px-2 py-1' },
-                        React.createElement('div', { className: 'font-alfaslab text-[10px] text-white truncate' },
+                        React.createElement('div', { className: 'font-mono text-[10px] text-bitmap-muted truncate' },
                           item.name || '#' + item.inscriptionNumber
                         )
                       )
