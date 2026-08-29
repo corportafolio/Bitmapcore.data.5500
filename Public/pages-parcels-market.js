@@ -183,6 +183,9 @@ function ParcelsMarketPage(props) {
   var _bt = React.useState({});
   var blockTags = _bt[0];
   var setBlockTags = _bt[1];
+  var _eb = React.useState([]);
+  var epicBlocks = _eb[0];
+  var setEpicBlocks = _eb[1];
   var _myListings = React.useState({});
   var myListings = _myListings[0];
   var setMyListings = _myListings[1];
@@ -331,10 +334,23 @@ function ParcelsMarketPage(props) {
     Promise.all(fetches).then(function(results) {
       var map = {};
       for (var k = 0; k < results.length; k++) {
-        if (results[k]) map[results[k].key] = results[k].data.etiquetas || '';
+        if (results[k]) map[results[k].key] = results[k].data;
       }
       setBlockTags(map);
     });
+  };
+
+  var loadEpicBlocks = function() {
+    fetch('/api/v1/tags/epic').then(function(r) { return r.json(); }).then(function(res) {
+      if (res && res.data && Array.isArray(res.data)) {
+        var blocks = [];
+        res.data.forEach(function(b) {
+          var n = parseInt(b.bloque, 10);
+          if (n > 0 && blocks.indexOf(n) === -1) blocks.push(n);
+        });
+        setEpicBlocks(blocks);
+      }
+    }).catch(function() {});
   };
 
   var loadMyListings = function() {
@@ -349,6 +365,7 @@ function ParcelsMarketPage(props) {
 
   React.useEffect(function() {
     fetchListings();
+    loadEpicBlocks();
     var interval = setInterval(fetchListings, 60000);
     return function() { clearInterval(interval); };
   }, []);
@@ -1598,7 +1615,7 @@ function ParcelsMarketPage(props) {
             React.createElement('div', { className: 'px-3 py-1.5 border-b border-bitmap-border' },
               React.createElement('span', { className: 'font-alfaslab text-xs text-white font-bold' }, 'Etiquetas de Parcelas')
             ),
-            React.createElement('div', { className: 'px-3 py-2 space-y-3' },
+              React.createElement('div', { className: 'px-3 py-2 space-y-3' },
               React.createElement('div', null,
                 React.createElement('div', { className: 'mb-1' },
                   React.createElement(UniversalTag, { text: 'millonaria', fontSize: 9 })
@@ -1613,6 +1630,22 @@ function ParcelsMarketPage(props) {
                 ),
                 React.createElement('p', { className: 'font-acme text-[10px] text-bitmap-text leading-relaxed' },
                   'Parcelas cuya transaccion tiene salidas de 100,000 BTC o mas'
+                )
+              ),
+              React.createElement('div', null,
+                React.createElement('div', { className: 'mb-1' },
+                  React.createElement(UniversalTag, { text: 'epic', fontSize: 9 })
+                ),
+                React.createElement('p', { className: 'font-acme text-[10px] text-bitmap-text leading-relaxed' },
+                  'Todas las parcelas de los bloques de halving (multiplos de 210,000: 210000, 420000, 630000, 840000), sin excepcion'
+                )
+              ),
+              React.createElement('div', null,
+                React.createElement('div', { className: 'mb-1' },
+                  React.createElement(UniversalTag, { text: 'mythic', fontSize: 9 })
+                ),
+                React.createElement('p', { className: 'font-acme text-[10px] text-bitmap-text leading-relaxed' },
+                  'La transaccion #1 de un bloque epic (o la tx del minero si el bloque no tiene tx #1). Solo existen 4 parcelas mythic'
                 )
               ),
               React.createElement('div', { className: 'border-t border-bitmap-border pt-2' },
@@ -1670,10 +1703,14 @@ function ParcelsMarketPage(props) {
                             (function() {
                               var m = (item.name || '').match(/^(\d+)\.(\d+)\.bitmap$/i);
                               if (!m) return null;
-                              var etq = blockTags[parseInt(m[2], 10)];
-                              if (!etq) return null;
-                              var pt = getParcelTag(item.name, etq);
-                              return pt ? React.createElement(UniversalTag, { text: pt.label, fontSize: 8 }) : null;
+                              var bd = blockTags[parseInt(m[2], 10)];
+                              if (!bd) return null;
+                              var pts = getParcelTags(item.name, bd, epicBlocks);
+                              return pts.length > 0 ? React.createElement('div', { className: 'flex items-center gap-1 flex-wrap' },
+                                pts.map(function(t, ti) {
+                                  return React.createElement(UniversalTag, { key: ti, text: t, fontSize: 8 });
+                                })
+                              ) : null;
                             })()
                           )
                         ),

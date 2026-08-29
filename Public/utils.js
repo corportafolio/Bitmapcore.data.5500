@@ -102,3 +102,22 @@ function getParcelTag(name, etiquetas) {
   if (!mm) return null;
   return { label: mm[1].toLowerCase() + ' ' + mm[2] + ' BTC', tag: mm[1].toLowerCase() };
 }
+
+function getParcelTags(name, blockData, epicBlocks) {
+  var tags = [];
+  if (!name) return tags;
+  var m = String(name).match(/^(\d+)\.(\d+)\.bitmap$/i);
+  if (!m) return tags;
+  var txNum = parseInt(m[1], 10);
+  var block = parseInt(m[2], 10);
+  var etiquetas = (blockData && blockData.etiquetas) || '';
+  var totalTxs = parseInt((blockData && (blockData.totalTransacciones || blockData.txCount)) || 0, 10);
+  var mt = getParcelTag(name, etiquetas);
+  if (mt) tags.push(mt.label);
+  if (epicBlocks && epicBlocks.indexOf(block) !== -1) {
+    tags.push('epic');
+    var mythicTx = txNum === 1 || (totalTxs <= 1 && txNum === 0);
+    if (mythicTx) tags.push('mythic');
+  }
+  return tags;
+}

@@ -169,6 +169,22 @@ function MisActivosPage(props) {
   var _f = React.useState({});
   var bitmapBlockData = _f[0];
   var setBitmapBlockData = _f[1];
+  var _eb = React.useState([]);
+  var epicBlocks = _eb[0];
+  var setEpicBlocks = _eb[1];
+
+  React.useEffect(function() {
+    fetch('/api/v1/tags/epic').then(function(r) { return r.json(); }).then(function(res) {
+      if (res && res.data && Array.isArray(res.data)) {
+        var blocks = [];
+        res.data.forEach(function(b) {
+          var n = parseInt(b.bloque, 10);
+          if (n > 0 && blocks.indexOf(n) === -1) blocks.push(n);
+        });
+        setEpicBlocks(blocks);
+      }
+    }).catch(function() {});
+  }, []);
   var _g = React.useState({});
   var bitmapTagPrices = _g[0];
   var setBitmapTagPrices = _g[1];
@@ -605,9 +621,11 @@ function MisActivosPage(props) {
                   isParcel ? (function() {
                     var pbn = extractBlockNumber(item.name);
                     var pbd = pbn !== null ? (bitmapBlockData[pbn] || {}) : {};
-                    var pt = pbn !== null ? getParcelTag(item.name, pbd.etiquetas || '') : null;
-                    return pt ? React.createElement('div', { className:'mt-0.5 flex justify-center' },
-                      React.createElement(UniversalTag, { text: pt.label, fontSize: 7 })
+                    var pts = pbn !== null ? getParcelTags(item.name, pbd, epicBlocks) : [];
+                    return pts.length > 0 ? React.createElement('div', { className:'mt-0.5 flex justify-center gap-1 flex-wrap' },
+                      pts.map(function(t, ti) {
+                        return React.createElement(UniversalTag, { key: ti, text: t, fontSize: 7 });
+                      })
                     ) : null;
                   })() : null,
                   isParcel ? React.createElement('div', { className:'font-acme text-xs text-white truncate text-center w-full', style:{ maxWidth: '80px' } },
@@ -714,6 +732,22 @@ function DetallePage(props) {
   var _g = React.useState({});
   var blockDataMap = _g[0];
   var setBlockDataMap = _g[1];
+  var _eb = React.useState([]);
+  var epicBlocks = _eb[0];
+  var setEpicBlocks = _eb[1];
+
+  React.useEffect(function() {
+    fetch('/api/v1/tags/epic').then(function(r) { return r.json(); }).then(function(res) {
+      if (res && res.data && Array.isArray(res.data)) {
+        var blocks = [];
+        res.data.forEach(function(b) {
+          var n = parseInt(b.bloque, 10);
+          if (n > 0 && blocks.indexOf(n) === -1) blocks.push(n);
+        });
+        setEpicBlocks(blocks);
+      }
+    }).catch(function() {});
+  }, []);
   var _h = React.useState({});
   var myListings = _h[0];
   var setMyListings = _h[1];
@@ -1377,9 +1411,11 @@ function DetallePage(props) {
                 }) : null
               ),
               isParcelItem ? (function() {
-                var pt = getParcelTag(item.name, etiquetas);
-                return pt ? React.createElement('div', { className:'flex justify-center mb-1' },
-                  React.createElement(UniversalTag, { text: pt.label, fontSize: 7 })
+                var pts = getParcelTags(item.name, blockDataMap[blockNum] || {}, epicBlocks);
+                return pts.length > 0 ? React.createElement('div', { className:'flex justify-center gap-1 flex-wrap mb-1' },
+                  pts.map(function(t, ti) {
+                    return React.createElement(UniversalTag, { key: ti, text: t, fontSize: 7 });
+                  })
                 ) : null;
               })() : null,
               React.createElement('div', { className:'font-mono text-[11px] text-white truncate text-center w-full' },
