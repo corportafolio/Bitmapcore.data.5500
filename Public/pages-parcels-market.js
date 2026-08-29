@@ -93,6 +93,9 @@ function ParcelsMarketPage(props) {
   var _e = React.useState(false);
   var showSortMenu = _e[0];
   var setShowSortMenu = _e[1];
+  var _ptagInfo = React.useState(false);
+  var showParcelTagInfo = _ptagInfo[0];
+  var setShowParcelTagInfo = _ptagInfo[1];
   var _f = React.useState(false);
   var showListDropdown = _f[0];
   var setShowListDropdown = _f[1];
@@ -1097,6 +1100,13 @@ function ParcelsMarketPage(props) {
     return function() { window.removeEventListener('click', close); };
   }, [showSortMenu, showListDropdown, showBuyMenu]);
 
+  React.useEffect(function() {
+    if (!showParcelTagInfo) return;
+    var close = function() { setShowParcelTagInfo(false); };
+    window.addEventListener('click', close);
+    return function() { window.removeEventListener('click', close); };
+  }, [showParcelTagInfo]);
+
   var walletNow = StoreApp.get('wallet');
 
   return React.createElement('div', { className: 'flex flex-col h-full' },
@@ -1573,6 +1583,44 @@ function ParcelsMarketPage(props) {
                   (currentSort === btn.key ? 'bg-bitmap-orange text-black font-bold' : 'text-bitmap-text hover:bg-bitmap-surface')
               }, btn.label);
             })
+          ) : null
+        ),
+        React.createElement('div', { className: 'relative' },
+          React.createElement('button', {
+            onClick: function(e) { e.stopPropagation(); setShowParcelTagInfo(!showParcelTagInfo); },
+            className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors',
+            title: 'Etiquetas de parcelas'
+          }, '\u24D8'),
+          showParcelTagInfo ? React.createElement('div', {
+            className: 'absolute right-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2',
+            onClick: function(e) { e.stopPropagation(); }
+          },
+            React.createElement('div', { className: 'px-3 py-1.5 border-b border-bitmap-border' },
+              React.createElement('span', { className: 'font-alfaslab text-xs text-white font-bold' }, 'Etiquetas de Parcelas')
+            ),
+            React.createElement('div', { className: 'px-3 py-2 space-y-3' },
+              React.createElement('div', null,
+                React.createElement('div', { className: 'mb-1' },
+                  React.createElement(UniversalTag, { text: 'millonaria', fontSize: 9 })
+                ),
+                React.createElement('p', { className: 'font-acme text-[10px] text-bitmap-text leading-relaxed' },
+                  'Parcelas cuya transaccion tiene salidas de 10,000 BTC a 99,999 BTC'
+                )
+              ),
+              React.createElement('div', null,
+                React.createElement('div', { className: 'mb-1' },
+                  React.createElement(UniversalTag, { text: 'multimillonaria', fontSize: 9 })
+                ),
+                React.createElement('p', { className: 'font-acme text-[10px] text-bitmap-text leading-relaxed' },
+                  'Parcelas cuya transaccion tiene salidas de 100,000 BTC o mas'
+                )
+              ),
+              React.createElement('div', { className: 'border-t border-bitmap-border pt-2' },
+                React.createElement('p', { className: 'font-acme text-[9px] text-bitmap-muted' },
+                  'Se agregaran mas etiquetas proximamente'
+                )
+              )
+            )
           ) : null
         )
       )
