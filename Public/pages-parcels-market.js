@@ -52,26 +52,26 @@ function ParcelConfBubble(props) {
       checkIcon,
       React.createElement('span', { className:'font-mono text-white' }, 'wallet inscribe: '),
       React.createElement('span', { className:'font-mono' }, parcelLast4(tx1.inscriberWallet)),
+      React.createElement('span', { className:'font-mono text-gray-300' }, 'bloque: ' + (tx1.genesisHeight || '---')),
       txLink(tx1.txid)
     ) : null,
-    tx1 ? React.createElement('div', { className:'font-mono text-gray-300' }, 'bloque: ' + (tx1.genesisHeight || '---')) : null,
     tx2 && tx2.confirmed ? React.createElement('div', { className:'mt-0.5 flex items-center gap-1 text-green-400' },
       checkIcon,
       React.createElement('span', { className:'font-mono text-white' }, 'de '),
       React.createElement('span', { className:'font-mono' }, parcelLast4(tx2.selfTransferFrom ? tx2.selfTransferFrom.split(',')[0].trim() : null)),
       React.createElement('span', { className:'font-mono text-white' }, ' a '),
       React.createElement('span', { className:'font-mono' }, parcelLast4(tx2.selfTransferTo ? tx2.selfTransferTo.split(',')[0].trim() : null)),
+      React.createElement('span', { className:'font-mono text-gray-300' }, 'bloque: ' + (tx2.selfTransferHeight !== undefined ? tx2.selfTransferHeight : '---')),
       txLink(tx2.txid)
     ) : null,
-    tx2 && tx2.confirmed ? React.createElement('div', { className:'font-mono text-gray-300' }, 'bloque: ' + (tx2.selfTransferHeight !== undefined ? tx2.selfTransferHeight : '---')) : null,
     tx2 && !tx2.confirmed ? React.createElement('div', { className:'mt-0.5 flex items-center gap-1 text-gray-500' },
       React.createElement('svg', { width:10, height:10, viewBox:'0 0 24 24', fill:'none', stroke:'#666', strokeWidth:3 },
         React.createElement('path', { d:'M22 11.08V12a10 10 0 1 1-5.93-9.14' }),
         React.createElement('polyline', { points:'22 4 12 14.01 9 11.01' })
       ),
-      React.createElement('span', { className:'font-mono' }, 'de --- a ---')
-    ) : null,
-    tx2 && !tx2.confirmed ? React.createElement('div', { className:'font-mono text-gray-500' }, 'bloque: ---') : null
+      React.createElement('span', { className:'font-mono' }, 'de --- a ---'),
+      React.createElement('span', { className:'font-mono' }, 'bloque: ---')
+    ) : null
   );
 }
 
@@ -1587,47 +1587,47 @@ function ParcelsMarketPage(props) {
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white flex-shrink-0' }, BitmapUtils.timeAgo(item.listedAt))
                           ),
-                          React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted truncate' }, addr),
                           React.createElement('div', { className: 'mt-0.5' },
                             React.createElement(ParcelConfBubble, { confs: confs })
                           )
                         ),
-                        React.createElement('div', { className: 'flex flex-col items-end gap-1 flex-shrink-0' },
+                        React.createElement('div', { className: 'flex flex-col items-end gap-0.5 flex-shrink-0' },
                           React.createElement('span', { className: 'font-acme text-sm font-semibold', style: { color: '#666666' } },
                             btcPriceStr + ' BTC'
                           ),
-                          isOwn ? React.createElement('div', { className: 'relative' },
-                            React.createElement('button', {
-                              onClick: function(e) { e.stopPropagation(); setEditMenuFor(menuOpen ? null : listingId); },
-                              className: 'p-1 rounded hover:bg-bitmap-border transition-colors'
-                            }, React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, className: 'text-bitmap-muted' },
-                              React.createElement('path', { d: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' }),
-                              React.createElement('path', { d: 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' })
-                            )),
-                            menuOpen ? React.createElement('div', {
-                              onClick: function(e) { e.stopPropagation(); },
-                              className: 'absolute right-0 top-full mt-1 w-44 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
-                            },
-                              React.createElement('button', {
-                                onClick: function() { handleEditPrice(item); },
-                                className: 'w-full px-3 py-2 text-left font-acme text-xs text-bitmap-text hover:bg-bitmap-surface transition-colors'
-                              }, '\u270F Actualizar precio'),
-                              React.createElement('button', {
-                                onClick: function() { handleDelist(item); },
-                                className: 'w-full px-3 py-2 text-left font-acme text-xs text-bitmap-red hover:bg-bitmap-surface transition-colors'
-                              }, '\u2716 Deslistar')
-                            ) : null
-                          ) : React.createElement('div', {
-                            onClick: function() { toggleBuySelection(item.inscriptionId || item.id); },
-                            className: 'w-5 h-5 flex-shrink-0 cursor-pointer rounded flex items-center justify-center',
-                            style: { backgroundColor: isSelected ? '#00AA00' : '#444', border: '1px solid #666' }
+                          React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted truncate', style: { maxWidth: '130px' } }, addr)
+                        ),
+                        isOwn ? React.createElement('div', { className: 'relative flex-shrink-0' },
+                          React.createElement('button', {
+                            onClick: function(e) { e.stopPropagation(); setEditMenuFor(menuOpen ? null : listingId); },
+                            className: 'p-1 rounded hover:bg-bitmap-border transition-colors'
+                          }, React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, className: 'text-bitmap-muted' },
+                            React.createElement('path', { d: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' }),
+                            React.createElement('path', { d: 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' })
+                          )),
+                          menuOpen ? React.createElement('div', {
+                            onClick: function(e) { e.stopPropagation(); },
+                            className: 'absolute right-0 top-full mt-1 w-44 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
                           },
-                            isSelected
-                              ? React.createElement('svg', { width: 12, height: 12, viewBox: '0 0 12 12', fill: 'none' },
-                                  React.createElement('path', { d: 'M2 6l3 3 5-5', stroke: '#000', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
-                                )
-                              : null
-                          )
+                            React.createElement('button', {
+                              onClick: function() { handleEditPrice(item); },
+                              className: 'w-full px-3 py-2 text-left font-acme text-xs text-bitmap-text hover:bg-bitmap-surface transition-colors'
+                            }, '\u270F Actualizar precio'),
+                            React.createElement('button', {
+                              onClick: function() { handleDelist(item); },
+                              className: 'w-full px-3 py-2 text-left font-acme text-xs text-bitmap-red hover:bg-bitmap-surface transition-colors'
+                            }, '\u2716 Deslistar')
+                          ) : null
+                        ) : React.createElement('div', {
+                          onClick: function() { toggleBuySelection(item.inscriptionId || item.id); },
+                          className: 'w-5 h-5 flex-shrink-0 cursor-pointer rounded flex items-center justify-center',
+                          style: { backgroundColor: isSelected ? '#00AA00' : '#444', border: '1px solid #666' }
+                        },
+                          isSelected
+                            ? React.createElement('svg', { width: 12, height: 12, viewBox: '0 0 12 12', fill: 'none' },
+                                React.createElement('path', { d: 'M2 6l3 3 5-5', stroke: '#000', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
+                              )
+                            : null
                         )
                       )
                     );
