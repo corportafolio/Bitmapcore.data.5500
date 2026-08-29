@@ -154,14 +154,30 @@ var ParcelMarketApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: items })
-    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    }).then(function(r) {
+      return r.json().then(function(j) {
+        if (!r.ok) {
+          var msg = j && j.error && (j.error.message || j.error) ? j.error.message : ('HTTP ' + r.status);
+          throw new Error(typeof msg === 'string' ? msg : 'HTTP ' + r.status);
+        }
+        return j;
+      });
+    });
   },
   batchSign: function(listingIds, signedPsbtHexs, sellerOrdinalPublicKey) {
     return fetch('/api/v1/parcels/batch/sign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ listingIds: listingIds, signedPsbtHexs: signedPsbtHexs, sellerOrdinalPublicKey: sellerOrdinalPublicKey })
-    }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    }).then(function(r) {
+      return r.json().then(function(j) {
+        if (!r.ok) {
+          var msg = j && j.error && (j.error.message || j.error) ? j.error.message : ('HTTP ' + r.status);
+          throw new Error(typeof msg === 'string' ? msg : 'HTTP ' + r.status);
+        }
+        return j;
+      });
+    });
   },
   parcelBatchBuy: function(payload) {
     return fetch('/api/v1/transaction/parcel-batch-buy', {

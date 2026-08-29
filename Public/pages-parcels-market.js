@@ -351,20 +351,31 @@ function ParcelsMarketPage(props) {
             return;
           }
 
-          AssetApi.getBulkParcelConfirmations(allIds, wallet.address).then(function(res2) {
-            if (res2 && res2.success && res2.data) {
-              items = items.map(function(it) {
-                var c = res2.data[it.id];
-                var confs = (c && c.confirmations) ? c.confirmations : null;
-                if (confs && typeof ParcelConfirmationCache !== 'undefined') ParcelConfirmationCache.save(it.id, confs);
-                return Object.assign({}, it, { confs: confs, eligible: isParcelEligible(confs) });
-              });
-            }
-            setListItems(items);
+          var cacheLoads = items.map(function(it) {
+            if (typeof ParcelConfirmationCache === 'undefined') return Promise.resolve(null);
+            return ParcelConfirmationCache.load(it.id);
+          });
+
+          Promise.all(cacheLoads).then(function(cachedConfs) {
+            var withCached = items.map(function(it, idx) {
+              var confs = cachedConfs[idx] || null;
+              return Object.assign({}, it, { confs: confs, eligible: isParcelEligible(confs) });
+            });
+            setListItems(withCached);
             setIsLoadingDropdown(false);
-          }).catch(function() {
-            setListItems(items);
-            setIsLoadingDropdown(false);
+
+            AssetApi.getBulkParcelConfirmations(allIds, wallet.address).then(function(res2) {
+              if (res2 && res2.success && res2.data) {
+                setListItems(function(prev) {
+                  return prev.map(function(p) {
+                    var c = res2.data[p.id];
+                    var confs = (c && c.confirmations) ? c.confirmations : null;
+                    if (confs && typeof ParcelConfirmationCache !== 'undefined') ParcelConfirmationCache.save(p.id, confs);
+                    return Object.assign({}, p, { confs: confs, eligible: isParcelEligible(confs) });
+                  });
+                });
+              }
+            }).catch(function() {});
           });
         } else {
           setListItems([]);
@@ -503,15 +514,24 @@ function ParcelsMarketPage(props) {
         var psbtToSigns = createJson.data.psbtToSigns || [];
         var psbtHexArray = psbtToSigns.map(function(p) { return p.unsignedPsbtHex; });
 
+        var signingDone = false;
+        var failedSignIndex = -1;
+
         if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
           try {
             setListingStatus({ toast: 'Firmando en Xverse...' });
             signedPsbtHexs = [];
             for (var xi = 0; xi < psbtToSigns.length; xi++) {
               setListingStatus({ toast: 'Firmando listing ' + (xi + 1) + ' de ' + psbtToSigns.length + ' en Xverse...' });
-              var singleSigned = await StoreApp._xverseSignPsbt(psbtToSigns[xi].unsignedPsbtHex, wallet.address, [0]);
-              signedPsbtHexs.push(singleSigned);
+              try {
+                var singleSigned = await StoreApp._xverseSignPsbt(psbtToSigns[xi].unsignedPsbtHex, wallet.address, [0]);
+                signedPsbtHexs.push(singleSigned);
+              } catch(xe) {
+                failedSignIndex = xi;
+                break;
+              }
             }
+            if (failedSignIndex === -1) signingDone = true;
           } catch(xe) {
             setListingStatus({ toast: 'Xverse: firma cancelada o fallida' });
           }
@@ -521,12 +541,18 @@ function ParcelsMarketPage(props) {
             signedPsbtHexs = [];
             for (var ui = 0; ui < psbtHexArray.length; ui++) {
               setListingStatus({ toast: 'Firmando listing ' + (ui + 1) + ' de ' + psbtHexArray.length + ' en Unisat...' });
-              var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
-                autoFinalized: false,
-                toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
-              });
-              signedPsbtHexs.push(singleSigned);
+              try {
+                var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
+                  autoFinalized: false,
+                  toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
+                });
+                signedPsbtHexs.push(singleSigned);
+              } catch(ue) {
+                failedSignIndex = ui;
+                break;
+              }
             }
+            if (failedSignIndex === -1) signingDone = true;
           } catch(ue) {
             setListingStatus({ toast: 'Unisat: firma cancelada o fallida' });
           }
@@ -534,7 +560,7 @@ function ParcelsMarketPage(props) {
           setListingStatus({ toast: 'Wallet no disponible para firmar' });
         }
 
-        if (signedPsbtHexs && signedPsbtHexs.length > 0) {
+        if (signingDone && signedPsbtHexs && signedPsbtHexs.length === psbtToSigns.length) {
           var listingIds = createJson.data.listingIds || [];
           if (listingIds.length > 0) {
             setListingStatus({ toast: 'Activando listings...' });
@@ -544,7 +570,7 @@ function ParcelsMarketPage(props) {
           setSuccessItems(selected);
           setShowSuccessMenu(true);
         } else {
-          setListingStatus({ toast: 'Firma cancelada. Los listings permanecen inactivos.' });
+          setListingStatus({ toast: 'Firma #' + (failedSignIndex + 1) + ' cancelada o fallida. Se firmaron ' + (signedPsbtHexs ? signedPsbtHexs.length : 0) + ' de ' + psbtToSigns.length + '. Los listings NO fueron activados.' });
         }
       } else {
         setListingStatus({ toast: 'Error al crear listings' });
@@ -556,9 +582,6 @@ function ParcelsMarketPage(props) {
       loadMyListings();
       if (listingActivated) {
         setSuccessToast({ message: selected.length + ' parcelas listadas correctamente', type: 'success' });
-        setTimeout(function() { setSuccessToast(null); }, 20000);
-      } else if (signedPsbtHexs) {
-        setSuccessToast({ message: 'No se pudo completar el listado', type: 'error' });
         setTimeout(function() { setSuccessToast(null); }, 20000);
       }
     }
@@ -1347,7 +1370,7 @@ function ParcelsMarketPage(props) {
             React.createElement('div', { className: 'font-acme text-sm text-bitmap-muted mb-2' }, 'No hay wallet conectada'),
             React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted' }, 'Conecte una wallet para listar sus parcelas.')
           ) :
-          listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay parcelas disponibles') :
+          listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No se detectaron parcelas') :
           React.createElement(React.Fragment, null,
             React.createElement('div', { className: 'px-3 pb-2 border-b border-bitmap-border/50 flex items-center gap-2' },
               React.createElement('input', {
