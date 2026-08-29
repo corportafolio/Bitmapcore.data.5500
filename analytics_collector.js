@@ -434,10 +434,12 @@ app.get('/timeseries', authMiddleware, (req, res) => {
 app.get('/heatmap', authMiddleware, (req, res) => {
   try {
     const { start, end } = parseRange(req.query.range);
+    const tzOffset = parseInt(req.query.tz) || 0;
+    const sign = tzOffset >= 0 ? '+' : '';
     const rows = db.prepare(`
       SELECT
-        CAST(strftime('%w', started_at/1000, 'unixepoch', 'localtime') AS INTEGER) as dow,
-        CAST(strftime('%H', started_at/1000, 'unixepoch', 'localtime') AS INTEGER) as hour,
+        CAST(strftime('%w', started_at/1000, 'unixepoch', 'localtime', '${sign}${tzOffset} hours') AS INTEGER) as dow,
+        CAST(strftime('%H', started_at/1000, 'unixepoch', 'localtime', '${sign}${tzOffset} hours') AS INTEGER) as hour,
         COUNT(*) as sessions
       FROM sessions
       WHERE started_at BETWEEN ? AND ?

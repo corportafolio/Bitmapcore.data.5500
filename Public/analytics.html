@@ -515,7 +515,7 @@
         api('/dashboard?range='+RANGE+'&count='+countMode),
         api('/realtime'),
         api('/wallet-stats'),
-        api('/heatmap?range='+RANGE)
+        api('/heatmap?range='+RANGE+'&tz='+(-new Date().getTimezoneOffset()/60))
       ]).then(function(results){
         var data = results[0];
         var realtime = results[1];
