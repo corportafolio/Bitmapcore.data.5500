@@ -1467,7 +1467,7 @@ function ParcelsMarketPage(props) {
                     className: 'bitmap-check'
                   }),
                   React.createElement('img', {
-                    src: '/api/v1/parcel-image',
+                    src: '/api/v1/parcel-image?v=2',
                     className: 'w-[30px] h-[30px] rounded object-cover flex-shrink-0',
                     onError: function(e) { e.target.style.display = 'none'; }
                   }),
@@ -1560,7 +1560,7 @@ function ParcelsMarketPage(props) {
                   filtered.map(function(item, i) {
                     var btcPriceStr = BitmapUtils.formatBtcSat(item.listedPrice || item.price || 0);
                     var addr = BitmapUtils.truncateAddress(item.sellerAddress || item.ownerAddress || '', 6);
-                    var confs = parcelConfs[item.inscriptionId || item.id] || null;
+                    var confs = item.confirmations || parcelConfs[item.inscriptionId || item.id] || null;
                     var isSelected = selectedBuyItems.indexOf(item.inscriptionId || item.id) !== -1;
                     var isOwn = walletNow && walletNow.address && (item.sellerAddress === walletNow.address);
                     var listingId = item.id || '';
@@ -1572,7 +1572,7 @@ function ParcelsMarketPage(props) {
                       React.createElement('div', { className: 'flex items-center gap-3' },
                         React.createElement('div', { className: 'flex-shrink-0', style: { width: 55, height: 55 } },
                           React.createElement('img', {
-                            src: '/api/v1/parcel-image',
+                            src: '/api/v1/parcel-image?v=2',
                             width: 55,
                             height: 55,
                             loading: 'lazy',
@@ -1659,7 +1659,7 @@ function ParcelsMarketPage(props) {
                         )
                       ),
                       React.createElement('img', {
-                        src: '/api/v1/parcel-image',
+                        src: '/api/v1/parcel-image?v=2',
                         width: '100%',
                         loading: 'lazy',
                         style: { imageRendering: 'pixelated', background: '#1a1a1a', display: 'block' },

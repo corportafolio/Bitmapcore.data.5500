@@ -2210,23 +2210,15 @@ app.get('/api/v1/parcel-image', (req, res) => {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, size, size);
 
-    const cols = 2, rows = 2;
     const border = Math.max(Math.round(size * 0.02), 2);
-    const street = Math.max(Math.round(size * 0.015), 1);
-    const cell = (size - border * 2 - street * (cols - 1)) / cols;
+    const cell = size - border * 2;
 
     ctx.fillStyle = '#FFA500';
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const x = border + c * (cell + street);
-        const y = border + r * (cell + street);
-        ctx.fillRect(x, y, cell, cell);
-      }
-    }
+    ctx.fillRect(border, border, cell, cell);
 
     const png = canvas.toBuffer('image/png');
     res.set('Content-Type', 'image/png');
-    res.set('Cache-Control', 'public, max-age=86400');
+    res.set('Cache-Control', 'public, max-age=3600');
     res.send(png);
   } catch(err) {
     res.status(500).send('Internal error');

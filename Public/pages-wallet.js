@@ -563,7 +563,7 @@ function MisActivosPage(props) {
                   ) : null,
                   React.createElement('div', { className:bubbleSize + ' rounded overflow-hidden bg-bitmap-black flex-shrink-0' },
                     isParcel
-                      ? React.createElement('img', { src:'/api/v1/parcel-image', alt:'', className:'w-full h-full object-cover' })
+                      ? React.createElement('img', { src:'/api/v1/parcel-image?v=2', alt:'', className:'w-full h-full object-cover' })
                       : (isBitmap && blockNum ? React.createElement('img', {
                           src: bImgUrl,
                           alt:'',
@@ -1269,7 +1269,7 @@ function DetallePage(props) {
           var inscriptionIdShort = item.id ? item.id.slice(0, 16) + '...' : '';
           var isParcelItem = item.isParcel || collectionName === 'Parcelas';
             var imgSrc = isParcelItem
-              ? '/api/v1/parcel-image'
+              ? '/api/v1/parcel-image?v=2'
               : '/api/v1/block-image/' + blockNum + '?v=5&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk;
             return React.createElement('div', { key:idx, className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3 flex flex-col items-center' },
               tags.length > 0 ? React.createElement('div', { className:'w-full mb-1 px-0.5' },
@@ -1332,7 +1332,7 @@ function DetallePage(props) {
                   src: imgSrc,
                   alt:'',
                   className:'w-full h-full object-cover',
-                  onError: function(e) { e.target.src = isParcelItem ? '/api/v1/parcel-image' : '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
+                  onError: function(e) { e.target.src = isParcelItem ? '/api/v1/parcel-image?v=2' : '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
                 }) : null
               ),
               React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate text-center w-full' },
