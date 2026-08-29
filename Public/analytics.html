@@ -119,6 +119,7 @@
     }
 
     var countriesChartType = 'doughnut';
+    var countMode = 'all';
 
     function render(){
       var html = '';
@@ -404,9 +405,14 @@
       var browserRows = (data.browsers||[]).map(function(b){ return [b.browser||'unknown', fmt(b.c)]; });
       var utmRows = (data.utmSources||[]).map(function(u){ return [u.utm_source, fmt(u.c)]; });
       var countryRows = (data.countries||[]).map(function(c){ return [flagEmoji(c.country)+' '+c.country, fmt(c.c)]; });
-      var html = '<div class="grid-3">';
-      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Dispositivos</h3>' + dataTable(['Dispositivo','Sesiones'], deviceRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techDevicesChart"></canvas></div></div>';
-      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Navegadores</h3>' + dataTable(['Navegador','Sesiones'], browserRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techBrowsersChart"></canvas></div></div>';
+      var countLabel = countMode === 'unique' ? 'Navegadores unicos' : 'Sesiones';
+      var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 style="color:#fff;margin:0;font-size:16px">Tecnologia</h3><div style="display:flex;gap:4px">';
+      html += '<button class="range-btn'+(countMode==='all'?' active':'')+'" onclick="setCountMode(\'all\')" style="font-size:11px;padding:4px 10px">Todos</button>';
+      html += '<button class="range-btn'+(countMode==='unique'?' active':'')+'" onclick="setCountMode(\'unique\')" style="font-size:11px;padding:4px 10px">Unicos</button>';
+      html += '</div></div>';
+      html += '<div class="grid-3">';
+      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Dispositivos</h3>' + dataTable(['Dispositivo', countLabel], deviceRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techDevicesChart"></canvas></div></div>';
+      html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Navegadores</h3>' + dataTable(['Navegador', countLabel], browserRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techBrowsersChart"></canvas></div></div>';
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Fuentes UTM</h3>' + dataTable(['Fuente UTM','Sesiones'], utmRows) + '</div>';
       html += '</div>';
 
@@ -419,11 +425,57 @@
       html += '<div class="card" style="margin-bottom:16px;min-height:250px"><canvas id="countriesChart" style="max-height:300px"></canvas></div>';
       html += countryRows.length ? dataTable(['Pais','Sesiones'], countryRows) : '<p style="color:#666">Sin datos de paises aun.</p>';
       html += '</div>';
+
+      // Heatmap
+      var heatmap = data.heatmap || [];
+      if(heatmap.length > 0){
+        var dayNames = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab'];
+        var maxSessions = 0;
+        var heatMap = {};
+        heatmap.forEach(function(h){
+          if(h.sessions > maxSessions) maxSessions = h.sessions;
+          heatMap[h.dow+'_'+h.hour] = h.sessions;
+        });
+        html += '<div style="margin-top:20px"><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Conexiones por hora</h3>';
+        html += '<div class="card" style="overflow-x:auto;padding:16px">';
+        html += '<div style="display:grid;grid-template-columns:40px repeat(24,1fr);gap:2px;min-width:600px">';
+        html += '<div></div>';
+        for(var h = 0; h < 24; h++){
+          html += '<div style="text-align:center;color:#666;font-size:10px">'+h+'</div>';
+        }
+        for(var d = 0; d < 7; d++){
+          html += '<div style="color:#B0B0B0;font-size:11px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px">'+dayNames[d]+'</div>';
+          for(var h2 = 0; h2 < 24; h2++){
+            var val = heatMap[d+'_'+h2] || 0;
+            var intensity = maxSessions > 0 ? val / maxSessions : 0;
+            var r = Math.round(254 * intensity);
+            var g = Math.round(62 * intensity);
+            var b = Math.round(0 * intensity);
+            var bg = intensity > 0 ? 'rgb('+r+','+g+','+b+')' : '#1a1a1a';
+            html += '<div style="aspect-ratio:1;border-radius:3px;background:'+bg+';cursor:pointer" title="'+dayNames[d]+' '+h2+':00 — '+val+' sesiones"></div>';
+          }
+        }
+        html += '</div>';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;justify-content:flex-end"><span style="color:#666;font-size:11px">Menos</span>';
+        for(var i = 0; i <= 4; i++){
+          var t = i / 4;
+          var ri = Math.round(254 * t);
+          var gi = Math.round(62 * t);
+          html += '<div style="width:14px;height:14px;border-radius:3px;background:rgb('+ri+','+gi+',0)"></div>';
+        }
+        html += '<span style="color:#666;font-size:11px">Mas</span></div>';
+        html += '</div></div>';
+      }
       return html;
     }
 
     window.setCountriesChartType = function(type){
       countriesChartType = type;
+      loadDashboard();
+    };
+
+    window.setCountMode = function(mode){
+      countMode = mode;
       loadDashboard();
     };
 
@@ -460,13 +512,15 @@
       document.getElementById('tabContent').innerHTML = '<div class="loading">Cargando datos...</div>';
 
       Promise.all([
-        api('/dashboard?range='+RANGE),
+        api('/dashboard?range='+RANGE+'&count='+countMode),
         api('/realtime'),
-        api('/wallet-stats')
+        api('/wallet-stats'),
+        api('/heatmap?range='+RANGE)
       ]).then(function(results){
         var data = results[0];
         var realtime = results[1];
         data.walletStats = results[2];
+        data.heatmap = results[3].heatmap || [];
 
         var liveInfo = document.getElementById('liveInfo');
         if(liveInfo) liveInfo.textContent = 'Online: '+realtime.activeSessions+' visitas | '+realtime.sessionsLast1h+' en 1h | '+realtime.sessionsLast24h+' en 24h';

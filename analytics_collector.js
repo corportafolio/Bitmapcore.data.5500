@@ -298,6 +298,8 @@ app.get('/dashboard', authMiddleware, (req, res) => {
     const { start, end } = parseRange(req.query.range);
     const prevStart = start - (end - start);
     const prevEnd = start;
+    const countMode = req.query.count || 'all';
+    const countExpr = countMode === 'unique' ? 'COUNT(DISTINCT session_id)' : 'COUNT(*)';
 
     const sessions = db.prepare('SELECT COUNT(DISTINCT session_id) as c FROM events WHERE created_at BETWEEN ? AND ?').get(start, end).c;
     const prevSessions = db.prepare('SELECT COUNT(DISTINCT session_id) as c FROM events WHERE created_at BETWEEN ? AND ?').get(prevStart, prevEnd).c;
@@ -341,9 +343,9 @@ app.get('/dashboard', authMiddleware, (req, res) => {
 
     const eventTypes = db.prepare('SELECT event_type, COUNT(*) as c FROM events WHERE created_at BETWEEN ? AND ? GROUP BY event_type ORDER BY c DESC').all(start, end);
 
-    const devices = db.prepare('SELECT device_type, COUNT(*) as c FROM events WHERE created_at BETWEEN ? AND ? GROUP BY device_type ORDER BY c DESC').all(start, end);
+    const devices = db.prepare(`SELECT device_type, ${countExpr} as c FROM events WHERE created_at BETWEEN ? AND ? GROUP BY device_type ORDER BY c DESC`).all(start, end);
 
-    const browsers = db.prepare('SELECT browser, COUNT(*) as c FROM events WHERE created_at BETWEEN ? AND ? GROUP BY browser ORDER BY c DESC').all(start, end);
+    const browsers = db.prepare(`SELECT browser, ${countExpr} as c FROM events WHERE created_at BETWEEN ? AND ? GROUP BY browser ORDER BY c DESC`).all(start, end);
 
     const utmSources = db.prepare(`SELECT utm_source, COUNT(*) as c FROM events WHERE utm_source IS NOT NULL AND utm_source != '' AND created_at BETWEEN ? AND ? GROUP BY utm_source ORDER BY c DESC LIMIT 10`).all(start, end);
 
@@ -424,6 +426,25 @@ app.get('/timeseries', authMiddleware, (req, res) => {
     res.json({ metric, interval, series });
   } catch (err) {
     console.error('Timeseries error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/heatmap', authMiddleware, (req, res) => {
+  try {
+    const { start, end } = parseRange(req.query.range);
+    const rows = db.prepare(`
+      SELECT
+        CAST(strftime('%w', started_at/1000, 'unixepoch', 'localtime') AS INTEGER) as dow,
+        CAST(strftime('%H', started_at/1000, 'unixepoch', 'localtime') AS INTEGER) as hour,
+        COUNT(*) as sessions
+      FROM sessions
+      WHERE started_at BETWEEN ? AND ?
+      GROUP BY dow, hour
+    `).all(start, end);
+    res.json({ heatmap: rows });
+  } catch (err) {
+    console.error('Heatmap error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
