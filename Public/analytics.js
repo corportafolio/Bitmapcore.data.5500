@@ -6,8 +6,8 @@
   var FLUSH_INTERVAL = 10000;
   var MAX_BATCH = 10;
 
-  var sessionId = getOrCreate('bc_sid', function(){ return genId(); });
-  var userId = getOrCreate('bc_uid', function(){ return genId(); });
+  var sessionId = genId(); // nueva sesion en cada carga del documento = visita real
+  var userId = getOrCreate('bc_uid', function(){ return genId(); }); // identidad unica del navegador (persistente)
   var visitId = genId(); // nueva visita en cada carga del documento
   var queue = [];
   var scrollDepth = 0;

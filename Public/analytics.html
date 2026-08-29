@@ -332,11 +332,13 @@
       var deviceRows = (data.devices||[]).map(function(d){ return [d.device_type||'unknown', fmt(d.c)]; });
       var browserRows = (data.browsers||[]).map(function(b){ return [b.browser||'unknown', fmt(b.c)]; });
       var utmRows = (data.utmSources||[]).map(function(u){ return [u.utm_source, fmt(u.c)]; });
+      var countryRows = (data.countries||[]).map(function(c){ return [c.country, fmt(c.c)]; });
       var html = '<div class="grid-3">';
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Dispositivos</h3>' + dataTable(['Dispositivo','Sesiones'], deviceRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techDevicesChart"></canvas></div></div>';
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Navegadores</h3>' + dataTable(['Navegador','Sesiones'], browserRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techBrowsersChart"></canvas></div></div>';
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Fuentes UTM</h3>' + dataTable(['Fuente UTM','Sesiones'], utmRows) + '</div>';
       html += '</div>';
+      html += '<div style="margin-top:16px"><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Paises</h3>' + (countryRows.length ? dataTable(['Pais','Sesiones'], countryRows) : '<p style="color:#666">Sin datos de paises aun.</p>') + '</div>';
       return html;
     }
 

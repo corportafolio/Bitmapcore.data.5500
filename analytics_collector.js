@@ -108,6 +108,11 @@ if (!eventCols.includes('visit_id')) {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_events_visit ON events(visit_id)`);
 }
 
+// Migracion: agregar columna country a events si no existe (header CF-IPCountry de Cloudflare)
+if (!eventCols.includes('country')) {
+  db.exec(`ALTER TABLE events ADD COLUMN country TEXT`);
+}
+
 const RATE_LIMIT = new Map();
 const RATE_WINDOW = 60000;
 const RATE_MAX = 100;
@@ -148,10 +153,11 @@ function parseUserAgent(ua) {
 }
 
 const stmts = {
-  insertEvent: db.prepare(`INSERT INTO events (session_id, user_id, event_type, event_data, page_url, referrer, utm_source, utm_medium, utm_campaign, user_agent, ip_hash, device_type, browser, viewport_w, viewport_h, created_at, visit_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+  insertEvent: db.prepare(`INSERT INTO events (session_id, user_id, event_type, event_data, page_url, referrer, utm_source, utm_medium, utm_campaign, user_agent, ip_hash, device_type, browser, viewport_w, viewport_h, created_at, visit_id, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
   insertPageView: db.prepare(`INSERT INTO page_views (session_id, user_id, page_url, page_title, referrer, load_time_ms, scroll_depth, time_on_page_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`),
-  upsertSession: db.prepare(`INSERT INTO sessions (session_id, user_id, first_page, referrer, utm_source, utm_medium, utm_campaign, user_agent, ip_hash, device_type, browser, started_at, last_seen_at, page_count, event_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0) ON CONFLICT(session_id) DO UPDATE SET last_seen_at = excluded.last_seen_at, page_count = page_count + 1, event_count = event_count + 1`),
+  upsertSession: db.prepare(`INSERT INTO sessions (session_id, user_id, first_page, referrer, utm_source, utm_medium, utm_campaign, user_agent, ip_hash, device_type, browser, country, started_at, last_seen_at, page_count, event_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0) ON CONFLICT(session_id) DO UPDATE SET last_seen_at = excluded.last_seen_at, page_count = page_count + 1, event_count = event_count + 1, country = COALESCE(excluded.country, sessions.country)`),
   updateSessionLastSeen: db.prepare(`UPDATE sessions SET last_seen_at = ? WHERE session_id = ?`),
+  updateSessionCountry: db.prepare(`UPDATE sessions SET country = COALESCE(?, country) WHERE session_id = ?`),
 };
 
 function parseUrl(url) {
@@ -174,17 +180,18 @@ app.post('/event', (req, res) => {
 
   const now = Date.now();
   const ipHash = hashIp(ip);
+  const country = req.headers['cf-ipcountry'] || null;
   const { device, browser } = parseUserAgent(user_agent || req.headers['user-agent']);
   const utms = parseUrl(page_url || '');
 
   const transaction = db.transaction(() => {
-    stmts.insertEvent.run(session_id, user_id || null, event_type, event_data ? JSON.stringify(event_data) : null, page_url || null, referrer || null, utms.utm_source || null, utms.utm_medium || null, utms.utm_campaign || null, user_agent || null, ipHash, device, browser, viewport_w || null, viewport_h || null, now, visit_id || null);
+    stmts.insertEvent.run(session_id, user_id || null, event_type, event_data ? JSON.stringify(event_data) : null, page_url || null, referrer || null, utms.utm_source || null, utms.utm_medium || null, utms.utm_campaign || null, user_agent || null, ipHash, device, browser, viewport_w || null, viewport_h || null, now, visit_id || null, country);
 
     if (event_type === 'page_view' && page_url) {
       stmts.insertPageView.run(session_id, user_id || null, page_url || null, event_data?.title || null, referrer || null, load_time_ms || null, scroll_depth || 0, time_on_page_ms || 0, now);
     }
 
-    stmts.upsertSession.run(session_id, user_id || null, page_url || null, referrer || null, utms.utm_source || null, utms.utm_medium || null, utms.utm_campaign || null, user_agent || null, ipHash, device, browser, now, now);
+    stmts.upsertSession.run(session_id, user_id || null, page_url || null, referrer || null, utms.utm_source || null, utms.utm_medium || null, utms.utm_campaign || null, user_agent || null, ipHash, device, browser, country, now, now);
   });
 
   try {
@@ -205,6 +212,7 @@ app.post('/events', (req, res) => {
 
   const now = Date.now();
   const ipHash = hashIp(ip);
+  const country = req.headers['cf-ipcountry'] || null;
   const { device, browser } = parseUserAgent(req.headers['user-agent']);
 
   const transaction = db.transaction(() => {
@@ -212,11 +220,11 @@ app.post('/events', (req, res) => {
       const { session_id, user_id, event_type, event_data, page_url, referrer, viewport_w, viewport_h, visit_id } = ev;
       if (!session_id || !event_type) continue;
       const utms = parseUrl(page_url || '');
-      stmts.insertEvent.run(session_id, user_id || null, event_type, event_data ? JSON.stringify(event_data) : null, page_url || null, referrer || null, utms.utm_source || null, utms.utm_medium || null, utms.utm_campaign || null, req.headers['user-agent'] || null, ipHash, device, browser, viewport_w || null, viewport_h || null, ev.timestamp || now, visit_id || null);
+      stmts.insertEvent.run(session_id, user_id || null, event_type, event_data ? JSON.stringify(event_data) : null, page_url || null, referrer || null, utms.utm_source || null, utms.utm_medium || null, utms.utm_campaign || null, req.headers['user-agent'] || null, ipHash, device, browser, viewport_w || null, viewport_h || null, ev.timestamp || now, visit_id || null, country);
     if (event_type === 'page_view' && page_url) {
         stmts.insertPageView.run(session_id, user_id || null, page_url || null, event_data?.title || null, referrer || null, ev.load_time_ms || null, ev.scroll_depth || 0, ev.time_on_page_ms || 0, ev.timestamp || now);
       }
-      stmts.upsertSession.run(session_id, user_id || null, page_url || null, referrer || null, utms.utm_source || null, utms.utm_medium || null, utms.utm_campaign || null, req.headers['user-agent'] || null, ipHash, device, browser, ev.timestamp || now, ev.timestamp || now);
+      stmts.upsertSession.run(session_id, user_id || null, page_url || null, referrer || null, utms.utm_source || null, utms.utm_medium || null, utms.utm_campaign || null, req.headers['user-agent'] || null, ipHash, device, browser, country, ev.timestamp || now, ev.timestamp || now);
     }
   });
 
@@ -233,8 +241,12 @@ app.post('/heartbeat', (req, res) => {
   const { session_id, page_url, scroll_depth, time_on_page_ms } = req.body;
   if (!session_id) return res.status(400).json({ error: 'session_id required' });
   const now = Date.now();
+  const country = req.headers['cf-ipcountry'] || null;
   try {
     stmts.updateSessionLastSeen.run(now, session_id);
+    if (country) {
+      stmts.updateSessionCountry.run(country, session_id);
+    }
     if (page_url) {
       db.prepare(`UPDATE page_views SET scroll_depth = MAX(scroll_depth, ?), time_on_page_ms = ? WHERE session_id = ? AND page_url = ? AND id = (SELECT MAX(id) FROM page_views WHERE session_id = ? AND page_url = ?)`).run(scroll_depth || 0, time_on_page_ms || 0, session_id, page_url, session_id, page_url);
     }
@@ -339,6 +351,8 @@ app.get('/dashboard', authMiddleware, (req, res) => {
 
     const walletTypes = db.prepare(`SELECT event_data, COUNT(*) as c FROM events WHERE event_type = 'wallet_connected' AND created_at BETWEEN ? AND ? GROUP BY event_data ORDER BY c DESC`).all(start, end);
 
+    const countries = db.prepare(`SELECT country, COUNT(*) as c FROM sessions WHERE country IS NOT NULL AND country != '' AND started_at BETWEEN ? AND ? GROUP BY country ORDER BY c DESC LIMIT 15`).all(start, end);
+
     res.json({
       summary: {
         sessions, prevSessions, users, prevUsers, pageViews, prevPageViews,
@@ -347,7 +361,7 @@ app.get('/dashboard', authMiddleware, (req, res) => {
         conversionRate, prevConversionRate,
         visitBounceRate, prevVisitBounceRate, totalVisits, prevTotalVisits
       },
-      topPages, eventTypes, devices, browsers, utmSources, walletTypes
+      topPages, eventTypes, devices, browsers, utmSources, walletTypes, countries
     });
   } catch (err) {
     console.error('Dashboard error:', err.message);
