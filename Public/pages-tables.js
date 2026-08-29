@@ -274,7 +274,7 @@ function TagTableScreen(props) {
                         alt: 'Block ' + blockNum
                       })
                     ),
-                    React.createElement('div', { className:'font-alfaslab text-sm text-white' }, blockNum + '.bitmap'),
+                    React.createElement('div', { className:'font-mono text-sm text-white' }, blockNum + '.bitmap'),
                     React.createElement('div', { className:'font-acme text-xs', style:{ color:'#666666' } },
                       BitmapUtils.formatBtc(block.totalBtc || 0) + ' BTC'
                     )
@@ -304,7 +304,7 @@ function TagTableScreen(props) {
                       ),
                       React.createElement('div', { className:'flex-1 min-w-0' },
                         React.createElement('div', { className:'flex items-center justify-between' },
-                          React.createElement('span', { className:'font-alfaslab text-sm text-white font-bold' }, blockNum + '.bitmap'),
+                          React.createElement('span', { className:'font-mono text-sm text-white font-bold' }, blockNum + '.bitmap'),
                           React.createElement('span', { className:'font-acme text-sm font-semibold', style:{ color:'#666666' } },
                             BitmapUtils.formatBtc(block.totalBtc || 0) + ' BTC'
                           )

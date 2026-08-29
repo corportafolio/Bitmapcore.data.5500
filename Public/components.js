@@ -240,7 +240,7 @@ function Sidebar(props) {
             }),
             React.createElement('div', { className:'flex-1 min-w-0' },
               React.createElement('div', { className:'flex justify-between items-center' },
-                React.createElement('div', { className:'font-alfaslab text-[9px] text-white truncate' },
+                React.createElement('div', { className:'font-mono text-[9px] text-white truncate' },
                   (item.bitmapNumber || '?') + '.bitmap'
                 ),
                 React.createElement('div', { className:'flex items-center gap-1' },

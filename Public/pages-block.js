@@ -557,7 +557,7 @@ function PantallaDeBloqueEspecifico(props) {
       React.createElement('div', { className:'grid grid-cols-3 gap-2' },
         React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-lg p-3 text-center' },
           React.createElement('div', { className:'font-acme text-xs text-bitmap-muted mb-1' }, 'Bloque'),
-          React.createElement('div', { className:'font-alfaslab text-sm text-white' }, bloque + '.bitmap')
+          React.createElement('div', { className:'font-mono text-sm text-white' }, bloque + '.bitmap')
         ),
         React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-lg p-3 text-center' },
           React.createElement('div', { className:'font-acme text-xs text-bitmap-muted mb-1' }, 'BTC'),

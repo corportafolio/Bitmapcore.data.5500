@@ -107,7 +107,7 @@ function BitmapBubble(props) {
     style: { width: 84, padding: 2, gap: 2, flexShrink: 0, backgroundColor: '#0a0a0a' }
   },
     // Line 1: bitmap number
-    React.createElement('div', { style:{ color:'#fff', fontFamily:"'Alfa Slab One',serif", fontSize:'9px', whiteSpace:'nowrap', lineHeight:'1.2', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'80px' } }, (item.bitmapNumber || '?') + '.bitmap'),
+    React.createElement('div', { style:{ color:'#fff', fontFamily:"ui-monospace,'Courier New',monospace", fontSize:'9px', whiteSpace:'nowrap', lineHeight:'1.2', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'80px' } }, (item.bitmapNumber || '?') + '.bitmap'),
     // Line 2: price + marketplace icon
     React.createElement('div', { className: 'flex items-center gap-[2px] w-full justify-center' },
       React.createElement('span', { className: 'font-acme text-[11px] whitespace-nowrap overflow-hidden text-ellipsis', style: { maxWidth: 58, color:'#666666' } }, btcPrice),
@@ -317,7 +317,7 @@ function ListedTagDetailPage(props) {
                     React.createElement('div', { className: 'flex-1 min-w-0' },
                       React.createElement('div', { className: 'flex items-center justify-between' },
                         React.createElement('div', { className: 'flex items-center gap-2' },
-                          React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                          React.createElement('span', { className: 'font-mono text-sm text-white font-bold' },
                             (item.bitmapNumber || '?') + '.bitmap'
                           ),
                           React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },

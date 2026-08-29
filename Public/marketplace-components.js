@@ -44,7 +44,7 @@ function MarketPreview(props) {
         React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black' },
           React.createElement(MondrianCanvas, { blockNumber:blockNum, transactions:[], size:200 })
         ),
-        React.createElement('div', { className:'font-alfaslab text-sm text-white' }, blockNum + '.bitmap'),
+        React.createElement('div', { className:'font-mono text-sm text-white' }, blockNum + '.bitmap'),
         React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light' },
           listing.price ? BitmapUtils.formatBtc(listing.price) + ' BTC' : 'N/A'
         )
@@ -76,7 +76,7 @@ function SaleCard(props) {
       React.createElement(MondrianCanvas, { blockNumber:blockNumber, transactions:[], size:48 })
     ),
     React.createElement('div', { className:'min-w-0 flex-1' },
-      React.createElement('div', { className:'font-alfaslab text-sm text-white' }, blockNumber + '.bitmap'),
+      React.createElement('div', { className:'font-mono text-sm text-white' }, blockNumber + '.bitmap'),
       React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, (marketplace || '') + ' \u2022 ' + (date || ''))
     ),
     React.createElement('div', { className:'font-acme text-sm font-semibold text-bitmap-orange-light' },
@@ -315,7 +315,7 @@ var sourceLogo = preview.source === 'ordinalswallet' ? 'ordinalswallet_logo.png'
             className:'flex flex-col items-center bg-bitmap-black rounded-lg p-[2px] flex-shrink-0',
             style: { minWidth: 82 }
           },
-            React.createElement('span', { style:{ color:'#fff', fontFamily:"'Alfa Slab One',serif", fontSize:'9px', whiteSpace:'nowrap', lineHeight:'1.2' } }, (preview.blockNumber || '?') + '.bitmap'),
+            React.createElement('span', { style:{ color:'#fff', fontFamily:"ui-monospace,'Courier New',monospace", fontSize:'9px', whiteSpace:'nowrap', lineHeight:'1.2' } }, (preview.blockNumber || '?') + '.bitmap'),
             React.createElement('span', { style:{ color:'#666666', fontFamily:"'Acme',sans-serif", fontSize:'9px', whiteSpace:'nowrap', lineHeight:'1.2', display:'flex', alignItems:'center', gap:'2px' } },
               sourceLogo ? React.createElement('img', { src:sourceLogo, className:'h-[10px] w-[10px] object-contain flex-shrink-0' }) : null,
               preview.discountPercentage ? React.createElement('span', { style:{ color:'#00AA00', fontWeight:'bold' } }, preview.discountPercentage + '% ') : null,

@@ -190,7 +190,7 @@ function UnifiedPage(props) {
                       React.createElement('div', { className: 'flex-1 min-w-0' },
                         React.createElement('div', { className: 'flex items-center justify-between' },
                           React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                            React.createElement('span', { className: 'font-mono text-sm text-white font-bold' },
                               (item.bitmapNumber || '?') + '.bitmap'
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt)),
@@ -317,7 +317,7 @@ function TagGroupsPage(props) {
               React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black flex items-center justify-center' },
                 React.createElement(MondrianCanvas, { blockNumber:block.blockNumber || i, transactions:[], size:150 })
               ),
-              React.createElement('div', { className:'font-alfaslab text-xs text-white' }, (block.blockNumber || i) + '.bitmap'),
+              React.createElement('div', { className:'font-mono text-xs text-white' }, (block.blockNumber || i) + '.bitmap'),
               block.price ? React.createElement('div', { className:'font-acme text-[10px]', style:{ color:'#666666' } }, BitmapUtils.formatBtc(block.price) + ' BTC') : null
             );
           })
@@ -363,7 +363,7 @@ function TagTablePage(props) {
                 React.createElement(MondrianCanvas, { blockNumber:block.bloque || block.blockNumber || i, transactions:[], size:48 })
               ),
               React.createElement('div', { className:'flex-1 text-left' },
-                React.createElement('div', { className:'font-alfaslab text-sm text-white' }, (block.bloque || block.blockNumber || i) + '.bitmap'),
+                React.createElement('div', { className:'font-mono text-sm text-white' }, (block.bloque || block.blockNumber || i) + '.bitmap'),
                 block.totalTransacciones || block.txCount ? React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' }, (block.totalTransacciones || block.txCount) + ' TXs') : null
               ),
               block.totalBtc ? React.createElement('div', { className:'font-acme text-xs', style:{ color:'#666666' } }, BitmapUtils.formatBtc(block.totalBtc) + ' BTC') : null

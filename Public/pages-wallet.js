@@ -1186,7 +1186,7 @@ function DetallePage(props) {
                     onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
                   }) : null
                 ),
-                React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
+                React.createElement('div', { className:'font-mono text-[11px] text-white truncate' },
                   item.name || '#' + item.inscriptionNumber
                 ),
                 React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' },
@@ -1223,7 +1223,7 @@ function DetallePage(props) {
                 onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
               }) : null
             ),
-            React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate' },
+            React.createElement('div', { className:'font-mono text-[11px] text-white truncate' },
               item.name || '#' + item.inscriptionNumber
             ),
             React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' },
@@ -1335,7 +1335,7 @@ function DetallePage(props) {
                   onError: function(e) { e.target.src = isParcelItem ? '/api/v1/parcel-image?v=2' : '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
                 }) : null
               ),
-              React.createElement('div', { className:'font-alfaslab text-[11px] text-white truncate text-center w-full' },
+              React.createElement('div', { className:'font-mono text-[11px] text-white truncate text-center w-full' },
                 item.name || '#' + item.inscriptionNumber
               ),
               React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted text-center' },

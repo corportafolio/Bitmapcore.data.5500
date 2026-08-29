@@ -1252,7 +1252,7 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
                         React.createElement('div', { className: 'flex-1 min-w-0' },
                           React.createElement('div', { className: 'flex items-center justify-between' },
                             React.createElement('div', { className: 'flex items-center gap-2' },
-                              React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                              React.createElement('span', { className: 'font-mono text-sm text-white font-bold' },
                                 bn + '.bitmap'
                               ),
                               React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
@@ -1620,7 +1620,7 @@ function DescuentosPage(props) {
                             style: { width: 80, height: 80, borderRadius: 2, imageRendering: 'pixelated', background: '#1a1a1a' },
                             loading: 'lazy', alt: ''
                           }),
-                          React.createElement('span', { className: 'font-alfaslab text-[9px] text-white' },
+                          React.createElement('span', { className: 'font-mono text-[9px] text-white' },
                             (item.bitmapNumber || '?') + '.bitmap'
                           )
                         );

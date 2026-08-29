@@ -174,7 +174,7 @@ function OrdinalswalletPage(props) {
                       React.createElement('div', { className: 'flex-1 min-w-0' },
                         React.createElement('div', { className: 'flex items-center justify-between' },
                           React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                            React.createElement('span', { className: 'font-mono text-sm text-white font-bold' },
                               (item.bitmapNumber || '?') + '.bitmap'
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
@@ -377,7 +377,7 @@ function UnisatPage(props) {
                       React.createElement('div', { className: 'flex-1 min-w-0' },
                         React.createElement('div', { className: 'flex items-center justify-between' },
                           React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                            React.createElement('span', { className: 'font-mono text-sm text-white font-bold' },
                               (item.bitmapNumber || '?') + '.bitmap'
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))
@@ -584,7 +584,7 @@ function SatflowPage(props) {
                       React.createElement('div', { className: 'flex-1 min-w-0' },
                         React.createElement('div', { className: 'flex items-center justify-between' },
                           React.createElement('div', { className: 'flex items-center gap-2' },
-                            React.createElement('span', { className: 'font-alfaslab text-sm text-white font-bold' },
+                            React.createElement('span', { className: 'font-mono text-sm text-white font-bold' },
                               (item.bitmapNumber || '?') + '.bitmap'
                             ),
                             React.createElement('span', { className: 'font-acme text-xs text-white' }, BitmapUtils.timeAgo(item.listedAt))

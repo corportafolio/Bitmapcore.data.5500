@@ -163,7 +163,7 @@ function ResultCard(props) {
     className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-3 hover:border-bitmap-orange transition-all'
   },
     React.createElement('div', { className:'flex items-center justify-between mb-1' },
-      React.createElement('div', { className:'font-alfaslab text-sm text-white truncate flex-1 cursor-pointer', onClick:onClick }, label),
+      React.createElement('div', { className:'font-mono text-sm text-white truncate flex-1 cursor-pointer', onClick:onClick }, label),
       onRemove ? React.createElement('button', {
         onClick:function(e) { e.stopPropagation(); onRemove(); },
         className:'ml-2 text-bitmap-muted hover:text-bitmap-orange transition-colors font-acme text-2xl w-7 h-7 flex items-center justify-center rounded-full hover:bg-bitmap-black flex-shrink-0'
