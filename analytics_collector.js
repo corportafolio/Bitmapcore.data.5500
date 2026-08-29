@@ -300,6 +300,7 @@ app.get('/dashboard', authMiddleware, (req, res) => {
     const prevEnd = start;
     const countMode = req.query.count || 'all';
     const countExpr = countMode === 'unique' ? 'COUNT(DISTINCT session_id)' : 'COUNT(*)';
+    const countryExpr = countMode === 'unique' ? 'COUNT(DISTINCT user_id)' : 'COUNT(*)';
 
     const sessions = db.prepare('SELECT COUNT(DISTINCT session_id) as c FROM events WHERE created_at BETWEEN ? AND ?').get(start, end).c;
     const prevSessions = db.prepare('SELECT COUNT(DISTINCT session_id) as c FROM events WHERE created_at BETWEEN ? AND ?').get(prevStart, prevEnd).c;
@@ -353,7 +354,7 @@ app.get('/dashboard', authMiddleware, (req, res) => {
 
     const walletTypes = db.prepare(`SELECT event_data, COUNT(*) as c FROM events WHERE event_type = 'wallet_connected' AND created_at BETWEEN ? AND ? GROUP BY event_data ORDER BY c DESC`).all(start, end);
 
-    const countries = db.prepare(`SELECT country, COUNT(*) as c FROM sessions WHERE country IS NOT NULL AND country != '' AND started_at BETWEEN ? AND ? GROUP BY country ORDER BY c DESC LIMIT 15`).all(start, end);
+    const countries = db.prepare(`SELECT country, ${countryExpr} as c FROM sessions WHERE country IS NOT NULL AND country != '' AND started_at BETWEEN ? AND ? GROUP BY country ORDER BY c DESC LIMIT 15`).all(start, end);
 
     // Countries series: top 5 countries over time (for evolution chart)
     const top5Countries = countries.slice(0, 5).map(c => c.country);
@@ -367,7 +368,7 @@ app.get('/dashboard', authMiddleware, (req, res) => {
         buckets.push({ ts: t, tsEnd: Math.min(t + intervalMs, end) });
       }
       const placeholders = top5Countries.map(() => '?').join(',');
-      const stmtCountry = db.prepare(`SELECT country, COUNT(*) as c FROM sessions WHERE country IN (${placeholders}) AND started_at >= ? AND started_at < ? GROUP BY country`);
+      const stmtCountry = db.prepare(`SELECT country, ${countryExpr} as c FROM sessions WHERE country IN (${placeholders}) AND started_at >= ? AND started_at < ? GROUP BY country`);
       for (const b of buckets) {
         const rows = stmtCountry.all(...top5Countries, b.ts, b.tsEnd);
         for (const r of rows) {
