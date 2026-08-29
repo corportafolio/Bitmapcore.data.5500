@@ -353,6 +353,27 @@ app.get('/dashboard', authMiddleware, (req, res) => {
 
     const countries = db.prepare(`SELECT country, COUNT(*) as c FROM sessions WHERE country IS NOT NULL AND country != '' AND started_at BETWEEN ? AND ? GROUP BY country ORDER BY c DESC LIMIT 15`).all(start, end);
 
+    // Countries series: top 5 countries over time (for evolution chart)
+    const top5Countries = countries.slice(0, 5).map(c => c.country);
+    const countriesSeries = [];
+    if (top5Countries.length > 0) {
+      const range = end - start;
+      const intervalMs = range <= 86400000 ? 3600000 : 86400000; // hour for 24h, day otherwise
+      const timeFmt = range <= 86400000 ? '%Y-%m-%dT%H:00' : '%Y-%m-%d';
+      const buckets = [];
+      for (let t = start; t < end; t += intervalMs) {
+        buckets.push({ ts: t, tsEnd: Math.min(t + intervalMs, end) });
+      }
+      const placeholders = top5Countries.map(() => '?').join(',');
+      const stmtCountry = db.prepare(`SELECT country, COUNT(*) as c FROM sessions WHERE country IN (${placeholders}) AND started_at >= ? AND started_at < ? GROUP BY country`);
+      for (const b of buckets) {
+        const rows = stmtCountry.all(...top5Countries, b.ts, b.tsEnd);
+        for (const r of rows) {
+          countriesSeries.push({ ts: b.ts, country: r.country, count: r.c });
+        }
+      }
+    }
+
     res.json({
       summary: {
         sessions, prevSessions, users, prevUsers, pageViews, prevPageViews,
@@ -361,7 +382,7 @@ app.get('/dashboard', authMiddleware, (req, res) => {
         conversionRate, prevConversionRate,
         visitBounceRate, prevVisitBounceRate, totalVisits, prevTotalVisits
       },
-      topPages, eventTypes, devices, browsers, utmSources, walletTypes, countries
+      topPages, eventTypes, devices, browsers, utmSources, walletTypes, countries, countriesSeries
     });
   } catch (err) {
     console.error('Dashboard error:', err.message);

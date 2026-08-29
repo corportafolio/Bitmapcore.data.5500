@@ -113,6 +113,13 @@
       return colors;
     }
 
+    function flagEmoji(code){
+      if(!code || code.length !== 2) return '';
+      return String.fromCodePoint(0x1F1E6 + code.charCodeAt(0) - 65, 0x1F1E6 + code.charCodeAt(1) - 65);
+    }
+
+    var countriesChartType = 'doughnut';
+
     function render(){
       var html = '';
       html += '<div class="header">';
@@ -271,6 +278,70 @@
             options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#B0B0B0',font:{size:11}}}}}
           });
         }
+        drawCountriesCharts(data);
+      }, 100);
+    }
+
+    function drawCountriesCharts(data){
+      setTimeout(function(){
+        destroyChart('countriesChart');
+        var ctx = document.getElementById('countriesChart');
+        if(!ctx) return;
+        var countries = data.countries || [];
+        var series = data.countriesSeries || [];
+        if(countries.length === 0) return;
+
+        if(countriesChartType === 'doughnut'){
+          charts['countriesChart'] = new Chart(ctx, {
+            type:'doughnut',
+            data:{
+              labels: countries.map(function(c){ return flagEmoji(c.country)+' '+c.country; }),
+              datasets:[{data:countries.map(function(c){return c.c;}),backgroundColor:chartColors(countries.length),borderWidth:0}]
+            },
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#B0B0B0',font:{size:12}}}}}
+          });
+        }
+        else if(countriesChartType === 'bar'){
+          charts['countriesChart'] = new Chart(ctx, {
+            type:'bar',
+            data:{
+              labels: countries.slice(0,10).map(function(c){ return flagEmoji(c.country)+' '+c.country; }),
+              datasets:[{label:'Sesiones',data:countries.slice(0,10).map(function(c){return c.c;}),backgroundColor:chartColors(countries.slice(0,10).length),borderWidth:0,borderRadius:4}]
+            },
+            options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#666'},grid:{color:'#2A2A2A'}},y:{ticks:{color:'#B0B0B0',font:{size:12}},grid:{display:false}}}}
+          });
+        }
+        else if(countriesChartType === 'line'){
+          var top5 = countries.slice(0,5).map(function(c){ return c.country; });
+          var timeLabels = [];
+          var byTime = {};
+          series.forEach(function(s){
+            var key = s.ts;
+            if(!byTime[key]) byTime[key] = {};
+            byTime[key][s.country] = s.count;
+          });
+          Object.keys(byTime).sort().forEach(function(t){
+            var d = new Date(parseInt(t));
+            timeLabels.push(RANGE==='24h'?d.getHours()+':00':d.toLocaleDateString('es',{day:'numeric',month:'short'}));
+          });
+          var datasets = top5.map(function(country, i){
+            return {
+              label: flagEmoji(country)+' '+country,
+              data: Object.keys(byTime).sort().map(function(t){ return byTime[t][country] || 0; }),
+              borderColor: chartColors(top5.length)[i],
+              backgroundColor: chartColors(top5.length)[i] + '33',
+              fill: true,
+              tension: 0.4,
+              pointRadius: 2,
+              borderWidth: 2
+            };
+          });
+          charts['countriesChart'] = new Chart(ctx, {
+            type:'line',
+            data:{labels:timeLabels, datasets:datasets},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#B0B0B0',font:{size:11}}}},scales:{x:{ticks:{color:'#666',maxTicksLimit:8},grid:{color:'#2A2A2A'}},y:{ticks:{color:'#666'},grid:{color:'#2A2A2A'}}}}
+          });
+        }
       }, 100);
     }
 
@@ -332,15 +403,29 @@
       var deviceRows = (data.devices||[]).map(function(d){ return [d.device_type||'unknown', fmt(d.c)]; });
       var browserRows = (data.browsers||[]).map(function(b){ return [b.browser||'unknown', fmt(b.c)]; });
       var utmRows = (data.utmSources||[]).map(function(u){ return [u.utm_source, fmt(u.c)]; });
-      var countryRows = (data.countries||[]).map(function(c){ return [c.country, fmt(c.c)]; });
+      var countryRows = (data.countries||[]).map(function(c){ return [flagEmoji(c.country)+' '+c.country, fmt(c.c)]; });
       var html = '<div class="grid-3">';
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Dispositivos</h3>' + dataTable(['Dispositivo','Sesiones'], deviceRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techDevicesChart"></canvas></div></div>';
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Navegadores</h3>' + dataTable(['Navegador','Sesiones'], browserRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techBrowsersChart"></canvas></div></div>';
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Fuentes UTM</h3>' + dataTable(['Fuente UTM','Sesiones'], utmRows) + '</div>';
       html += '</div>';
-      html += '<div style="margin-top:16px"><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Paises</h3>' + (countryRows.length ? dataTable(['Pais','Sesiones'], countryRows) : '<p style="color:#666">Sin datos de paises aun.</p>') + '</div>';
+
+      var countryTypes = [{id:'doughnut',label:'Dona'},{id:'bar',label:'Barras'},{id:'line',label:'Evolucion'}];
+      html += '<div style="margin-top:16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="color:#fff;margin:0;font-size:16px">Paises</h3><div style="display:flex;gap:4px">';
+      countryTypes.forEach(function(t){
+        html += '<button class="range-btn'+(countriesChartType===t.id?' active':'')+'" onclick="setCountriesChartType(\''+t.id+'\')" style="font-size:11px;padding:4px 10px">'+t.label+'</button>';
+      });
+      html += '</div></div>';
+      html += '<div class="card" style="margin-bottom:16px;min-height:250px"><canvas id="countriesChart" style="max-height:300px"></canvas></div>';
+      html += countryRows.length ? dataTable(['Pais','Sesiones'], countryRows) : '<p style="color:#666">Sin datos de paises aun.</p>';
+      html += '</div>';
       return html;
     }
+
+    window.setCountriesChartType = function(type){
+      countriesChartType = type;
+      loadDashboard();
+    };
 
     function renderWallets(data){
       var w = data.walletStats;
