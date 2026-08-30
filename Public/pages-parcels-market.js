@@ -1637,7 +1637,7 @@ function ParcelsMarketPage(props) {
                   React.createElement(UniversalTag, { text: 'epic', fontSize: 9 })
                 ),
                 React.createElement('p', { className: 'font-acme text-[10px] text-bitmap-text leading-relaxed' },
-                  'Todas las parcelas de los bloques de halving (multiplos de 210,000: 210000, 420000, 630000, 840000), sin excepcion'
+                  '5 bloques epic con 7,899 parcelas en total: 0 (1) + 210000 (457) + 420000 (1,257) + 630000 (3,134) + 840000 (3,050)'
                 )
               ),
               React.createElement('div', null,
