@@ -104,11 +104,6 @@ function HeaderBar(props) {
   d: 'M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 9.5C12.8284 9.5 13.5 8.82843 13.5 8C13.5 7.17157 12.8284 6.5 12 6.5C11.1716 6.5 10.5 7.17157 10.5 8C10.5 8.82843 11.1716 9.5 12 9.5ZM14 15H13V10.5H10V12.5H11V15H10V17H14V15Z'
 }))) : null,
     !showBackButton ? React.createElement('button', {
-      onClick: function() { navigate('/mercado-parcelas'); },
-      className:'font-alfaslab text-bitmap-orange text-xs px-2 py-1 border border-bitmap-orange rounded hover:bg-bitmap-orange hover:text-black transition-colors mr-2 whitespace-nowrap',
-      title:'Mercado de Parcelas'
-    }, 'Parcelas') : null,
-    !showBackButton ? React.createElement('button', {
       onClick: function() { navigate('/selector'); },
       className:'font-alfaslab text-bitmap-orange text-xs px-2 py-1 border border-bitmap-orange rounded hover:bg-bitmap-orange hover:text-black transition-colors mr-2 whitespace-nowrap'
     }, 'Mercados Bitmap') : null,
@@ -342,7 +337,6 @@ function FloatingMarketplaceMenu(props) {
     { id:'unisat', label:'Unisat', path:'/unisat', icon:'unisat_logo.png', isImage:true },
     { id:'satflow', label:'Satflow', path:'/satflow', icon:'satflow-logo.png', isImage:true },
     { id:'local', label:'BitmapCore', path:'/local', icon:'logo_bitmapcore_logo.png', isImage:true },
-    { id:'parcels', label:'Parcelas', path:'/mercado-parcelas', icon:'\uD83D\uDFE7', isImage:false },
     { id:'discounts', label:'Descuentos', path:'/discounts', icon:'discount.svg', isImage:true },
     { id:'unified', label:'Unified', path:'/unified', icon:'layers.svg', isImage:true },
     { id:'tags', label:'Etiquetas Listadas', path:'/listed-tags', icon:'\uD83C\uDFF7\uFE0F', isImage:false },

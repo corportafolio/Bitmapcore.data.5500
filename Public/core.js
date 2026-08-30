@@ -89,7 +89,6 @@
       React.createElement(Route, { path:'/unisat', element:wrapper(safe(UnisatPage)) }),
       React.createElement(Route, { path:'/satflow', element:wrapper(safe(SatflowPage)) }),
       React.createElement(Route, { path:'/local', element:wrapper(safe(LocalPage)) }),
-      React.createElement(Route, { path:'/mercado-parcelas', element:wrapper(safe(ParcelsMarketPage)) }),
       React.createElement(Route, { path:'/discounts', element:wrapper(safe(DescuentosPage)) }),
       React.createElement(Route, { path:'/unified', element:wrapper(safe(UnifiedPage)) }),
       React.createElement(Route, { path:'/tag-tables/:tagName', element:wrapper(safe(TagTableScreen)) }),
