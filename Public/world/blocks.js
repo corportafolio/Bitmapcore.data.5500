@@ -98,6 +98,7 @@ var WorldBlocks = (function() {
     });
 
     mat.onBeforeCompile = function(shader) {
+      console.log('🗺️ createAtlasMaterial: onBeforeCompile RUNNING, map=', shader.uniforms.map ? 'yes' : 'no');
       shader.vertexShader = shader.vertexShader.replace(
         '#include <common>',
         'attribute vec4 aUvOffset;\nvarying vec4 vAtlasUvOffset;\n#include <common>'
@@ -200,6 +201,7 @@ var WorldBlocks = (function() {
     mesh.frustumCulled = false;
     mesh.count = 0;
     mesh.userData = { tileId: tileId, isInstanced: true };
+    mesh.visible = false;
     scene.add(mesh);
     tileInstanced[tileId] = mesh;
     tileInstanceCount[tileId] = 0;
@@ -393,8 +395,15 @@ var WorldBlocks = (function() {
     if (tileTextures[tileId]) {
       if (mesh.material.map !== tileTextures[tileId]) {
         console.log('🗺️ loadTileTexture: using cached texture for tile', tileId);
-        mesh.material.map = tileTextures[tileId];
-        mesh.material.needsUpdate = true;
+        // Replace material with fresh one to ensure shader compiles with texture
+        var newMat = createAtlasMaterial();
+        newMat.map = tileTextures[tileId];
+        newMat.needsUpdate = true;
+        mesh.material = newMat;
+      }
+      if (!mesh.visible) {
+        mesh.visible = true;
+        console.log('🗺️ loadTileTexture: mesh visible=true for tile', tileId, '(cached texture)');
       }
       return;
     }
@@ -402,9 +411,16 @@ var WorldBlocks = (function() {
     console.log('🗺️ loadTileTexture: loading texture for tile', tileId);
     loadTileImageData(tileId, function(texture) {
       if (texture && mesh) {
-        console.log('🗺️ loadTileTexture: texture loaded for tile', tileId, 'applying to mesh');
-        mesh.material.map = texture;
-        mesh.material.needsUpdate = true;
+        console.log('🗺️ loadTileTexture: texture loaded for tile', tileId, 'creating fresh material with atlas shader');
+        
+        // Create fresh material with atlas shader to force proper compile with texture
+        var newMat = createAtlasMaterial();
+        newMat.map = texture;
+        newMat.needsUpdate = true;
+        mesh.material = newMat;
+        
+        mesh.visible = true;
+        console.log('🗺️ loadTileTexture: fresh material applied, mesh visible=true for tile', tileId);
       } else {
         console.warn('🗺️ loadTileTexture: texture load failed for tile', tileId);
       }
@@ -465,12 +481,14 @@ var WorldBlocks = (function() {
     var mat = new THREE.MeshStandardMaterial({
       vertexColors: true,
       roughness: 0.85,
-      metalness: 0.0
+      metalness: 0.0,
+      side: THREE.DoubleSide
     });
 
     streetGroundMesh = new THREE.Mesh(geo, mat);
     streetGroundMesh.frustumCulled = false;
     streetGroundMesh.renderOrder = -1;
+    streetGroundMesh.position.y = 0;
     scene.add(streetGroundMesh);
   }
 
