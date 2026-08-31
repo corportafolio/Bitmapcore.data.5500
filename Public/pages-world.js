@@ -1,6 +1,7 @@
 var PagesWorld = (function() {
   var initialized = false;
   var animFrame = null;
+  var AVATAR_MODE_DIST = 111;
 
   function WorldPage(props) {
     var ref = React.useRef(null);
@@ -9,6 +10,9 @@ var PagesWorld = (function() {
     var infoRef = React.useRef(null);
     var blockInfoRef = React.useRef(null);
     var zoomIndicatorRef = React.useRef(null);
+    var cameraArrowsRef = React.useRef(null);
+    var dpadRef = React.useRef(null);
+    var lastMode = 'camera';
 
     var onControlsChange = React.useCallback(function(theta, phi, distance) {
       if (compassRef.current) {
@@ -18,6 +22,19 @@ var PagesWorld = (function() {
         var zoomLevel = (300 / distance).toFixed(1);
         zoomIndicatorRef.current.textContent = 'Zoom: ' + zoomLevel + 'x';
       }
+
+      var isAvatarMode = distance < AVATAR_MODE_DIST;
+      var currentMode = isAvatarMode ? 'avatar' : 'camera';
+      if (currentMode !== lastMode) {
+        lastMode = currentMode;
+        if (cameraArrowsRef.current) {
+          cameraArrowsRef.current.style.display = isAvatarMode ? 'none' : 'grid';
+        }
+        if (dpadRef.current) {
+          dpadRef.current.style.display = isAvatarMode ? 'flex' : 'none';
+        }
+      }
+
       updateBlockInfoThrottled(theta, phi, distance);
       WorldBlocks.scheduleLoad(theta, phi);
     }, []);
@@ -41,10 +58,10 @@ var PagesWorld = (function() {
       var bestBlock = -1;
       var bestDot = -1;
       var meshes = WorldBlocks.getAllMeshes();
-      var keys = Object.keys(meshes);
+      var meshKeys = Object.keys(meshes);
 
-      for (var i = 0; i < keys.length; i++) {
-        var bn = parseInt(keys[i]);
+      for (var i = 0; i < meshKeys.length; i++) {
+        var bn = parseInt(meshKeys[i]);
         var pos = WorldGrid.blockToSphere(bn);
         var len = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
         if (len < 0.001) continue;
@@ -119,6 +136,7 @@ var PagesWorld = (function() {
         }
       }, createCompassSVG()),
       React.createElement('div', {
+        ref: cameraArrowsRef,
         style: {
           position: 'fixed', right: '20px', top: '116px', zIndex: 200,
           display: 'grid', gridTemplateColumns: 'repeat(3, 48px)',
@@ -140,6 +158,33 @@ var PagesWorld = (function() {
         React.createElement('div', null),
         createArrowButton('▼', 'rotateDown', 'Abajo'),
         React.createElement('div', null)
+      ),
+      React.createElement('div', {
+        ref: dpadRef,
+        style: {
+          position: 'fixed', left: '20px', bottom: '20px', zIndex: 210,
+          display: 'none',
+          flexDirection: 'column', alignItems: 'center', gap: '4px'
+        }
+      },
+        createDpadButton('▲', function() { WorldAvatar.moveForward(); }, 'Norte'),
+        React.createElement('div', {
+          style: { display: 'flex', gap: '4px', alignItems: 'center' }
+        },
+          createDpadButton('◀', function() { WorldAvatar.moveLeft(); }, 'Oeste'),
+          React.createElement('div', {
+            style: {
+              width: '44px', height: '44px', borderRadius: '50%',
+              background: 'rgba(254,62,0,0.3)', border: '2px solid #FE3E00',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }
+          }, React.createElement('div', { style: { width: '10px', height: '10px', borderRadius: '50%', background: '#FE3E00' } })),
+          createDpadButton('▶', function() { WorldAvatar.moveRight(); }, 'Este')
+        ),
+        createDpadButton('▼', function() { WorldAvatar.moveBackward(); }, 'Sur'),
+        React.createElement('div', {
+          style: { color: '#666', fontSize: '9px', fontFamily: 'Acme, sans-serif', marginTop: '6px', textAlign: 'center' }
+        }, 'WASD: mover')
       ),
       React.createElement('div', {
         style: { position: 'fixed', right: '20px', bottom: '80px', zIndex: 200, display: 'flex', flexDirection: 'column', gap: '8px' }
@@ -173,7 +218,7 @@ var PagesWorld = (function() {
           borderRadius: '8px', padding: '6px 14px', color: '#666',
           fontSize: '10px', fontFamily: 'Acme, sans-serif', whiteSpace: 'nowrap'
         }
-      }, 'Arrastra: rotar | Scroll: zoom | Click: detalle | Flechas/Teclado: navegar | +/-: zoom')
+      }, 'Arrastra: rotar | Scroll: zoom | Click: detalle | WASD: avatar | +/-: zoom')
     );
   }
 
@@ -213,6 +258,25 @@ var PagesWorld = (function() {
     }, symbol);
   }
 
+  function createDpadButton(symbol, onClick, title) {
+    return React.createElement('button', {
+      onClick: onClick,
+      onMouseDown: function(e) { e.preventDefault(); onClick(); },
+      title: title,
+      style: {
+        width: '44px', height: '44px', borderRadius: '8px',
+        background: 'rgba(8,0,8,0.9)', border: '2px solid #FE3E00',
+        color: '#FFFFFF', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
+        transition: 'all 0.1s ease', userSelect: 'none',
+        WebkitTapHighlightColor: 'transparent'
+      },
+      onMouseEnter: function(e) { e.target.style.background = '#FE3E00'; e.target.style.color = '#080008'; },
+      onMouseLeave: function(e) { e.target.style.background = 'rgba(8,0,8,0.9)'; e.target.style.color = '#FFFFFF'; }
+    }, symbol);
+  }
+
   function createZoomButton(symbol, action, title) {
     return React.createElement('button', {
       onClick: function() { WorldControls[action] && WorldControls[action](); },
@@ -249,13 +313,6 @@ var PagesWorld = (function() {
     WorldControls.setOnChange(onChange);
 
     var initialState = WorldControls.getState();
-    console.log('🔍 INIT STATE:', {
-      theta: initialState.theta,
-      thetaDeg: (initialState.theta * 180 / Math.PI).toFixed(1),
-      phi: initialState.phi,
-      phiDeg: (initialState.phi * 180 / Math.PI).toFixed(1),
-      distance: initialState.distance
-    });
 
     WorldBlocks.createBlockMesh(0, 1, '');
     WorldBlocks.loadChunk(initialState.theta, initialState.phi, initialState.distance, function() {

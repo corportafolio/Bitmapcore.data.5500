@@ -18,7 +18,7 @@ var WorldBlocks = (function() {
   var zoomTimer = null;
 
   var NEAR_DISTANCE = 112;
-  var MAX_NEAR_TILES_PER_FRAME = 3;
+  var MAX_NEAR_TILES_PER_FRAME = 5;
 
   var tileInstanced = {};
   var tileNearMeshes = {};
@@ -390,7 +390,7 @@ var WorldBlocks = (function() {
     });
 
     var startT = performance.now();
-    var BUDGET_MS = 8;
+    var BUDGET_MS = 16;
     var d = 0;
 
     while (d < dirtyList.length && (performance.now() - startT) < BUDGET_MS) {
@@ -451,7 +451,7 @@ var WorldBlocks = (function() {
     });
 
     var startT = performance.now();
-    var BUDGET_MS = 8;
+    var BUDGET_MS = 16;
     var pending = 0;
     var nearTilesStarted = 0;
 

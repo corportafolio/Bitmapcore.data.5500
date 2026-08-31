@@ -213,7 +213,7 @@ var Parcel3D = (function() {
   }
 
   function addGroundPlane(positions, normals, colors, indices, vertexOffset) {
-    var S = 0.35;
+    var S = 0.78;
     var LW = 0.012;
     var SW = 0.03;
 

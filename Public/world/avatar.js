@@ -70,7 +70,6 @@ var WorldAvatar = (function() {
     mesh = group;
     updatePosition();
     scene.add(mesh);
-    console.log('🧑 WorldAvatar: Avatar creado en el mundo');
   }
 
   function updatePosition() {
@@ -106,50 +105,43 @@ var WorldAvatar = (function() {
     lastFrame = now;
 
     var moved = false;
+
+    if (keys['w'] || keys['W']) { moveForward(); moved = true; }
+    if (keys['s'] || keys['S']) { moveBackward(); moved = true; }
+    if (keys['a'] || keys['A']) { rotateLeft(); moved = true; }
+    if (keys['d'] || keys['D']) { rotateRight(); moved = true; }
+  }
+
+  function moveForward() {
+    posPhi = Math.min(1.5, posPhi + SPEED);
+    updatePosition();
+  }
+
+  function moveBackward() {
+    posPhi = Math.max(-1.5, posPhi - SPEED);
+    updatePosition();
+  }
+
+  function moveLeft() {
     var cosPhi = Math.max(Math.cos(posPhi), 0.15);
+    posTheta += SPEED / cosPhi;
+    updatePosition();
+  }
 
-    if (keys['w'] || keys['W']) {
-      posPhi = Math.min(1.5, posPhi + SPEED * dt);
-      moved = true;
-    }
-    if (keys['s'] || keys['S']) {
-      posPhi = Math.max(-1.5, posPhi - SPEED * dt);
-      moved = true;
-    }
-    if (keys['a'] || keys['A']) {
-      heading += SPEED * 2 * dt;
-      moved = true;
-    }
-    if (keys['d'] || keys['D']) {
-      heading -= SPEED * 2 * dt;
-      moved = true;
-    }
-    if (keys['ArrowUp']) {
-      posPhi = Math.min(1.5, posPhi + SPEED * dt);
-      moved = true;
-    }
-    if (keys['ArrowDown']) {
-      posPhi = Math.max(-1.5, posPhi - SPEED * dt);
-      moved = true;
-    }
-    if (keys['ArrowLeft']) {
-      posTheta += SPEED / cosPhi * dt;
-      moved = true;
-    }
-    if (keys['ArrowRight']) {
-      posTheta -= SPEED / cosPhi * dt;
-      moved = true;
-    }
+  function moveRight() {
+    var cosPhi = Math.max(Math.cos(posPhi), 0.15);
+    posTheta -= SPEED / cosPhi;
+    updatePosition();
+  }
 
-    if (moved) {
-      if (keys['a'] || keys['A'] || keys['d'] || keys['D'] ||
-          keys['ArrowLeft'] || keys['ArrowRight']) {
-        if (!keys['a'] && !keys['A'] && !keys['d'] && !keys['D']) {
-          posTheta += (keys['ArrowLeft'] ? 1 : -1) * SPEED / cosPhi * dt;
-        }
-      }
-      updatePosition();
-    }
+  function rotateLeft() {
+    heading += SPEED * 2;
+    updatePosition();
+  }
+
+  function rotateRight() {
+    heading -= SPEED * 2;
+    updatePosition();
   }
 
   function getPosition() {
@@ -177,6 +169,10 @@ var WorldAvatar = (function() {
     getPosition: getPosition,
     setPosition: setPosition,
     getHeading: getHeading,
+    moveForward: moveForward,
+    moveBackward: moveBackward,
+    moveLeft: moveLeft,
+    moveRight: moveRight,
     destroy: destroy
   };
 })();
