@@ -201,7 +201,7 @@ var WorldBlocks = (function() {
     mesh.frustumCulled = false;
     mesh.count = 0;
     mesh.userData = { tileId: tileId, isInstanced: true };
-    mesh.visible = false;
+    mesh.visible = true;
     scene.add(mesh);
     tileInstanced[tileId] = mesh;
     tileInstanceCount[tileId] = 0;
@@ -395,15 +395,10 @@ var WorldBlocks = (function() {
     if (tileTextures[tileId]) {
       if (mesh.material.map !== tileTextures[tileId]) {
         console.log('🗺️ loadTileTexture: using cached texture for tile', tileId);
-        // Replace material with fresh one to ensure shader compiles with texture
         var newMat = createAtlasMaterial();
         newMat.map = tileTextures[tileId];
         newMat.needsUpdate = true;
         mesh.material = newMat;
-      }
-      if (!mesh.visible) {
-        mesh.visible = true;
-        console.log('🗺️ loadTileTexture: mesh visible=true for tile', tileId, '(cached texture)');
       }
       return;
     }
@@ -412,15 +407,11 @@ var WorldBlocks = (function() {
     loadTileImageData(tileId, function(texture) {
       if (texture && mesh) {
         console.log('🗺️ loadTileTexture: texture loaded for tile', tileId, 'creating fresh material with atlas shader');
-        
-        // Create fresh material with atlas shader to force proper compile with texture
         var newMat = createAtlasMaterial();
         newMat.map = texture;
         newMat.needsUpdate = true;
         mesh.material = newMat;
-        
-        mesh.visible = true;
-        console.log('🗺️ loadTileTexture: fresh material applied, mesh visible=true for tile', tileId);
+        console.log('🗺️ loadTileTexture: fresh material applied for tile', tileId);
       } else {
         console.warn('🗺️ loadTileTexture: texture load failed for tile', tileId);
       }
@@ -503,7 +494,7 @@ var WorldBlocks = (function() {
 
     var camPos = getCameraPosition();
     var camDir = new THREE.Vector3(camPos.x, camPos.y, camPos.z).normalize();
-    var surfR = WORLD_RADIUS + INSTANCE_OFFSET - 0.05;
+    var surfR = WORLD_RADIUS + INSTANCE_OFFSET;
 
     streetGroundMesh.position.set(camDir.x * surfR, camDir.y * surfR, camDir.z * surfR);
 
