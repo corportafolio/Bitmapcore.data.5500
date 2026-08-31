@@ -12,7 +12,10 @@ var WorldBlocks = (function() {
   var MAX_TX = 8000;
   var INSTANCE_OFFSET = 0.3;
   var LOAD_DEBOUNCE = 250;
+  var ZOOM_DEBOUNCE = 500;
   var loadTimer = null;
+  var isZooming = false;
+  var zoomTimer = null;
 
   var NEAR_DISTANCE = 104;
 
@@ -683,6 +686,7 @@ var WorldBlocks = (function() {
       var dTheta = Math.abs(theta - lastUpdateTheta);
       var dPhi = Math.abs(phi - lastUpdatePhi);
       var dDist = Math.abs(distance - lastUpdateDist);
+      var debounce = isZooming ? ZOOM_DEBOUNCE : LOAD_DEBOUNCE;
       if (dTheta < 0.01 && dPhi < 0.01 && dDist < 2) return;
     }
     lastUpdateTheta = theta;
@@ -699,7 +703,9 @@ var WorldBlocks = (function() {
     applyVisible(visible);
 
     rebuildDirtyTiles();
-    rebuildNearOverlay();
+    if (!isZooming) {
+      rebuildNearOverlay();
+    }
   }
 
   function applyVisible(visible) {
@@ -754,6 +760,17 @@ var WorldBlocks = (function() {
       var state = WorldControls.getState();
       updateVisible(theta, phi, state.distance);
     }, LOAD_DEBOUNCE);
+  }
+
+  function setZooming(zooming) {
+    isZooming = zooming;
+    if (zoomTimer) { clearTimeout(zoomTimer); zoomTimer = null; }
+    if (zooming) {
+      zoomTimer = setTimeout(function() {
+        isZooming = false;
+        rebuildNearOverlay();
+      }, 600);
+    }
   }
 
   function getMeshAt(blockNumber) {
@@ -876,6 +893,7 @@ var WorldBlocks = (function() {
     destroy: destroy,
     loadChunk: loadChunk,
     scheduleLoad: scheduleLoad,
+    setZooming: setZooming,
     startBackgroundLoad: startBackgroundLoad,
     stopBackgroundLoad: stopBackgroundLoad,
     cleanupDistant: cleanupDistant,

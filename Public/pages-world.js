@@ -8,10 +8,15 @@ var PagesWorld = (function() {
     var compassRef = React.useRef(null);
     var infoRef = React.useRef(null);
     var blockInfoRef = React.useRef(null);
+    var zoomIndicatorRef = React.useRef(null);
 
     var onControlsChange = React.useCallback(function(theta, phi, distance) {
       if (compassRef.current) {
         compassRef.current.style.transform = 'rotate(' + (-theta * 180 / Math.PI) + 'deg)';
+      }
+      if (zoomIndicatorRef.current) {
+        var zoomLevel = (300 / distance).toFixed(1);
+        zoomIndicatorRef.current.textContent = 'Zoom: ' + zoomLevel + 'x';
       }
       updateBlockInfoThrottled(theta, phi, distance);
       WorldBlocks.scheduleLoad(theta, phi);
@@ -97,15 +102,25 @@ var PagesWorld = (function() {
         }
       }),
       React.createElement('div', {
+        ref: zoomIndicatorRef,
+        style: {
+          position: 'fixed', top: '2px', right: '20px', zIndex: 200,
+          background: 'rgba(8,0,8,0.85)', border: '1px solid #2A2A2A',
+          borderRadius: '6px', padding: '4px 10px',
+          color: '#FE3E00', fontSize: '12px', fontFamily: 'monospace',
+          fontWeight: 'bold', textAlign: 'center', minWidth: '80px'
+        }
+      }, 'Zoom: 1.0x'),
+      React.createElement('div', {
         ref: compassRef,
         style: {
-          position: 'fixed', top: '20px', right: '20px', zIndex: 200,
+          position: 'fixed', top: '26px', right: '20px', zIndex: 200,
           width: '80px', height: '80px', transformOrigin: 'center'
         }
       }, createCompassSVG()),
       React.createElement('div', {
         style: {
-          position: 'fixed', right: '20px', top: '110px', zIndex: 200,
+          position: 'fixed', right: '20px', top: '116px', zIndex: 200,
           display: 'grid', gridTemplateColumns: 'repeat(3, 48px)',
           gridTemplateRows: 'repeat(3, 48px)', gap: '6px'
         }

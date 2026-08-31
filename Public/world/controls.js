@@ -139,6 +139,9 @@ var WorldControls = (function() {
   function zoom(delta) {
     if (zoomTarget === null) zoomTarget = distance;
     zoomTarget = Math.max(MIN_DISTANCE, Math.min(MAX_DISTANCE, zoomTarget + delta));
+    if (typeof WorldBlocks !== 'undefined' && WorldBlocks.setZooming) {
+      WorldBlocks.setZooming(true);
+    }
     if (!zoomFrame) {
       zoomFrame = requestAnimationFrame(zoomStep);
     }

@@ -1,9 +1,13 @@
 var Parcel3D = (function() {
-  var YELLOW_R = 255, YELLOW_G = 215, YELLOW_B = 0;
-  var YELLOW_THRESHOLD = 80;
 
-  function isYellow(r, g, b) {
-    return r > 150 && g > 100 && b < 100;
+  function isTransparent(r, g, b, a) {
+    if (a !== undefined && a < 10) return true;
+    return r < 5 && g < 5 && b < 5;
+  }
+
+  function colorDist(r1, g1, b1, r2, g2, b2) {
+    var dr = r1 - r2, dg = g1 - g2, db = b1 - b2;
+    return dr * dr + dg * dg + db * db;
   }
 
   function extractCellPixels(imageData, cellCol, cellRow, cellSize) {
@@ -19,11 +23,21 @@ var Parcel3D = (function() {
         var r = imageData.data[idx];
         var g = imageData.data[idx + 1];
         var b = imageData.data[idx + 2];
-        row.push(isYellow(r, g, b) ? 1 : 0);
+        var a = imageData.data[idx + 3];
+        if (isTransparent(r, g, b, a)) {
+          row.push(null);
+        } else {
+          row.push({ r: r, g: g, b: b });
+        }
       }
       pixels.push(row);
     }
     return pixels;
+  }
+
+  function colorsMatch(c1, c2) {
+    if (!c1 || !c2) return false;
+    return colorDist(c1.r, c1.g, c1.b, c2.r, c2.g, c2.b) < 1800;
   }
 
   function detectRectangles(pixels) {
@@ -40,16 +54,17 @@ var Parcel3D = (function() {
 
     for (var y = 0; y < cellSize; y++) {
       for (var x = 0; x < cellSize; x++) {
-        if (visited[y][x] || pixels[y][x] === 0) continue;
+        if (visited[y][x] || !pixels[y][x]) continue;
 
+        var baseColor = pixels[y][x];
         var w = 0;
-        while (x + w < cellSize && pixels[y][x + w] === 1) w++;
+        while (x + w < cellSize && colorsMatch(pixels[y][x + w], baseColor)) w++;
 
         var h = 1;
         var canExpand = true;
         while (canExpand && y + h < cellSize) {
           for (var dx = 0; dx < w; dx++) {
-            if (pixels[y + h][x + dx] !== 1) { canExpand = false; break; }
+            if (!colorsMatch(pixels[y + h][x + dx], baseColor)) { canExpand = false; break; }
           }
           if (canExpand) h++;
         }
@@ -60,7 +75,10 @@ var Parcel3D = (function() {
           }
         }
 
-        rects.push({ x: x, y: y, w: w, h: h });
+        rects.push({
+          x: x, y: y, w: w, h: h,
+          cr: baseColor.r, cg: baseColor.g, cb: baseColor.b
+        });
       }
     }
 
@@ -78,10 +96,10 @@ var Parcel3D = (function() {
 
           var canMerge = false;
 
-          if (a.y === b.y && a.h === b.h) {
+          if (a.y === b.y && a.h === b.h && colorsMatch(a, b)) {
             if (a.x + a.w === b.x || b.x + b.w === a.x) canMerge = true;
           }
-          if (a.x === b.x && a.w === b.w) {
+          if (a.x === b.x && a.w === b.w && colorsMatch(a, b)) {
             if (a.y + a.h === b.y || b.y + b.h === a.y) canMerge = true;
           }
 
@@ -92,7 +110,7 @@ var Parcel3D = (function() {
             var nh = Math.max(a.y + a.h, b.y + b.h) - ny;
 
             if (nw * nh <= a.w * a.h + b.w * b.h + 2) {
-              rects[i] = { x: nx, y: ny, w: nw, h: nh };
+              rects[i] = { x: nx, y: ny, w: nw, h: nh, cr: a.cr, cg: a.cg, cb: a.cb };
               rects.splice(j, 1);
               merged = true;
               break;
@@ -124,7 +142,7 @@ var Parcel3D = (function() {
     var rects = detectRectangles(pixels);
 
     if (rects.length === 0) {
-      rects = [{ x: 0, y: 0, w: cellSize, h: cellSize }];
+      rects = [{ x: 0, y: 0, w: cellSize, h: cellSize, cr: 40, cg: 40, cb: 40 }];
     }
 
     var positions = [];
@@ -134,18 +152,22 @@ var Parcel3D = (function() {
     var vertexCount = 0;
 
     for (var i = 0; i < rects.length; i++) {
-      var r = rects[i];
-      var px = r.x / cellSize;
-      var py = r.y / cellSize;
-      var pw = r.w / cellSize;
-      var ph = r.h / cellSize;
-      var h = getParcelHeight(tx, i, hash);
+      var rc = rects[i];
+      var px = rc.x / cellSize;
+      var py = rc.y / cellSize;
+      var pw = rc.w / cellSize;
+      var ph = rc.h / cellSize;
+      var ht = getParcelHeight(tx, i, hash);
+
+      var nr = rc.cr / 255;
+      var ng = rc.cg / 255;
+      var nb = rc.cb / 255;
 
       addCube(
         positions, normals, colors, indices, vertexCount,
         px - 0.5, 0, py - 0.5,
-        pw, h, ph,
-        1.0, 0.843, 0.0
+        pw, ht, ph,
+        nr, ng, nb
       );
       vertexCount += 24;
     }
