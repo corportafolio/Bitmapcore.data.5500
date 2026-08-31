@@ -17,15 +17,8 @@ var WorldBlocks = (function() {
   var isZooming = false;
   var zoomTimer = null;
 
-  var NEAR_DISTANCE = 112;
-  var STREET_MIN_DIST = 101;
-  var MAX_NEAR_TILES_PER_FRAME = 5;
-
   var tileInstanced = {};
-  var tileNearMeshes = {};
   var tileDirty = {};
-  var tileNearDirty = {};
-  var tileImageData = {};
   var tileTextures = {};
   var tileInstanceCount = {};
 
@@ -44,10 +37,6 @@ var WorldBlocks = (function() {
 
   var _up = new THREE.Vector3(0, 1, 0);
   var _normalVec = new THREE.Vector3();
-  var _quat = new THREE.Quaternion();
-  var _mat4 = new THREE.Matrix4();
-  var _localOffset = new THREE.Vector3();
-  var _nVec = new THREE.Vector3();
   var streetGroundMesh = null;
 
   function getPhiFromGz(gz) {
@@ -67,6 +56,7 @@ var WorldBlocks = (function() {
     sharedMaterial = createAtlasMaterial();
     createBlock0();
     loadAllData();
+    createStreetGround();
     if (typeof AtlasCache !== 'undefined' && AtlasCache.preloadAll) {
       AtlasCache.preloadAll(function() {
         console.log('🗺️ WorldBlocks: Atlas precarga completada');
@@ -84,18 +74,9 @@ var WorldBlocks = (function() {
       if (m && m.geometry) m.geometry.dispose();
       if (m && m.material) m.material.dispose();
     }
-    for (var tileId in tileNearMeshes) {
-      var m = tileNearMeshes[tileId];
-      if (m && m.parent) m.parent.remove(m);
-      if (m && m.geometry) m.geometry.dispose();
-      if (m && m.material) m.material.dispose();
-    }
 
     tileInstanced = {};
-    tileNearMeshes = {};
     tileDirty = {};
-    tileNearDirty = {};
-    tileImageData = {};
     tileTextures = {};
     tileInstanceCount = {};
     blocksByTile = {};
@@ -103,7 +84,8 @@ var WorldBlocks = (function() {
     shownBlocks = {};
     blockData = {};
     block0Mesh = null;
-    nearProgress = {};
+
+    removeStreetGround();
 
     if (sharedBoxGeo) { sharedBoxGeo.dispose(); sharedBoxGeo = null; }
     sharedMaterial = null;
@@ -223,7 +205,6 @@ var WorldBlocks = (function() {
     tileInstanceCount[tileId] = 0;
     instanceBlockMap[tileId] = [];
     tileDirty[tileId] = true;
-    tileNearDirty[tileId] = true;
     return mesh;
   }
 
@@ -236,7 +217,6 @@ var WorldBlocks = (function() {
     blocksByTile[tileId][blockNum] = true;
     getOrCreateTileMesh(tileId);
     tileDirty[tileId] = true;
-    tileNearDirty[tileId] = true;
   }
 
   function hideInstance(blockNum) {
@@ -250,25 +230,13 @@ var WorldBlocks = (function() {
     if (tileDirty[tileId] !== undefined) {
       tileDirty[tileId] = true;
     }
-    tileNearDirty[tileId] = true;
   }
 
   function loadTileImageData(tileId, callback) {
-    if (tileImageData[tileId]) {
-      callback(tileImageData[tileId]);
-      return;
-    }
-
-    if (!AtlasCache) {
-      callback(null);
-      return;
-    }
+    if (!AtlasCache) { callback(null); return; }
 
     AtlasCache.ensureAtlas(tileId, function(blob) {
-      if (!blob) {
-        callback(null);
-        return;
-      }
+      if (!blob) { callback(null); return; }
 
       var url = URL.createObjectURL(blob);
       var img = new Image();
@@ -278,8 +246,6 @@ var WorldBlocks = (function() {
         canvas.height = img.height;
         var ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
-        var imageData = ctx.getImageData(0, 0, img.width, img.height);
-        tileImageData[tileId] = imageData;
 
         var texture = new THREE.Texture(img);
         texture.magFilter = THREE.NearestFilter;
@@ -288,7 +254,7 @@ var WorldBlocks = (function() {
         tileTextures[tileId] = texture;
 
         URL.revokeObjectURL(url);
-        callback(imageData);
+        callback(texture);
       };
       img.onerror = function() {
         URL.revokeObjectURL(url);
@@ -355,7 +321,6 @@ var WorldBlocks = (function() {
     var dummy = new THREE.Object3D();
     var uvData = new Float32Array(count * 4);
     var blockMap = new Array(count);
-    var up = new THREE.Vector3(0, 1, 0);
 
     var idx = 0;
     for (var k in blocksInTile) {
@@ -370,7 +335,7 @@ var WorldBlocks = (function() {
       var radius = WORLD_RADIUS + INSTANCE_OFFSET;
 
       dummy.position.set(cached.nx * radius, cached.ny * radius, cached.nz * radius);
-      dummy.quaternion.setFromUnitVectors(up, _normalVec.set(cached.nx, cached.ny, cached.nz));
+      dummy.quaternion.setFromUnitVectors(_up, _normalVec.set(cached.nx, cached.ny, cached.nz));
       dummy.scale.set(cached.scale, height / BLOCK_SIZE, cached.scale);
       dummy.updateMatrix();
       mesh.setMatrixAt(idx, dummy.matrix);
@@ -428,291 +393,94 @@ var WorldBlocks = (function() {
       return;
     }
 
-    loadTileImageData(tileId, function() {
-      if (tileTextures[tileId] && mesh) {
-        mesh.material.map = tileTextures[tileId];
+    loadTileImageData(tileId, function(texture) {
+      if (texture && mesh) {
+        mesh.material.map = texture;
         mesh.material.needsUpdate = true;
       }
     });
   }
 
-  var nearProgress = {};
+  function createStreetGround() {
+    if (streetGroundMesh) return;
 
-  function rebuildNearOverlay() {
-    var distance = getDistance();
+    var R = 30;
+    var SEG = 64;
+    var roadWidth = 2.0;
+    var sidewalkWidth = 0.6;
+    var laneWidth = (roadWidth - 0.1) / 2;
 
-    if (distance >= NEAR_DISTANCE) {
-      for (var tileId in tileNearMeshes) {
-        var tid = parseInt(tileId);
-        scene.remove(tileNearMeshes[tid]);
-        tileNearMeshes[tid].geometry.dispose();
-        tileNearMeshes[tid].material.dispose();
-        delete tileNearMeshes[tid];
-        tileNearDirty[tid] = true;
-        if (tileInstanced[tid]) tileInstanced[tid].visible = true;
-      }
-      nearProgress = {};
-      removeStreetGround();
-      return;
+    var positions = [];
+    var colors = [];
+    var indices = [];
+    var vi = 0;
+
+    function addQuad(x1, z1, x2, z2, r, g, b) {
+      positions.push(x1, 0, z1, x2, 0, z1, x2, 0, z2, x1, 0, z2);
+      colors.push(r, g, b, r, g, b, r, g, b, r, g, b);
+      indices.push(vi, vi + 1, vi + 2, vi, vi + 2, vi + 3);
+      vi += 4;
     }
 
-    var nearList = [];
-    for (var tileId in tileNearDirty) {
-      if (tileNearDirty[tileId]) nearList.push(parseInt(tileId));
-    }
-    if (nearList.length === 0) return;
+    for (var i = 0; i < SEG; i++) {
+      var a0 = (i / SEG) * Math.PI * 2;
+      var a1 = ((i + 1) / SEG) * Math.PI * 2;
+      var cos0 = Math.cos(a0), sin0 = Math.sin(a0);
+      var cos1 = Math.cos(a1), sin1 = Math.sin(a1);
 
-    var camPos = getCameraPosition();
-    nearList.sort(function(a, b) {
-      return getTileCenterDist(a, camPos) - getTileCenterDist(b, camPos);
-    });
+      function px(r, c) { return c * r; }
+      function pz(r, s) { return s * r; }
 
-    var startT = performance.now();
-    var BUDGET_MS = 50;
-    var pending = 0;
-    var nearTilesStarted = 0;
+      var sw = sidewalkWidth;
+      var hw = roadWidth / 2;
+      var lw = 0.08;
 
-    for (var i = 0; i < nearList.length; i++) {
-      if ((performance.now() - startT) >= BUDGET_MS) { pending++; continue; }
-      if (nearTilesStarted >= MAX_NEAR_TILES_PER_FRAME) { pending++; continue; }
-      var tid = nearList[i];
-
-      if (tileNearMeshes[tid]) {
-        tileNearDirty[tid] = false;
-        continue;
-      }
-      if (nearProgress[tid]) { pending++; continue; }
-
-      var blocksInTile = blocksByTile[tid];
-      var hasBlocks = false;
-      if (blocksInTile) { for (var bk in blocksInTile) { hasBlocks = true; break; } }
-      if (!hasBlocks) {
-        tileNearDirty[tid] = false;
-        continue;
-      }
-
-      var imageData = tileImageData[tid];
-      if (!imageData) {
-        pending++;
-        (function(tid2) {
-          loadTileImageData(tid2, function() {
-            if (getDistance() < NEAR_DISTANCE) {
-              tileNearDirty[tid2] = true;
-              rebuildNearOverlay();
-            }
-          });
-        })(tid);
-        continue;
-      }
-
-      beginNearTile(tid, imageData);
-      nearTilesStarted++;
-      pending++;
+      addQuad(px(sw, cos0), pz(sw, sin0), px(sw, cos1), pz(sw, sin1), 0.50, 0.50, 0.52);
+      addQuad(px(hw, cos0), pz(hw, sin0), px(hw, cos1), pz(hw, sin1), 0.32, 0.32, 0.35);
+      addQuad(px(lw, cos0), pz(lw, sin0), px(lw, cos1), pz(lw, sin1), 0.85, 0.85, 0.80);
+      addQuad(px(-lw, cos0), pz(-lw, sin0), px(-lw, cos1), pz(-lw, sin1), 0.85, 0.85, 0.80);
+      addQuad(px(-hw, cos0), pz(-hw, sin0), px(-hw, cos1), pz(-hw, sin1), 0.32, 0.32, 0.35);
+      addQuad(px(-sw, cos0), pz(-sw, sin0), px(-sw, cos1), pz(-sw, sin1), 0.50, 0.50, 0.52);
     }
 
-    stepNearTiles(BUDGET_MS, startT);
-
-    if (!streetGroundMesh && nearTilesStarted > 0) {
-      var camPos = getCameraPosition();
-      var camDir = new THREE.Vector3(camPos.x, camPos.y, camPos.z).normalize();
-      createStreetGround(camPos, camDir);
-    }
-
-    if (pending > 0 || hasNearProgress()) {
-      requestAnimationFrame(rebuildNearOverlay);
-    }
-  }
-
-  function hasNearProgress() {
-    for (var k in nearProgress) return true;
-    return false;
-  }
-
-  function beginNearTile(tileId, imageData) {
-    var blockNums = [];
-    for (var bk in blocksByTile[tileId]) blockNums.push(parseInt(bk));
-    if (blockNums.length === 0) return;
-
-    nearProgress[tileId] = {
-      blocks: blockNums,
-      index: 0,
-      imageData: imageData,
-      positions: [],
-      normals: [],
-      colors: [],
-      indices: [],
-      vertexCount: 0
-    };
-  }
-
-  function stepNearTiles(budgetMs, startT) {
-    for (var tileId in nearProgress) {
-      var prog = nearProgress[tileId];
-      if (!prog) continue;
-
-      while (prog.index < prog.blocks.length) {
-        if ((performance.now() - startT) >= budgetMs) return;
-        appendNearBlock(prog, parseInt(prog.blocks[prog.index]));
-        prog.index++;
-      }
-
-      if (prog.index >= prog.blocks.length) {
-        finishNearTile(parseInt(tileId), prog);
-      }
-    }
-  }
-
-  function appendNearBlock(prog, blockNum) {
-    var data = allBlocks[blockNum] || { tx: 1, hash: '' };
-    var tx = data.tx;
-    var hash = data.hash;
-
-    var cached = WorldGrid.getCachedBlockInfo(blockNum);
-    var scaleX = cached.scale;
-    var scaleZ = cached.scale;
-
-    var distance = getDistance();
-    var t = Math.max(0, Math.min(1, (NEAR_DISTANCE - distance) / (NEAR_DISTANCE - STREET_MIN_DIST)));
-    var heightFactor = 1 + t * 4;
-
-    var gx = blockNum % GRID_SIZE;
-    var gz = Math.floor(blockNum / GRID_SIZE);
-    var col = gx % ATLAS_COLS;
-    var row;
-    if (gz < 500) {
-      row = (ATLAS_ROWS - 1) - (gz % ATLAS_ROWS);
-    } else {
-      row = (gz - 500) % ATLAS_ROWS;
-    }
-
-    var geoData = Parcel3D.buildBlockGeometryFromImage(
-      prog.imageData, col, row, CELL_SIZE, blockNum, tx, hash
-    );
-
-    _normalVec.set(cached.nx, cached.ny, cached.nz);
-    _quat.setFromUnitVectors(_up, _normalVec);
-    _mat4.makeRotationFromQuaternion(_quat);
-
-    var radius = WORLD_RADIUS + INSTANCE_OFFSET;
-    var bx = cached.nx * radius;
-    var by = cached.ny * radius;
-    var bz = cached.nz * radius;
-
-    var positionsArr = geoData.positions;
-    var normalsArr = geoData.normals;
-    var colorsArr = geoData.colors;
-    var indicesArr = geoData.indices;
-
-    for (var j = 0; j < positionsArr.length; j += 3) {
-      var lx = positionsArr[j] * BLOCK_SIZE * scaleX;
-      var ly = positionsArr[j + 1] > 0 ? positionsArr[j + 1] * heightFactor : positionsArr[j + 1];
-      var lz = positionsArr[j + 2] * BLOCK_SIZE * scaleZ;
-
-      _localOffset.set(lx, ly, lz);
-      _localOffset.applyMatrix4(_mat4);
-
-      prog.positions.push(bx + _localOffset.x, by + _localOffset.y, bz + _localOffset.z);
-
-      _nVec.set(normalsArr[j], normalsArr[j + 1], normalsArr[j + 2]);
-      _nVec.applyQuaternion(_quat);
-      _nVec.normalize();
-      prog.normals.push(_nVec.x, _nVec.y, _nVec.z);
-
-      prog.colors.push(colorsArr[j], colorsArr[j + 1], colorsArr[j + 2]);
-    }
-
-    for (var j = 0; j < indicesArr.length; j++) {
-      prog.indices.push(indicesArr[j] + prog.vertexCount);
-    }
-
-    prog.vertexCount += positionsArr.length / 3;
-  }
-
-  function finishNearTile(tileId, prog) {
-    if (prog.positions.length === 0) return;
+    var posArr = new Float32Array(positions);
+    var colArr = new Float32Array(colors);
+    var idxArr = new Uint32Array(indices);
 
     var geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(prog.positions), 3));
-    geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(prog.normals), 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(prog.colors), 3));
-    geo.setIndex(new THREE.BufferAttribute(new Uint32Array(prog.indices), 1));
+    geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
+    geo.setIndex(new THREE.BufferAttribute(idxArr, 1));
 
     var mat = new THREE.MeshStandardMaterial({
       vertexColors: true,
-      roughness: 0.6,
-      metalness: 0.05,
-      flatShading: true
-    });
-
-    if (tileNearMeshes[tileId]) {
-      scene.remove(tileNearMeshes[tileId]);
-      tileNearMeshes[tileId].geometry.dispose();
-      tileNearMeshes[tileId].material.dispose();
-    }
-
-    var mesh = new THREE.Mesh(geo, mat);
-    mesh.frustumCulled = false;
-    mesh.userData = { tileId: tileId, isNearOverlay: true };
-    scene.add(mesh);
-    tileNearMeshes[tileId] = mesh;
-    tileNearDirty[tileId] = false;
-    if (tileInstanced[tileId]) tileInstanced[tileId].visible = false;
-  }
-
-  function createStreetGround(camPos, camDir) {
-    if (streetGroundMesh) {
-      scene.remove(streetGroundMesh);
-      streetGroundMesh.geometry.dispose();
-      streetGroundMesh.material.dispose();
-      streetGroundMesh = null;
-    }
-
-    var geo = new THREE.CircleGeometry(4, 32);
-    var positions = geo.attributes.position.array;
-    for (var i = 0; i < positions.length; i += 3) {
-      positions[i + 2] = 0;
-    }
-
-    var colors = new Float32Array(positions.length);
-    for (var i = 0; i < positions.length; i += 3) {
-      var x = positions[i];
-      var absX = Math.abs(x);
-      var r, g, b;
-      if (absX > 0.15) {
-        r = 0.45; g = 0.45; b = 0.48;
-      } else if (absX > 0.12) {
-        r = 0.30; g = 0.30; b = 0.33;
-      } else {
-        r = 0.88; g = 0.88; b = 0.85;
-      }
-      colors[i] = r;
-      colors[i + 1] = g;
-      colors[i + 2] = b;
-    }
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    var mat = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.8,
-      metalness: 0.0,
-      flatShading: false
+      roughness: 0.85,
+      metalness: 0.0
     });
 
     streetGroundMesh = new THREE.Mesh(geo, mat);
     streetGroundMesh.frustumCulled = false;
     streetGroundMesh.renderOrder = -1;
+    scene.add(streetGroundMesh);
+  }
 
-    var pos = new THREE.Vector3(
-      camDir.x * (WORLD_RADIUS + INSTANCE_OFFSET - 0.02),
-      camDir.y * (WORLD_RADIUS + INSTANCE_OFFSET - 0.02),
-      camDir.z * (WORLD_RADIUS + INSTANCE_OFFSET - 0.02)
-    );
-    streetGroundMesh.position.copy(pos);
+  function updateStreetGround() {
+    if (!streetGroundMesh) return;
+    var distance = getDistance();
+    if (distance > 120) {
+      streetGroundMesh.visible = false;
+      return;
+    }
+    streetGroundMesh.visible = true;
+
+    var camPos = getCameraPosition();
+    var camDir = new THREE.Vector3(camPos.x, camPos.y, camPos.z).normalize();
+    var surfR = WORLD_RADIUS + INSTANCE_OFFSET - 0.05;
+
+    streetGroundMesh.position.set(camDir.x * surfR, camDir.y * surfR, camDir.z * surfR);
 
     var up = new THREE.Vector3(0, 1, 0);
-    streetGroundMesh.quaternion.setFromUnitVectors(up, camDir.clone().normalize());
-
-    scene.add(streetGroundMesh);
+    streetGroundMesh.quaternion.setFromUnitVectors(up, camDir);
   }
 
   function removeStreetGround() {
@@ -794,7 +562,6 @@ var WorldBlocks = (function() {
       var dTheta = Math.abs(theta - lastUpdateTheta);
       var dPhi = Math.abs(phi - lastUpdatePhi);
       var dDist = Math.abs(distance - lastUpdateDist);
-      var debounce = isZooming ? ZOOM_DEBOUNCE : LOAD_DEBOUNCE;
       if (dTheta < 0.01 && dPhi < 0.01 && dDist < 2) return;
     }
     lastUpdateTheta = theta;
@@ -811,7 +578,7 @@ var WorldBlocks = (function() {
     applyVisible(visible);
 
     rebuildDirtyTiles();
-    rebuildNearOverlay();
+    updateStreetGround();
   }
 
   function applyVisible(visible) {
@@ -871,18 +638,11 @@ var WorldBlocks = (function() {
   function setZooming(zooming) {
     isZooming = zooming;
     if (zoomTimer) { clearTimeout(zoomTimer); zoomTimer = null; }
-    if (zooming) {
-      zoomTimer = setTimeout(function() {
-        isZooming = false;
-        rebuildNearOverlay();
-      }, 600);
-    }
   }
 
   function getMeshAt(blockNumber) {
     if (blockNumber === 0) return block0Mesh;
     var tileId = WorldGrid.getAtlasTile(blockNumber);
-    if (tileNearMeshes[tileId]) return tileNearMeshes[tileId];
     return tileInstanced[tileId] || null;
   }
 
@@ -894,9 +654,6 @@ var WorldBlocks = (function() {
     var result = { 0: block0Mesh };
     for (var tileId in tileInstanced) {
       result['tile_' + tileId] = tileInstanced[tileId];
-    }
-    for (var tileId in tileNearMeshes) {
-      result['near_' + tileId] = tileNearMeshes[tileId];
     }
     return result;
   }
@@ -943,36 +700,21 @@ var WorldBlocks = (function() {
         if (m && m.material && m.material !== sharedMaterial) m.material.dispose();
         delete tileInstanced[tileId];
         delete tileDirty[tileId];
-        delete tileNearDirty[tileId];
-        delete tileImageData[tileId];
         delete tileTextures[tileId];
         delete tileInstanceCount[tileId];
         delete blocksByTile[tileId];
         delete instanceBlockMap[tileId];
       }
     }
-
-    for (var tileId in tileNearMeshes) {
-      if (!visibleTiles[tileId]) {
-        var m = tileNearMeshes[tileId];
-        if (m && m.parent) m.parent.remove(m);
-        if (m && m.geometry) m.geometry.dispose();
-        if (m && m.material) m.material.dispose();
-        delete tileNearMeshes[tileId];
-        delete tileNearDirty[tileId];
-        delete nearProgress[tileId];
-      }
-    }
   }
 
   function startBackgroundLoad() {
     if (bgLoadInterval) return;
-    console.log('🗺️ WorldBlocks: Iniciando carga continua de 3D...');
     bgLoadInterval = setInterval(function() {
       var state = WorldControls.getState();
       if (!state) return;
       rebuildDirtyTiles();
-      rebuildNearOverlay();
+      updateStreetGround();
     }, 2000);
   }
 
@@ -980,7 +722,6 @@ var WorldBlocks = (function() {
     if (bgLoadInterval) {
       clearInterval(bgLoadInterval);
       bgLoadInterval = null;
-      console.log('🗺️ WorldBlocks: Carga continua detenida.');
     }
   }
 
