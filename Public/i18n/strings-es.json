@@ -39,7 +39,14 @@
     "viewAll": "Ver todos",
     "block": "Bloque",
     "searchPlaceholder": "Número de bloque o etiqueta...",
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "blockNotFound": "El bloque ",
+    "blockNotFoundSuffix": " no existe en la base de datos",
+    "tagTables": "Tablas de Etiquetas",
+    "sort": "Ordenar",
+    "sortMostBlocks": "Con Más bloques",
+    "sortLeastBlocks": "Con Menos bloques",
+    "sortOriginal": "Orden original (Bloque)"
   },
   "marketplace": {
     "title": "Marketplace",
@@ -137,5 +144,12 @@
     "connectWallet": "Conectar Wallet",
     "myAssets": "Mis Activos",
     "disconnect": "Desconectar wallet"
+  },
+  "sidebar": {
+    "listings": "Listados",
+    "sort": "Orden",
+    "sortRecent": "Más recientes",
+    "sortLowest": "Menor precio",
+    "sortHighest": "Mayor precio"
   }
 }

@@ -55,7 +55,7 @@ function HomePage(props) {
       BlockViewModel.getBlock(num).then(function(block) {
         setIsSearching(false);
         if (!block) {
-          setNoBlockMessage('El bloque ' + num + ' no existe en la base de datos');
+          setNoBlockMessage(I18n.t('home.blockNotFound') + num + I18n.t('home.blockNotFoundSuffix'));
           if (noBlockTimer) clearTimeout(noBlockTimer);
           noBlockTimer = setTimeout(function() { setNoBlockMessage(''); }, 10000);
           return;
@@ -141,9 +141,9 @@ function HomePage(props) {
 
   var sortOptions = [
     { key:'A-Z', label:'A-Z' },
-    { key:'most_blocks', label:'Con M\u00E1s bloques' },
-    { key:'least_blocks', label:'Con Menos bloques' },
-    { key:'original', label:'Orden original (Bloque)' }
+    { key:'most_blocks', label: I18n.t('home.sortMostBlocks') },
+    { key:'least_blocks', label: I18n.t('home.sortLeastBlocks') },
+    { key:'original', label: I18n.t('home.sortOriginal') }
   ];
 
   var getSortedTags = function() {
@@ -173,7 +173,7 @@ function HomePage(props) {
             value:searchQuery,
             onChange:function(e) { setSearchQuery(e.target.value); setNoBlockMessage(''); },
             onKeyDown:handleKeyDown,
-            placeholder:'Buscar bloque o etiqueta...',
+            placeholder:I18n.t('home.searchPlaceholder'),
             className:'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors h-10'
           })
         ),
@@ -201,12 +201,12 @@ function HomePage(props) {
       tagsLoading ? React.createElement('div', { className:'flex items-center justify-center h-32 font-acme text-bitmap-muted' }, I18n.t('app.loading')) :
       React.createElement('div', { className:'space-y-2' },
         React.createElement('div', { className:'flex items-center justify-between' },
-        React.createElement('h2', { className:'font-alfaslab text-lg text-white' }, tags.length + ' Tablas de Etiquetas (' + tags.length + ')'),
+        React.createElement('h2', { className:'font-alfaslab text-lg text-white' }, tags.length + ' ' + I18n.t('home.tagTables') + ' (' + tags.length + ')'),
         React.createElement('div', { className:'relative' },
           React.createElement('button', {
             onClick:function() { setSortMenuOpen(!sortMenuOpen); },
             className:'bg-bitmap-orange text-black font-alfaslab text-xs px-3 py-1 rounded-lg whitespace-nowrap'
-          }, 'Ordenar'),
+          }, I18n.t('home.sort')),
           sortMenuOpen ? React.createElement('div', { className:'absolute right-0 top-full mt-1 bg-bitmap-surface border border-bitmap-border rounded-lg py-1 z-50 min-w-[180px]' },
             sortOptions.map(function(opt) {
               var isActive = sortOrder === opt.key;
@@ -259,10 +259,10 @@ function MarketplaceSelectorPage(props) {
     { id:'ordinalswallet', label:'Ordinalswallet', icon:'\uD83D\uDFE7', path:'/ordinalswallet' },
     { id:'unisat', label:'Unisat', icon:'\uD83D\uDFE1', path:'/unisat' },
     { id:'local', label:'BitmapCore', icon:'\uD83D\uDFE0', path:'/local' },
-    { id:'discounts', label:'Descuentos', icon:'\uD83D\uDFE2', path:'/discounts', isDiscount:true },
+    { id:'discounts', label: I18n.t('nav.discounts'), icon:'\uD83D\uDFE2', path:'/discounts', isDiscount:true },
     { id:'unified', label:'Unified', icon:'\uD83D\uDD35', path:'/unified' },
-    { id:'tags', label:'Etiquetas', icon:'\uD83C\uDFF7\uFE0F', path:'/tag-tables' },
-    { id:'sales', label:'Ventas', icon:'\uD83D\uDCB0', path:'/sales' }
+    { id:'tags', label: I18n.t('nav.tags'), icon:'\uD83C\uDFF7\uFE0F', path:'/tag-tables' },
+    { id:'sales', label: I18n.t('nav.sales'), icon:'\uD83D\uDCB0', path:'/sales' }
   ];
 
   var getData = function(id) {

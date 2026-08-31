@@ -175,12 +175,12 @@ function Sidebar(props) {
   }, []);
 
   var sortOptions = [
-    { value: 'listedAtDesc', label: 'M\u00E1s recientes' },
-    { value: 'priceAsc', label: 'Menor precio' },
-    { value: 'priceDesc', label: 'Mayor precio' }
+    { value: 'listedAtDesc', label: I18n.t('sidebar.sortRecent') },
+    { value: 'priceAsc', label: I18n.t('sidebar.sortLowest') },
+    { value: 'priceDesc', label: I18n.t('sidebar.sortHighest') }
   ];
 
-  var currentSortLabel = 'Orden';
+  var currentSortLabel = I18n.t('sidebar.sort');
   for (var si = 0; si < sortOptions.length; si++) {
     if (sortOptions[si].value === currentSort) { currentSortLabel = sortOptions[si].label; break; }
   }
@@ -198,7 +198,7 @@ function Sidebar(props) {
   },
     React.createElement('div', { className:'flex flex-col h-full' },
       React.createElement('div', { className:'flex items-center justify-between px-3 py-2 border-b border-bitmap-border', style:{ minHeight:'36px' } },
-        React.createElement('span', { className:'font-alfaslab text-[10px] text-bitmap-orange' }, 'Listados'),
+        React.createElement('span', { className:'font-alfaslab text-[10px] text-bitmap-orange' }, I18n.t('sidebar.listings')),
         React.createElement('div', { className:'relative' },
           React.createElement('button', {
             onClick: function() { setShowDropdown(!showDropdown); },
@@ -219,7 +219,7 @@ function Sidebar(props) {
       ),
       React.createElement('div', { className:'flex-1 overflow-y-auto divide-y divide-bitmap-border' },
         listings.length === 0
-          ? React.createElement('div', { className:'text-center py-8 font-acme text-xs text-bitmap-muted' }, 'Cargando...')
+          ? React.createElement('div', { className:'text-center py-8 font-acme text-xs text-bitmap-muted' }, I18n.t('app.loading'))
           : listings.map(function(item, i) {
               var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
               var tags = (item.etiquetas || '').split('|').filter(function(t) { return t.trim() !== ''; });

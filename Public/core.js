@@ -119,5 +119,13 @@
 
   var root = ReactDOM.createRoot(document.getElementById('root'));
   StoreApp.initWallet();
-  root.render(React.createElement(Root));
+  if (typeof I18nManager !== 'undefined' && I18nManager.init) {
+    I18nManager.init().then(function() {
+      root.render(React.createElement(Root));
+    }).catch(function() {
+      root.render(React.createElement(Root));
+    });
+  } else {
+    root.render(React.createElement(Root));
+  }
 })();
