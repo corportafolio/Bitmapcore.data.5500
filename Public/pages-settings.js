@@ -35,7 +35,12 @@ function SettingsPage(props) {
   };
 
   return React.createElement('div', { className:'p-4 lg:p-6' },
-    React.createElement('div', { className:'max-w-md mx-auto' },
+    React.createElement('div', { className:'max-w-xl mx-auto space-y-6' },
+      React.createElement('h2', { className:'font-alfaslab text-xl text-white flex items-center gap-2 mb-2' },
+        React.createElement('span', { className:'text-xl' }, '\u2699\uFE0F'),
+        ' ', I18n.t('settings.title')
+      ),
+
       React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-6' },
         React.createElement('label', { className:'font-acme text-xs text-bitmap-muted block mb-2' }, I18n.t('settings.language')),
         React.createElement('div', { className:'relative' },
@@ -77,6 +82,35 @@ function SettingsPage(props) {
                 'bg-bitmap-orange text-white rounded-lg hover:bg-bitmap-orange/80 disabled:opacity-50 mx-2 my-1'
             }, isSaving ? I18n.t('app.loading') : I18n.t('settings.save'))
           ) : null
+        )
+      ),
+
+      React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-6' },
+        React.createElement('h3', { className:'font-alfaslab text-lg text-white mb-4 flex items-center gap-2' },
+          React.createElement('span', { className:'text-xl' }, '\uD83D\uDCCA'),
+          ' ', I18n.t('settings.about')
+        ),
+        React.createElement('div', { className:'space-y-3 font-acme text-sm text-bitmap-text' },
+          React.createElement('div', { className:'flex justify-between' },
+            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.version')),
+            React.createElement('span', null, '1.0.0')
+          ),
+          React.createElement('div', { className:'flex justify-between' },
+            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.database')),
+            React.createElement('span', null, I18n.t('settings.blocks'))
+          ),
+          React.createElement('div', { className:'flex justify-between' },
+            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.tagTables')),
+            React.createElement('span', null, '55')
+          ),
+          React.createElement('div', { className:'flex justify-between' },
+            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.primaryColor')),
+            React.createElement('span', { className:'font-alfaslab text-bitmap-orange' }, '#FE3E00')
+          ),
+          React.createElement('div', { className:'flex justify-between' },
+            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.backgroundColor')),
+            React.createElement('span', { className:'font-alfaslab text-white' }, '#080008')
+          )
         )
       )
     )
