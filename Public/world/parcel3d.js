@@ -213,17 +213,49 @@ var Parcel3D = (function() {
   }
 
   function addGroundPlane(positions, normals, colors, indices, vertexOffset) {
-    positions.push(-0.5, -0.01, -0.5);
-    positions.push( 0.5, -0.01, -0.5);
-    positions.push( 0.5, -0.01,  0.5);
-    positions.push(-0.5, -0.01,  0.5);
-
-    for (var i = 0; i < 4; i++) {
-      normals.push(0, 1, 0);
-      colors.push(0.02, 0.016, 0.024);
-    }
+    var S = 0.35;
+    var LW = 0.012;
+    var SW = 0.03;
 
     var base = vertexOffset;
+
+    positions.push(-S, -0.01, -S);
+    positions.push(-S + SW, -0.01, -S);
+    positions.push(-S + SW, -0.01, S);
+    positions.push(-S, -0.01, S);
+    for (var i = 0; i < 4; i++) { normals.push(0, 1, 0); colors.push(0.55, 0.55, 0.55); }
+    indices.push(base, base+1, base+2, base, base+2, base+3);
+
+    base += 4;
+    positions.push(-S + SW, -0.01, -S);
+    positions.push(-LW, -0.01, -S);
+    positions.push(-LW, -0.01, S);
+    positions.push(-S + SW, -0.01, S);
+    for (var i = 0; i < 4; i++) { normals.push(0, 1, 0); colors.push(0.35, 0.35, 0.38); }
+    indices.push(base, base+1, base+2, base, base+2, base+3);
+
+    base += 4;
+    positions.push(-LW, -0.009, -S);
+    positions.push(LW, -0.009, -S);
+    positions.push(LW, -0.009, S);
+    positions.push(-LW, -0.009, S);
+    for (var i = 0; i < 4; i++) { normals.push(0, 1, 0); colors.push(0.92, 0.92, 0.88); }
+    indices.push(base, base+1, base+2, base, base+2, base+3);
+
+    base += 4;
+    positions.push(LW, -0.01, -S);
+    positions.push(S - SW, -0.01, -S);
+    positions.push(S - SW, -0.01, S);
+    positions.push(LW, -0.01, S);
+    for (var i = 0; i < 4; i++) { normals.push(0, 1, 0); colors.push(0.35, 0.35, 0.38); }
+    indices.push(base, base+1, base+2, base, base+2, base+3);
+
+    base += 4;
+    positions.push(S - SW, -0.01, -S);
+    positions.push(S, -0.01, -S);
+    positions.push(S, -0.01, S);
+    positions.push(S - SW, -0.01, S);
+    for (var i = 0; i < 4; i++) { normals.push(0, 1, 0); colors.push(0.55, 0.55, 0.55); }
     indices.push(base, base+1, base+2, base, base+2, base+3);
   }
 

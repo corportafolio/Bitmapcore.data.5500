@@ -235,6 +235,7 @@ var PagesWorld = (function() {
     WorldControls.init(WorldScene.getCamera(), WorldScene.getRenderer());
     WorldGrid.create(WorldScene.getScene());
     WorldBlocks.init(WorldScene.getScene());
+    WorldAvatar.init(WorldScene.getScene());
 
     WorldInteraction.init(
       WorldScene.getCamera(),

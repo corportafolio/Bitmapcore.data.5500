@@ -17,7 +17,7 @@ var WorldBlocks = (function() {
   var isZooming = false;
   var zoomTimer = null;
 
-  var NEAR_DISTANCE = 111;
+  var NEAR_DISTANCE = 112;
   var MAX_NEAR_TILES_PER_FRAME = 3;
 
   var tileInstanced = {};
@@ -720,9 +720,7 @@ var WorldBlocks = (function() {
     applyVisible(visible);
 
     rebuildDirtyTiles();
-    if (!isZooming) {
-      rebuildNearOverlay();
-    }
+    rebuildNearOverlay();
   }
 
   function applyVisible(visible) {
