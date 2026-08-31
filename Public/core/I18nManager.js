@@ -1,4 +1,4 @@
-var I18n = (function() {
+var I18nManager = (function() {
   var currentLang = 'en';
   var pendingLang = 'en';
   var strings = {};
