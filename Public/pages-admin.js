@@ -45,49 +45,6 @@ function AdminDashboardPage(props) {
   );
 }
 
-function SettingsPage(props) {
-  var navigate = props.navigate;
-  var _a = React.useState(I18n.currentLang);
-  var lang = _a[0];
-  var setLang = _a[1];
-
-  var handleLangChange = function(newLang) {
-    setLang(newLang);
-    I18n.setLanguage(newLang);
-    window.location.reload();
-  };
-
-  return React.createElement('div', { className:'flex flex-col h-full' },
-    React.createElement(HeaderBar, { showBackButton:true, title:I18n.t('settings.title'), navigate:navigate }),
-    React.createElement('main', { className:'flex-1 overflow-y-auto p-4 lg:p-6' },
-      React.createElement('div', { className:'max-w-2xl mx-auto space-y-6' },
-        React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-4 space-y-3' },
-          React.createElement('h3', { className:'font-alfaslab text-sm text-bitmap-orange' }, I18n.t('settings.language')),
-          React.createElement('div', { className:'flex gap-2' },
-            React.createElement('button', {
-              onClick: function() { handleLangChange('es'); },
-              className: 'flex-1 py-2 font-alfaslab text-xs rounded-lg transition-colors ' + (lang === 'es' ? 'bg-bitmap-orange text-white' : 'bg-bitmap-black border border-bitmap-border text-bitmap-text')
-            }, 'Español'),
-            React.createElement('button', {
-              onClick: function() { handleLangChange('en'); },
-              className: 'flex-1 py-2 font-alfaslab text-xs rounded-lg transition-colors ' + (lang === 'en' ? 'bg-bitmap-orange text-white' : 'bg-bitmap-black border border-bitmap-border text-bitmap-text')
-            }, 'English')
-          )
-        ),
-        React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-4 space-y-3' },
-          React.createElement('h3', { className:'font-alfaslab text-sm text-bitmap-orange' }, 'Polling'),
-          React.createElement('p', { className:'font-acme text-xs text-bitmap-muted' }, 'Intervalo: ' + (BitmapConstants.POLLING_INTERVAL / 1000) + 's')
-        ),
-        React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-4 space-y-3' },
-          React.createElement('h3', { className:'font-alfaslab text-sm text-bitmap-orange' }, 'Información'),
-          React.createElement('p', { className:'font-acme text-xs text-bitmap-muted' }, 'BitmapCore Web v1.0'),
-          React.createElement('p', { className:'font-acme text-xs text-bitmap-muted' }, 'Bitcoin Block NFT Marketplace')
-        )
-      )
-    )
-  );
-}
-
 function WhitepaperPage(props) {
   var navigate = props.navigate;
 
