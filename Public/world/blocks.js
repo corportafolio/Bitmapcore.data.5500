@@ -17,7 +17,8 @@ var WorldBlocks = (function() {
   var isZooming = false;
   var zoomTimer = null;
 
-  var NEAR_DISTANCE = 104;
+  var NEAR_DISTANCE = 111;
+  var MAX_NEAR_TILES_PER_FRAME = 3;
 
   var tileInstanced = {};
   var tileNearMeshes = {};
@@ -452,9 +453,11 @@ var WorldBlocks = (function() {
     var startT = performance.now();
     var BUDGET_MS = 8;
     var pending = 0;
+    var nearTilesStarted = 0;
 
     for (var i = 0; i < nearList.length; i++) {
       if ((performance.now() - startT) >= BUDGET_MS) { pending++; continue; }
+      if (nearTilesStarted >= MAX_NEAR_TILES_PER_FRAME) { pending++; continue; }
       var tid = nearList[i];
 
       if (tileNearMeshes[tid]) {
@@ -484,6 +487,7 @@ var WorldBlocks = (function() {
       }
 
       beginNearTile(tid, imageData);
+      nearTilesStarted++;
       pending++;
     }
 
