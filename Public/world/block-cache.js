@@ -337,6 +337,17 @@ var MAX_CONCURRENT_FETCHES = 6;
   }
 
   function ensureAtlas(gz, callback) {
+    if (cachedKeys[gz]) {
+      getAtlasBlob(gz).then(function(blob) {
+        if (blob) {
+          callback(blob);
+        } else {
+          cachedKeys[gz] = false;
+          fetchAtlas(gz, callback);
+        }
+      });
+      return;
+    }
     fetchAtlas(gz, callback);
   }
 

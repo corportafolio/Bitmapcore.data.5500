@@ -18,7 +18,7 @@ var WorldBlocks = (function() {
   var zoomTimer = null;
 
   var NEAR_DISTANCE = 112;
-  var MAX_NEAR_TILES_PER_FRAME = 5;
+  var MAX_NEAR_TILES_PER_FRAME = 10;
 
   var tileInstanced = {};
   var tileNearMeshes = {};
@@ -390,7 +390,7 @@ var WorldBlocks = (function() {
     });
 
     var startT = performance.now();
-    var BUDGET_MS = 16;
+    var BUDGET_MS = 50;
     var d = 0;
 
     while (d < dirtyList.length && (performance.now() - startT) < BUDGET_MS) {
@@ -451,7 +451,7 @@ var WorldBlocks = (function() {
     });
 
     var startT = performance.now();
-    var BUDGET_MS = 16;
+    var BUDGET_MS = 50;
     var pending = 0;
     var nearTilesStarted = 0;
 
@@ -877,6 +877,11 @@ var WorldBlocks = (function() {
   function startBackgroundLoad() {
     if (bgLoadInterval) return;
     console.log('🗺️ WorldBlocks: Iniciando carga continua de 3D...');
+    if (typeof AtlasCache !== 'undefined' && AtlasCache.preloadAll) {
+      AtlasCache.preloadAll(function() {
+        console.log('🗺️ WorldBlocks: Atlas precarga completada');
+      });
+    }
     var lastTheta = null;
     var lastPhi = null;
     var lastDist = null;
