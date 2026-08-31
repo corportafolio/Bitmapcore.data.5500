@@ -629,7 +629,7 @@ var WorldBlocks = (function() {
     if (tileInstanced[tileId]) tileInstanced[tileId].visible = false;
   }
 
-  var MAX_VISIBLE = 150000;
+  var MAX_VISIBLE = 400000;
 
   function calculateVisibleBlocks(nearDir, distance) {
     var camPhi = Math.asin(Math.max(-1, Math.min(1, nearDir.y)));
@@ -642,12 +642,21 @@ var WorldBlocks = (function() {
     var angularRadius = Math.acos(Math.min(0.999, RADIUS / Math.max(distance, RADIUS + 0.1)));
     var gzRadius = Math.ceil((angularRadius * 180 / Math.PI) / 0.18);
 
+    var camGz;
+    if (camPhi >= 0) {
+      camGz = Math.round((camPhi / (Math.PI / 2)) * 499);
+    } else {
+      camGz = 500 + Math.round((-camPhi / (Math.PI / 2)) * 455);
+    }
+    camGz = Math.max(0, Math.min(955, camGz));
+
     var visible = [];
 
-    for (var gz = 0; gz < 956; gz++) {
+    function scanGz(gz) {
+      if (gz < 0 || gz > 955) return;
       var phi = getPhiFromGz(gz);
       var latDiff = Math.abs(phi - camPhi);
-      if (latDiff > Math.PI / 2) continue;
+      if (latDiff > Math.PI / 2) return;
 
       var latFactor = Math.cos(phi);
       var gxRadius = Math.min(Math.ceil(gzRadius / Math.max(latFactor, 0.15)), 500);
@@ -664,15 +673,19 @@ var WorldBlocks = (function() {
 
         if (dot > -0.1) {
           visible.push({ blockNum: blockNum, dot: dot });
-          if (visible.length >= MAX_VISIBLE) {
-            gz = 956;
-            break;
-          }
         }
       }
     }
 
+    for (var step = 0; step <= 955; step++) {
+      scanGz(camGz + step);
+      if (step > 0) scanGz(camGz - step);
+      if (visible.length >= MAX_VISIBLE) break;
+    }
+
     visible.sort(function(a, b) { return b.dot - a.dot; });
+
+    if (visible.length > MAX_VISIBLE) visible.length = MAX_VISIBLE;
 
     return visible;
   }
