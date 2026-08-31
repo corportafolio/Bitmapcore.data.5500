@@ -583,7 +583,7 @@ var WorldBlocks = (function() {
 
     for (var j = 0; j < positionsArr.length; j += 3) {
       var lx = positionsArr[j] * BLOCK_SIZE * scaleX;
-      var ly = positionsArr[j + 1] * heightFactor;
+      var ly = positionsArr[j + 1] > 0 ? positionsArr[j + 1] * heightFactor : positionsArr[j + 1];
       var lz = positionsArr[j + 2] * BLOCK_SIZE * scaleZ;
 
       localOffset.set(lx, ly, lz);
