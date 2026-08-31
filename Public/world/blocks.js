@@ -545,6 +545,10 @@ var WorldBlocks = (function() {
     var scaleX = cached.scale;
     var scaleZ = cached.scale;
 
+    var distance = getDistance();
+    var t = Math.max(0, Math.min(1, (NEAR_DISTANCE - distance) / (NEAR_DISTANCE - MIN_DISTANCE)));
+    var heightFactor = 1 + t * 14;
+
     var gx = blockNum % GRID_SIZE;
     var gz = Math.floor(blockNum / GRID_SIZE);
     var col = gx % ATLAS_COLS;
@@ -578,7 +582,7 @@ var WorldBlocks = (function() {
 
     for (var j = 0; j < positionsArr.length; j += 3) {
       var lx = positionsArr[j] * BLOCK_SIZE * scaleX;
-      var ly = positionsArr[j + 1];
+      var ly = positionsArr[j + 1] * heightFactor;
       var lz = positionsArr[j + 2] * BLOCK_SIZE * scaleZ;
 
       localOffset.set(lx, ly, lz);
