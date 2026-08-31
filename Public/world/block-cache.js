@@ -212,6 +212,7 @@ var MAX_CONCURRENT_FETCHES = 6;
   }
 
   function getAtlasBlob(gz) {
+    console.log('🗺️ AtlasCache.getAtlasBlob: gz=', gz);
     return openDB().then(function(database) {
       return new Promise(function(resolve, reject) {
         var tx = database.transaction(STORE_NAME, 'readonly');
@@ -220,8 +221,10 @@ var MAX_CONCURRENT_FETCHES = 6;
           var row = request.result;
           if (row && row.blob) {
             cachedKeys[gz] = true;
+            console.log('🗺️ AtlasCache.getAtlasBlob: gz', gz, 'FOUND in IndexedDB, size=', row.blob.size);
             resolve(row.blob);
           } else {
+            console.log('🗺️ AtlasCache.getAtlasBlob: gz', gz, 'NOT FOUND in IndexedDB');
             resolve(null);
           }
         };
@@ -244,11 +247,14 @@ var MAX_CONCURRENT_FETCHES = 6;
 
   function loadAllKeys() {
     if (loaded) {
+      console.log('🗺️ AtlasCache.loadAllKeys: already loaded, cachedKeys count=', Object.keys(cachedKeys).length);
       return Promise.resolve();
     }
     if (loadAllKeysPromise) {
+      console.log('🗺️ AtlasCache.loadAllKeys: already loading, waiting for existing Promise');
       return loadAllKeysPromise;
     }
+    console.log('🗺️ AtlasCache.loadAllKeys: loading from IndexedDB...');
     loadAllKeysPromise = openDB().then(function(database) {
       return new Promise(function(resolve) {
         var tx = database.transaction(STORE_NAME, 'readonly');
@@ -263,10 +269,12 @@ var MAX_CONCURRENT_FETCHES = 6;
           } else {
             loaded = true;
             loadAllKeysPromise = null;
+            console.log('🗺️ AtlasCache.loadAllKeys: DONE, cachedKeys count=', count);
             resolve();
           }
         };
         request.onerror = function() {
+          console.error('🗺️ AtlasCache.loadAllKeys: ERROR');
           loaded = true;
           loadAllKeysPromise = null;
           resolve();
@@ -320,18 +328,23 @@ var MAX_CONCURRENT_FETCHES = 6;
   }
 
   function ensureAtlas(gz, callback) {
+    console.log('🗺️ AtlasCache.ensureAtlas: gz=', gz);
     loadAllKeys().then(function() {
       if (cachedKeys[gz]) {
+        console.log('🗺️ AtlasCache.ensureAtlas: gz', gz, 'found in cachedKeys, getting blob');
         getAtlasBlob(gz).then(function(blob) {
           if (blob) {
+            console.log('🗺️ AtlasCache.ensureAtlas: gz', gz, 'blob found, size=', blob.size);
             callback(blob);
           } else {
+            console.warn('🗺️ AtlasCache.ensureAtlas: gz', gz, 'blob NOT FOUND in IndexedDB, fetching');
             delete cachedKeys[gz];
             fetchAtlas(gz, callback);
           }
         });
         return;
       }
+      console.log('🗺️ AtlasCache.ensureAtlas: gz', gz, 'NOT in cachedKeys, fetching from API');
       fetchAtlas(gz, callback);
     });
   }

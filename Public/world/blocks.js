@@ -233,14 +233,17 @@ var WorldBlocks = (function() {
   }
 
   function loadTileImageData(tileId, callback) {
-    if (!AtlasCache) { callback(null); return; }
+    if (!AtlasCache) { console.warn('🗺️ loadTileImageData: AtlasCache not available'); callback(null); return; }
 
+    console.log('🗺️ loadTileImageData: requesting atlas for tile', tileId);
     AtlasCache.ensureAtlas(tileId, function(blob) {
-      if (!blob) { callback(null); return; }
+      if (!blob) { console.warn('🗺️ loadTileImageData: no blob for tile', tileId); callback(null); return; }
 
+      console.log('🗺️ loadTileImageData: got blob for tile', tileId, 'size=', blob.size);
       var url = URL.createObjectURL(blob);
       var img = new Image();
       img.onload = function() {
+        console.log('🗺️ loadTileImageData: image loaded for tile', tileId, img.width + 'x' + img.height);
         var canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
@@ -254,9 +257,11 @@ var WorldBlocks = (function() {
         tileTextures[tileId] = texture;
 
         URL.revokeObjectURL(url);
+        console.log('🗺️ loadTileImageData: texture created for tile', tileId);
         callback(texture);
       };
       img.onerror = function() {
+        console.error('🗺️ loadTileImageData: image load error for tile', tileId);
         URL.revokeObjectURL(url);
         callback(null);
       };
@@ -387,16 +392,21 @@ var WorldBlocks = (function() {
   function loadTileTexture(tileId, mesh) {
     if (tileTextures[tileId]) {
       if (mesh.material.map !== tileTextures[tileId]) {
+        console.log('🗺️ loadTileTexture: using cached texture for tile', tileId);
         mesh.material.map = tileTextures[tileId];
         mesh.material.needsUpdate = true;
       }
       return;
     }
 
+    console.log('🗺️ loadTileTexture: loading texture for tile', tileId);
     loadTileImageData(tileId, function(texture) {
       if (texture && mesh) {
+        console.log('🗺️ loadTileTexture: texture loaded for tile', tileId, 'applying to mesh');
         mesh.material.map = texture;
         mesh.material.needsUpdate = true;
+      } else {
+        console.warn('🗺️ loadTileTexture: texture load failed for tile', tileId);
       }
     });
   }
@@ -479,8 +489,8 @@ var WorldBlocks = (function() {
 
     streetGroundMesh.position.set(camDir.x * surfR, camDir.y * surfR, camDir.z * surfR);
 
-    var up = new THREE.Vector3(0, 1, 0);
-    streetGroundMesh.quaternion.setFromUnitVectors(up, camDir);
+    var localZ = new THREE.Vector3(0, 0, 1);
+    streetGroundMesh.quaternion.setFromUnitVectors(localZ, camDir);
   }
 
   function removeStreetGround() {
