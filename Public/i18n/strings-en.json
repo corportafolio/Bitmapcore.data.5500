@@ -127,8 +127,10 @@
   },
   "settings": {
     "title": "Settings",
+    "profile": "Profile",
     "language": "Language",
     "theme": "Theme",
+    "appearance": "Appearance",
     "notifications": "Notifications",
     "polling": "Auto update",
     "interval": "Interval",
@@ -136,7 +138,19 @@
     "save": "Save Changes",
     "saved": "Saved",
     "alias": "Your alias on BitmapCore",
-    "about": "About"
+    "walletConnected": "Wallet Connected",
+    "walletNotConnected": "Wallet Not Connected",
+    "connectWallet": "Connect Wallet",
+    "disconnect": "Disconnect",
+    "dark": "Dark",
+    "light": "Light",
+    "about": "About",
+    "version": "Version",
+    "database": "Database",
+    "blocks": "~1,000,000 blocks",
+    "tagTables": "Tag Tables",
+    "primaryColor": "Primary Color",
+    "backgroundColor": "Background Color"
   },
   "hamburger": {
     "settings": "Settings",
