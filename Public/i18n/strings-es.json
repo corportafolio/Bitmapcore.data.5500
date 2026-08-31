@@ -1,0 +1,141 @@
+{
+  "app": {
+    "name": "BitmapCore",
+    "loading": "Cargando...",
+    "error": "Error",
+    "retry": "Reintentar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "back": "Volver",
+    "search": "Buscar",
+    "noResults": "Sin resultados",
+    "lastUpdate": "Última actualización",
+    "connectWallet": "Conectar Wallet",
+    "disconnect": "Desconectar"
+  },
+  "nav": {
+    "home": "Inicio",
+    "marketplace": "Marketplace",
+    "blocks": "Bloques",
+    "tags": "Etiquetas",
+    "wallet": "Wallet",
+    "settings": "Configuración",
+    "myAssets": "Mis Activos",
+    "sales": "Ventas",
+    "discounts": "Descuentos",
+    "unified": "Listado Unificado",
+    "tagTables": "Tablas de Etiquetas",
+    "ordinalswallet": "Ordinalswallet",
+    "unisat": "Unisat",
+    "local": "Local",
+    "parcels": "Parcelas"
+  },
+  "home": {
+    "title": "BitmapCore",
+    "subtitle": "El marketplace de Bitmap en Bitcoin",
+    "latestBlocks": "Últimos Bloques",
+    "latestSales": "Últimas Ventas",
+    "viewAll": "Ver todos",
+    "block": "Bloque",
+    "searchPlaceholder": "Número de bloque o etiqueta...",
+    "loading": "Cargando..."
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "selectMarketplace": "Selecciona un marketplace",
+    "floorPrice": "Precio mínimo",
+    "totalListings": "Total listados",
+    "listedAt": "Listado el",
+    "price": "Precio",
+    "buyNow": "Comprar ahora",
+    "noListings": "No hay listados disponibles",
+    "filters": "Filtros",
+    "sort": "Ordenar",
+    "sortByPrice": "Precio",
+    "sortByDate": "Fecha",
+    "sortByBlock": "Bloque",
+    "asc": "Ascendente",
+    "desc": "Descendente"
+  },
+  "block": {
+    "title": "Detalle de Bloque",
+    "transactions": "Transacciones",
+    "size": "Tamaño",
+    "date": "Fecha",
+    "viewMondrian": "Ver Mondrian Completo",
+    "bitmap": "Bitmap",
+    "inscription": "Inscripción",
+    "notFound": "Bloque no encontrado"
+  },
+  "tags": {
+    "title": "Tablas de Etiquetas",
+    "subtitle": "Explora bloques por etiquetas",
+    "blocksWithTag": "Bloques con etiqueta",
+    "noBlocks": "No hay bloques para esta etiqueta",
+    "viewDetails": "Ver detalles"
+  },
+  "sales": {
+    "title": "Ventas Recientes",
+    "noSales": "No hay ventas recientes",
+    "buyer": "Comprador",
+    "seller": "Vendedor",
+    "saleDate": "Fecha de venta"
+  },
+  "discounts": {
+    "title": "Descuentos",
+    "noDiscounts": "No hay descuentos disponibles",
+    "discountPrice": "Precio con descuento",
+    "originalPrice": "Precio original",
+    "savings": "Ahorro"
+  },
+  "unified": {
+    "title": "Listado Unificado",
+    "subtitle": "Todos los listados en un solo lugar",
+    "noListings": "No hay listados disponibles"
+  },
+  "wallet": {
+    "title": "Wallet",
+    "connect": "Conectar Wallet",
+    "dashboard": "Dashboard",
+    "balance": "Balance",
+    "address": "Dirección",
+    "notConnected": "Wallet no conectada",
+    "connectPrompt": "Conecta tu wallet para acceder a tus activos y realizar transacciones",
+    "disconnect": "Desconectar",
+    "myAssets": "Mis Activos",
+    "transaction": "Transacción",
+    "psbt": "PSBT Builder"
+  },
+  "psbt": {
+    "title": "PSBT Builder",
+    "placeholder": "Pega tu PSBT aquí...",
+    "sign": "Firmar PSBT",
+    "notAvailable": "Funcionalidad de PSBT no disponible aún"
+  },
+  "search": {
+    "title": "Buscar",
+    "placeholder": "Número de bloque o etiqueta...",
+    "searching": "Buscando..."
+  },
+  "settings": {
+    "title": "Configuración",
+    "language": "Idioma",
+    "theme": "Tema",
+    "notifications": "Notificaciones",
+    "polling": "Actualización automática",
+    "interval": "Intervalo",
+    "seconds": "segundos",
+    "save": "Guardar Cambios",
+    "saved": "Guardado",
+    "alias": "Tu alias en BitmapCore",
+    "about": "Acerca de"
+  },
+  "hamburger": {
+    "settings": "Configuración",
+    "world": "World",
+    "connectWallet": "Conectar Wallet",
+    "myAssets": "Mis Activos",
+    "disconnect": "Desconectar wallet"
+  }
+}

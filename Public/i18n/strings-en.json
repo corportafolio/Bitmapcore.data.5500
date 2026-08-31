@@ -1,0 +1,141 @@
+{
+  "app": {
+    "name": "BitmapCore",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "search": "Search",
+    "noResults": "No results",
+    "lastUpdate": "Last update",
+    "connectWallet": "Connect Wallet",
+    "disconnect": "Disconnect"
+  },
+  "nav": {
+    "home": "Home",
+    "marketplace": "Marketplace",
+    "blocks": "Blocks",
+    "tags": "Tags",
+    "wallet": "Wallet",
+    "settings": "Settings",
+    "myAssets": "My Assets",
+    "sales": "Sales",
+    "discounts": "Discounts",
+    "unified": "Unified Listing",
+    "tagTables": "Tag Tables",
+    "ordinalswallet": "Ordinalswallet",
+    "unisat": "Unisat",
+    "local": "Local",
+    "parcels": "Parcels"
+  },
+  "home": {
+    "title": "BitmapCore",
+    "subtitle": "The Bitmap marketplace on Bitcoin",
+    "latestBlocks": "Latest Blocks",
+    "latestSales": "Latest Sales",
+    "viewAll": "View all",
+    "block": "Block",
+    "searchPlaceholder": "Block number or tag...",
+    "loading": "Loading..."
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "selectMarketplace": "Select a marketplace",
+    "floorPrice": "Floor price",
+    "totalListings": "Total listings",
+    "listedAt": "Listed at",
+    "price": "Price",
+    "buyNow": "Buy now",
+    "noListings": "No listings available",
+    "filters": "Filters",
+    "sort": "Sort",
+    "sortByPrice": "Price",
+    "sortByDate": "Date",
+    "sortByBlock": "Block",
+    "asc": "Ascending",
+    "desc": "Descending"
+  },
+  "block": {
+    "title": "Block Detail",
+    "transactions": "Transactions",
+    "size": "Size",
+    "date": "Date",
+    "viewMondrian": "View Full Mondrian",
+    "bitmap": "Bitmap",
+    "inscription": "Inscription",
+    "notFound": "Block not found"
+  },
+  "tags": {
+    "title": "Tag Tables",
+    "subtitle": "Explore blocks by tags",
+    "blocksWithTag": "Blocks with tag",
+    "noBlocks": "No blocks for this tag",
+    "viewDetails": "View details"
+  },
+  "sales": {
+    "title": "Recent Sales",
+    "noSales": "No recent sales",
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "saleDate": "Sale date"
+  },
+  "discounts": {
+    "title": "Discounts",
+    "noDiscounts": "No discounts available",
+    "discountPrice": "Discount price",
+    "originalPrice": "Original price",
+    "savings": "Savings"
+  },
+  "unified": {
+    "title": "Unified Listing",
+    "subtitle": "All listings in one place",
+    "noListings": "No listings available"
+  },
+  "wallet": {
+    "title": "Wallet",
+    "connect": "Connect Wallet",
+    "dashboard": "Dashboard",
+    "balance": "Balance",
+    "address": "Address",
+    "notConnected": "Wallet not connected",
+    "connectPrompt": "Connect your wallet to access your assets and make transactions",
+    "disconnect": "Disconnect",
+    "myAssets": "My Assets",
+    "transaction": "Transaction",
+    "psbt": "PSBT Builder"
+  },
+  "psbt": {
+    "title": "PSBT Builder",
+    "placeholder": "Paste your PSBT here...",
+    "sign": "Sign PSBT",
+    "notAvailable": "PSBT functionality not yet available"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Block number or tag...",
+    "searching": "Searching..."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "notifications": "Notifications",
+    "polling": "Auto update",
+    "interval": "Interval",
+    "seconds": "seconds",
+    "save": "Save Changes",
+    "saved": "Saved",
+    "alias": "Your alias on BitmapCore",
+    "about": "About"
+  },
+  "hamburger": {
+    "settings": "Settings",
+    "world": "World",
+    "connectWallet": "Connect Wallet",
+    "myAssets": "My Assets",
+    "disconnect": "Disconnect Wallet"
+  }
+}
