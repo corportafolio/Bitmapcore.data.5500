@@ -395,10 +395,8 @@ var WorldBlocks = (function() {
     if (tileTextures[tileId]) {
       if (mesh.material.map !== tileTextures[tileId]) {
         console.log('🗺️ loadTileTexture: using cached texture for tile', tileId);
-        var newMat = createAtlasMaterial();
-        newMat.map = tileTextures[tileId];
-        newMat.needsUpdate = true;
-        mesh.material = newMat;
+        mesh.material.map = tileTextures[tileId];
+        mesh.material.needsUpdate = true;
       }
       return;
     }
@@ -406,12 +404,10 @@ var WorldBlocks = (function() {
     console.log('🗺️ loadTileTexture: loading texture for tile', tileId);
     loadTileImageData(tileId, function(texture) {
       if (texture && mesh) {
-        console.log('🗺️ loadTileTexture: texture loaded for tile', tileId, 'creating fresh material with atlas shader');
-        var newMat = createAtlasMaterial();
-        newMat.map = texture;
-        newMat.needsUpdate = true;
-        mesh.material = newMat;
-        console.log('🗺️ loadTileTexture: fresh material applied for tile', tileId);
+        console.log('🗺️ loadTileTexture: texture loaded for tile', tileId, 'applying to existing material');
+        mesh.material.map = texture;
+        mesh.material.needsUpdate = true;
+        console.log('🗺️ loadTileTexture: texture applied for tile', tileId);
       } else {
         console.warn('🗺️ loadTileTexture: texture load failed for tile', tileId);
       }
