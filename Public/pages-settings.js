@@ -30,20 +30,33 @@ function SettingsPage(props) {
     }
   }, []);
 
+  React.useEffect(function() {
+    if (!langDropdownOpen) return;
+    var closeDropdown = function() { setLangDropdownOpen(false); };
+    window.addEventListener('click', closeDropdown);
+    return function() { window.removeEventListener('click', closeDropdown); };
+  }, [langDropdownOpen]);
+
   var handleSave = function() {
     setIsSaving(true);
     localStorage.setItem('bitmap_alias', alias);
     localStorage.setItem('bitmap_theme', theme);
-    I18n.saveLanguage();
+    if (typeof I18n !== 'undefined' && I18n.saveLanguage) {
+      I18n.saveLanguage();
+    }
     document.documentElement.classList.toggle('light', theme === 'light');
     setIsSaving(false);
     setSaved(true);
-    setTimeout(function() { setSaved(false); }, 2000);
+    setTimeout(function() {
+      location.reload();
+    }, 800);
   };
 
   var handleLanguageSelect = function(lang) {
     setLanguage(lang);
-    setLangDropdownOpen(false);
+    if (typeof I18n !== 'undefined' && I18n.setLanguage) {
+      I18n.setLanguage(lang);
+    }
   };
 
   return React.createElement('div', { className:'p-4 lg:p-6' },
