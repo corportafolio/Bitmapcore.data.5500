@@ -18,6 +18,7 @@ var WorldBlocks = (function() {
   var zoomTimer = null;
 
   var NEAR_DISTANCE = 112;
+  var STREET_MIN_DIST = 101;
   var MAX_NEAR_TILES_PER_FRAME = 10;
 
   var tileInstanced = {};
@@ -546,7 +547,7 @@ var WorldBlocks = (function() {
     var scaleZ = cached.scale;
 
     var distance = getDistance();
-    var t = Math.max(0, Math.min(1, (NEAR_DISTANCE - distance) / (NEAR_DISTANCE - MIN_DISTANCE)));
+    var t = Math.max(0, Math.min(1, (NEAR_DISTANCE - distance) / (NEAR_DISTANCE - STREET_MIN_DIST)));
     var heightFactor = 1 + t * 14;
 
     var gx = blockNum % GRID_SIZE;
