@@ -145,6 +145,8 @@
     "dark": "Oscuro",
     "light": "Claro",
     "about": "Acerca de",
+    "appVersion": "BitmapCore Web v1.0",
+    "tagline": "Bitcoin Block NFT Marketplace",
     "version": "Versión",
     "database": "Base de datos",
     "blocks": "~1,000,000 bloques",

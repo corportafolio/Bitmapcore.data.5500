@@ -90,27 +90,9 @@ function SettingsPage(props) {
           React.createElement('span', { className:'text-xl' }, '\uD83D\uDCCA'),
           ' ', I18n.t('settings.about')
         ),
-        React.createElement('div', { className:'space-y-3 font-acme text-sm text-bitmap-text' },
-          React.createElement('div', { className:'flex justify-between' },
-            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.version')),
-            React.createElement('span', null, '1.0.0')
-          ),
-          React.createElement('div', { className:'flex justify-between' },
-            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.database')),
-            React.createElement('span', null, I18n.t('settings.blocks'))
-          ),
-          React.createElement('div', { className:'flex justify-between' },
-            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.tagTables')),
-            React.createElement('span', null, '55')
-          ),
-          React.createElement('div', { className:'flex justify-between' },
-            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.primaryColor')),
-            React.createElement('span', { className:'font-alfaslab text-bitmap-orange' }, '#FE3E00')
-          ),
-          React.createElement('div', { className:'flex justify-between' },
-            React.createElement('span', { className:'text-bitmap-muted' }, I18n.t('settings.backgroundColor')),
-            React.createElement('span', { className:'font-alfaslab text-white' }, '#080008')
-          )
+        React.createElement('div', { className:'space-y-2 font-acme text-sm text-bitmap-text' },
+          React.createElement('p', null, I18n.t('settings.appVersion')),
+          React.createElement('p', { className:'text-bitmap-muted' }, I18n.t('settings.tagline'))
         )
       )
     )
