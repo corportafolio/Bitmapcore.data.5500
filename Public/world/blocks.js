@@ -19,7 +19,7 @@ var WorldBlocks = (function() {
 
   var NEAR_DISTANCE = 112;
   var STREET_MIN_DIST = 101;
-  var MAX_NEAR_TILES_PER_FRAME = 10;
+  var MAX_NEAR_TILES_PER_FRAME = 5;
 
   var tileInstanced = {};
   var tileNearMeshes = {};
@@ -42,6 +42,14 @@ var WorldBlocks = (function() {
   var sharedBoxGeo = null;
   var sharedMaterial = null;
 
+  var _up = new THREE.Vector3(0, 1, 0);
+  var _normalVec = new THREE.Vector3();
+  var _quat = new THREE.Quaternion();
+  var _mat4 = new THREE.Matrix4();
+  var _localOffset = new THREE.Vector3();
+  var _nVec = new THREE.Vector3();
+  var streetGroundMesh = null;
+
   function getPhiFromGz(gz) {
     if (gz < 500) {
       return (gz / 500) * (Math.PI / 2);
@@ -59,6 +67,11 @@ var WorldBlocks = (function() {
     sharedMaterial = createAtlasMaterial();
     createBlock0();
     loadAllData();
+    if (typeof AtlasCache !== 'undefined' && AtlasCache.preloadAll) {
+      AtlasCache.preloadAll(function() {
+        console.log('🗺️ WorldBlocks: Atlas precarga completada');
+      });
+    }
   }
 
   function destroy() {
@@ -325,8 +338,9 @@ var WorldBlocks = (function() {
     var blocksInTile = blocksByTile[tileId];
     if (!blocksInTile) return;
 
-    var blockNums = Object.keys(blocksInTile);
-    if (blockNums.length === 0) {
+    var count = 0;
+    for (var k in blocksInTile) count++;
+    if (count === 0) {
       if (tileInstanced[tileId]) {
         tileInstanced[tileId].count = 0;
         tileInstanceCount[tileId] = 0;
@@ -335,7 +349,6 @@ var WorldBlocks = (function() {
     }
 
     var mesh = getOrCreateTileMesh(tileId);
-    var count = blockNums.length;
     mesh.count = count;
     tileInstanceCount[tileId] = count;
 
@@ -344,9 +357,10 @@ var WorldBlocks = (function() {
     var blockMap = new Array(count);
     var up = new THREE.Vector3(0, 1, 0);
 
-    for (var i = 0; i < count; i++) {
-      var blockNum = parseInt(blockNums[i]);
-      blockMap[i] = blockNum;
+    var idx = 0;
+    for (var k in blocksInTile) {
+      var blockNum = parseInt(k);
+      blockMap[idx] = blockNum;
 
       var data = allBlocks[blockNum] || { tx: 1, hash: '' };
       var txVal = data.tx;
@@ -356,16 +370,17 @@ var WorldBlocks = (function() {
       var radius = WORLD_RADIUS + INSTANCE_OFFSET;
 
       dummy.position.set(cached.nx * radius, cached.ny * radius, cached.nz * radius);
-      dummy.quaternion.setFromUnitVectors(up, new THREE.Vector3(cached.nx, cached.ny, cached.nz));
+      dummy.quaternion.setFromUnitVectors(up, _normalVec.set(cached.nx, cached.ny, cached.nz));
       dummy.scale.set(cached.scale, height / BLOCK_SIZE, cached.scale);
       dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
+      mesh.setMatrixAt(idx, dummy.matrix);
 
       var info = WorldGrid.atlasInfo(blockNum);
-      uvData[i * 4] = info.u0;
-      uvData[i * 4 + 1] = info.v0;
-      uvData[i * 4 + 2] = info.u1 - info.u0;
-      uvData[i * 4 + 3] = info.v1 - info.v0;
+      uvData[idx * 4] = info.u0;
+      uvData[idx * 4 + 1] = info.v0;
+      uvData[idx * 4 + 2] = info.u1 - info.u0;
+      uvData[idx * 4 + 3] = info.v1 - info.v0;
+      idx++;
     }
 
     mesh.instanceMatrix.needsUpdate = true;
@@ -437,6 +452,7 @@ var WorldBlocks = (function() {
         if (tileInstanced[tid]) tileInstanced[tid].visible = true;
       }
       nearProgress = {};
+      removeStreetGround();
       return;
     }
 
@@ -468,7 +484,9 @@ var WorldBlocks = (function() {
       if (nearProgress[tid]) { pending++; continue; }
 
       var blocksInTile = blocksByTile[tid];
-      if (!blocksInTile || Object.keys(blocksInTile).length === 0) {
+      var hasBlocks = false;
+      if (blocksInTile) { for (var bk in blocksInTile) { hasBlocks = true; break; } }
+      if (!hasBlocks) {
         tileNearDirty[tid] = false;
         continue;
       }
@@ -494,6 +512,12 @@ var WorldBlocks = (function() {
 
     stepNearTiles(BUDGET_MS, startT);
 
+    if (!streetGroundMesh && nearTilesStarted > 0) {
+      var camPos = getCameraPosition();
+      var camDir = new THREE.Vector3(camPos.x, camPos.y, camPos.z).normalize();
+      createStreetGround(camPos, camDir);
+    }
+
     if (pending > 0 || hasNearProgress()) {
       requestAnimationFrame(rebuildNearOverlay);
     }
@@ -505,7 +529,8 @@ var WorldBlocks = (function() {
   }
 
   function beginNearTile(tileId, imageData) {
-    var blockNums = Object.keys(blocksByTile[tileId]);
+    var blockNums = [];
+    for (var bk in blocksByTile[tileId]) blockNums.push(parseInt(bk));
     if (blockNums.length === 0) return;
 
     nearProgress[tileId] = {
@@ -548,7 +573,7 @@ var WorldBlocks = (function() {
 
     var distance = getDistance();
     var t = Math.max(0, Math.min(1, (NEAR_DISTANCE - distance) / (NEAR_DISTANCE - STREET_MIN_DIST)));
-    var heightFactor = 1 + t * 14;
+    var heightFactor = 1 + t * 4;
 
     var gx = blockNum % GRID_SIZE;
     var gz = Math.floor(blockNum / GRID_SIZE);
@@ -564,17 +589,14 @@ var WorldBlocks = (function() {
       prog.imageData, col, row, CELL_SIZE, blockNum, tx, hash
     );
 
-    var up = new THREE.Vector3(0, 1, 0);
-    var normalVec = new THREE.Vector3(cached.nx, cached.ny, cached.nz);
-    var quat = new THREE.Quaternion().setFromUnitVectors(up, normalVec);
-    var mat4 = new THREE.Matrix4().makeRotationFromQuaternion(quat);
+    _normalVec.set(cached.nx, cached.ny, cached.nz);
+    _quat.setFromUnitVectors(_up, _normalVec);
+    _mat4.makeRotationFromQuaternion(_quat);
 
     var radius = WORLD_RADIUS + INSTANCE_OFFSET;
     var bx = cached.nx * radius;
     var by = cached.ny * radius;
     var bz = cached.nz * radius;
-
-    var localOffset = new THREE.Vector3();
 
     var positionsArr = geoData.positions;
     var normalsArr = geoData.normals;
@@ -586,16 +608,15 @@ var WorldBlocks = (function() {
       var ly = positionsArr[j + 1] > 0 ? positionsArr[j + 1] * heightFactor : positionsArr[j + 1];
       var lz = positionsArr[j + 2] * BLOCK_SIZE * scaleZ;
 
-      localOffset.set(lx, ly, lz);
-      localOffset.applyMatrix4(mat4);
+      _localOffset.set(lx, ly, lz);
+      _localOffset.applyMatrix4(_mat4);
 
-      prog.positions.push(bx + localOffset.x, by + localOffset.y, bz + localOffset.z);
+      prog.positions.push(bx + _localOffset.x, by + _localOffset.y, bz + _localOffset.z);
 
-      var nx = normalsArr[j];
-      var ny = normalsArr[j + 1];
-      var nz = normalsArr[j + 2];
-      var nVec = new THREE.Vector3(nx, ny, nz).applyQuaternion(quat).normalize();
-      prog.normals.push(nVec.x, nVec.y, nVec.z);
+      _nVec.set(normalsArr[j], normalsArr[j + 1], normalsArr[j + 2]);
+      _nVec.applyQuaternion(_quat);
+      _nVec.normalize();
+      prog.normals.push(_nVec.x, _nVec.y, _nVec.z);
 
       prog.colors.push(colorsArr[j], colorsArr[j + 1], colorsArr[j + 2]);
     }
@@ -636,6 +657,71 @@ var WorldBlocks = (function() {
     tileNearMeshes[tileId] = mesh;
     tileNearDirty[tileId] = false;
     if (tileInstanced[tileId]) tileInstanced[tileId].visible = false;
+  }
+
+  function createStreetGround(camPos, camDir) {
+    if (streetGroundMesh) {
+      scene.remove(streetGroundMesh);
+      streetGroundMesh.geometry.dispose();
+      streetGroundMesh.material.dispose();
+      streetGroundMesh = null;
+    }
+
+    var geo = new THREE.CircleGeometry(4, 32);
+    var positions = geo.attributes.position.array;
+    for (var i = 0; i < positions.length; i += 3) {
+      positions[i + 2] = 0;
+    }
+
+    var colors = new Float32Array(positions.length);
+    for (var i = 0; i < positions.length; i += 3) {
+      var x = positions[i];
+      var absX = Math.abs(x);
+      var r, g, b;
+      if (absX > 0.15) {
+        r = 0.45; g = 0.45; b = 0.48;
+      } else if (absX > 0.12) {
+        r = 0.30; g = 0.30; b = 0.33;
+      } else {
+        r = 0.88; g = 0.88; b = 0.85;
+      }
+      colors[i] = r;
+      colors[i + 1] = g;
+      colors[i + 2] = b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    var mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.8,
+      metalness: 0.0,
+      flatShading: false
+    });
+
+    streetGroundMesh = new THREE.Mesh(geo, mat);
+    streetGroundMesh.frustumCulled = false;
+    streetGroundMesh.renderOrder = -1;
+
+    var pos = new THREE.Vector3(
+      camDir.x * (WORLD_RADIUS + INSTANCE_OFFSET - 0.02),
+      camDir.y * (WORLD_RADIUS + INSTANCE_OFFSET - 0.02),
+      camDir.z * (WORLD_RADIUS + INSTANCE_OFFSET - 0.02)
+    );
+    streetGroundMesh.position.copy(pos);
+
+    var up = new THREE.Vector3(0, 1, 0);
+    streetGroundMesh.quaternion.setFromUnitVectors(up, camDir.clone().normalize());
+
+    scene.add(streetGroundMesh);
+  }
+
+  function removeStreetGround() {
+    if (streetGroundMesh) {
+      scene.remove(streetGroundMesh);
+      streetGroundMesh.geometry.dispose();
+      streetGroundMesh.material.dispose();
+      streetGroundMesh = null;
+    }
   }
 
   var MAX_VISIBLE = 400000;
@@ -882,27 +968,12 @@ var WorldBlocks = (function() {
   function startBackgroundLoad() {
     if (bgLoadInterval) return;
     console.log('🗺️ WorldBlocks: Iniciando carga continua de 3D...');
-    if (typeof AtlasCache !== 'undefined' && AtlasCache.preloadAll) {
-      AtlasCache.preloadAll(function() {
-        console.log('🗺️ WorldBlocks: Atlas precarga completada');
-      });
-    }
-    var lastTheta = null;
-    var lastPhi = null;
-    var lastDist = null;
     bgLoadInterval = setInterval(function() {
       var state = WorldControls.getState();
       if (!state) return;
-      if (lastTheta === null || Math.abs(state.theta - lastTheta) > 0.005 || Math.abs(state.phi - lastPhi) > 0.005 || Math.abs(state.distance - lastDist) > 1) {
-        lastTheta = state.theta;
-        lastPhi = state.phi;
-        lastDist = state.distance;
-        updateVisible(state.theta, state.phi, state.distance);
-      } else {
-        rebuildDirtyTiles();
-        rebuildNearOverlay();
-      }
-    }, 1000);
+      rebuildDirtyTiles();
+      rebuildNearOverlay();
+    }, 2000);
   }
 
   function stopBackgroundLoad() {

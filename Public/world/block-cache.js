@@ -212,7 +212,6 @@ var MAX_CONCURRENT_FETCHES = 6;
   }
 
   function getAtlasBlob(gz) {
-    console.log('🗺️ AtlasCache.getAtlasBlob: gz=', gz);
     return openDB().then(function(database) {
       return new Promise(function(resolve, reject) {
         var tx = database.transaction(STORE_NAME, 'readonly');
@@ -221,10 +220,8 @@ var MAX_CONCURRENT_FETCHES = 6;
           var row = request.result;
           if (row && row.blob) {
             cachedKeys[gz] = true;
-            console.log('🗺️ AtlasCache.getAtlasBlob: gz', gz, 'FOUND in IndexedDB, size=', row.blob.size);
             resolve(row.blob);
           } else {
-            console.log('🗺️ AtlasCache.getAtlasBlob: gz', gz, 'NOT FOUND in IndexedDB');
             resolve(null);
           }
         };
@@ -234,28 +231,24 @@ var MAX_CONCURRENT_FETCHES = 6;
   }
 
   function saveAtlasBlob(gz, blob) {
-    console.log('🗺️ AtlasCache.saveAtlasBlob: gz=', gz, 'blob size=', blob.size);
     cachedKeys[gz] = true;
     return openDB().then(function(database) {
       return new Promise(function(resolve, reject) {
         var tx = database.transaction(STORE_NAME, 'readwrite');
         var request = tx.objectStore(STORE_NAME).put({ gz: gz, blob: blob });
-        request.onsuccess = function() { console.log('🗺️ AtlasCache.saveAtlasBlob: gz', gz, 'saved OK'); resolve(); };
-        request.onerror = function() { console.error('🗺️ AtlasCache.saveAtlasBlob: gz', gz, 'ERROR'); reject(request.error); };
+        request.onsuccess = function() { resolve(); };
+        request.onerror = function() { reject(request.error); };
       });
     });
   }
 
   function loadAllKeys() {
     if (loaded) {
-      console.log('🗺️ AtlasCache.loadAllKeys: already loaded, cachedKeys count=', Object.keys(cachedKeys).length);
       return Promise.resolve();
     }
     if (loadAllKeysPromise) {
-      console.log('🗺️ AtlasCache.loadAllKeys: already loading, waiting for existing Promise');
       return loadAllKeysPromise;
     }
-    console.log('🗺️ AtlasCache.loadAllKeys: loading from IndexedDB...');
     loadAllKeysPromise = openDB().then(function(database) {
       return new Promise(function(resolve) {
         var tx = database.transaction(STORE_NAME, 'readonly');
@@ -270,12 +263,10 @@ var MAX_CONCURRENT_FETCHES = 6;
           } else {
             loaded = true;
             loadAllKeysPromise = null;
-            console.log('🗺️ AtlasCache.loadAllKeys: DONE, cachedKeys count=', count);
             resolve();
           }
         };
         request.onerror = function() {
-          console.error('🗺️ AtlasCache.loadAllKeys: ERROR');
           loaded = true;
           loadAllKeysPromise = null;
           resolve();
@@ -299,17 +290,13 @@ var MAX_CONCURRENT_FETCHES = 6;
     var done = 0;
     var errors = 0;
 
-    console.log('🗺️ AtlasCache: Precargando ' + ATLAS_TOTAL + ' atlas (' + ATLAS_CONCURRENT + ' en paralelo)...');
-
     loadAllKeys().then(function() {
       var pending = [];
       for (var gz = 0; gz < ATLAS_TOTAL; gz++) {
         if (!hasAtlas(gz)) pending.push(gz);
       }
-      console.log('🗺️ AtlasCache: ' + (ATLAS_TOTAL - pending.length) + ' ya en caché, ' + pending.length + ' por descargar.');
       if (pending.length === 0) {
         preloadRunning = false;
-        console.log('🗺️ AtlasCache: Todos los atlas ya estaban en caché.');
         if (callback) callback(true);
         return;
       }
@@ -318,7 +305,6 @@ var MAX_CONCURRENT_FETCHES = 6;
         if (i >= pending.length) {
           if (done + errors >= pending.length) {
             preloadRunning = false;
-            console.log('🗺️ AtlasCache: Precarga completa. OK: ' + done + ', Errores: ' + errors);
             if (callback) callback(true);
           }
           return;
@@ -326,9 +312,6 @@ var MAX_CONCURRENT_FETCHES = 6;
         var gz = pending[i++];
         fetchAtlas(gz, function(blob) {
           if (blob) done++; else errors++;
-          if ((done + errors) % 50 === 0 || (done + errors) === pending.length) {
-            console.log('🗺️ AtlasCache: ' + (done + errors) + '/' + pending.length + ' (' + ((done + errors) / pending.length * 100).toFixed(1) + '%)');
-          }
           next();
         });
       }
@@ -395,7 +378,6 @@ var MAX_CONCURRENT_FETCHES = 6;
       })
       .catch(function(err) {
         activeFetches--;
-        console.error('🗺️ Atlas ' + gz + ' error:', err);
         var cbs = inFlight[gz] || [];
         delete inFlight[gz];
         for (var i = 0; i < cbs.length; i++) cbs[i](null);
