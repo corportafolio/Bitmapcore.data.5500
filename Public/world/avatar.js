@@ -1,7 +1,7 @@
 var WorldAvatar = (function() {
   var scene = null;
   var mesh = null;
-  var posTheta = Math.PI / 2;
+  var posTheta = 0.00314;
   var posPhi = 0;
   var heading = 0;
   var SPEED = 0.004;
