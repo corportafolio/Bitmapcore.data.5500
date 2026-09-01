@@ -18,12 +18,14 @@ var BitmapUtils = {
   isValidBlockNumber: function(n) { return n >= 0 && n <= 999999 && Number.isInteger(n); },
   formatDate: function(date) {
     var d = new Date(date);
-    var locale = (typeof I18n !== 'undefined' && I18n.getCurrentLang && I18n.getCurrentLang() === 'es') ? 'es-AR' : 'en-US';
+    var localeMap = { en: 'en-US', es: 'es-AR', fr: 'fr-FR' };
+    var locale = (typeof I18n !== 'undefined' && I18n.getCurrentLang) ? (localeMap[I18n.getCurrentLang()] || 'en-US') : 'en-US';
     return d.toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric' });
   },
   formatDateTime: function(date) {
     var d = new Date(date);
-    var locale = (typeof I18n !== 'undefined' && I18n.getCurrentLang && I18n.getCurrentLang() === 'es') ? 'es-AR' : 'en-US';
+    var localeMap = { en: 'en-US', es: 'es-AR', fr: 'fr-FR' };
+    var locale = (typeof I18n !== 'undefined' && I18n.getCurrentLang) ? (localeMap[I18n.getCurrentLang()] || 'en-US') : 'en-US';
     return d.toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   },
   timeAgo: function(date) {
@@ -34,7 +36,8 @@ var BitmapUtils = {
     return I18n.t('time.agoDays', { n: Math.floor(diff / 86400) });
   },
   formatNumber: function(n) {
-    var locale = (typeof I18n !== 'undefined' && I18n.getCurrentLang && I18n.getCurrentLang() === 'es') ? 'es-AR' : 'en-US';
+    var localeMap = { en: 'en-US', es: 'es-AR', fr: 'fr-FR' };
+    var locale = (typeof I18n !== 'undefined' && I18n.getCurrentLang) ? (localeMap[I18n.getCurrentLang()] || 'en-US') : 'en-US';
     return (n || 0).toLocaleString(locale);
   },
   formatFileSize: function(bytes) {

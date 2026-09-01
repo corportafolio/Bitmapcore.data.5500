@@ -55,8 +55,8 @@ function SettingsPage(props) {
               'border-bitmap-orange bg-bitmap-orange/10 text-bitmap-orange'
           },
             React.createElement('span', { className: 'flex items-center gap-2' },
-              language === 'en' ? '\uD83C\uDDEC\uD83C\uDDE7' : '\uD83C\uDDEA\uD83C\uDDF8',
-              language === 'en' ? 'English' : 'Espa\u00F1ol'
+              language === 'en' ? '\uD83C\uDDEC\uD83C\uDDE7' : language === 'es' ? '\uD83C\uDDEA\uD83C\uDDF8' : '\uD83C\uDDEB\uD83C\uDDF7',
+              language === 'en' ? 'English' : language === 'es' ? 'Espa\u00F1ol' : 'Fran\u00E7ais'
             ),
             React.createElement('span', { className: 'text-xs transition-transform' + (langDropdownOpen ? ' rotate-180' : '') }, '\u25BC')
           ),
@@ -64,7 +64,7 @@ function SettingsPage(props) {
             className: 'absolute right-0 top-full mt-1 w-full bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1',
             onClick: function(e) { e.stopPropagation(); }
           },
-            ['en', 'es'].map(function(l) {
+            ['en', 'es', 'fr'].map(function(l) {
               var isSelected = language === l;
               return React.createElement('button', {
                 key: l,
@@ -73,8 +73,8 @@ function SettingsPage(props) {
                   (isSelected ? 'bg-bitmap-orange/10 text-bitmap-orange' : 'text-bitmap-text hover:bg-bitmap-black/30 hover:text-white')
               },
                 React.createElement('span', { className: 'flex items-center gap-2' },
-                  l === 'en' ? '\uD83C\uDDEC\uD83C\uDDE7' : '\uD83C\uDDEA\uD83C\uDDF8',
-                  l === 'en' ? 'English' : 'Espa\u00F1ol'
+                  l === 'en' ? '\uD83C\uDDEC\uD83C\uDDE7' : l === 'es' ? '\uD83C\uDDEA\uD83C\uDDF8' : '\uD83C\uDDEB\uD83C\uDDF7',
+                  l === 'en' ? 'English' : l === 'es' ? 'Espa\u00F1ol' : 'Fran\u00E7ais'
                 ),
                 isSelected ? React.createElement('span', { className: 'ml-auto text-bitmap-orange' }, '\u2713') : null
               );

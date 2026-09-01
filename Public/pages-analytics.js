@@ -262,7 +262,7 @@ var AnalyticsDashboard = (function(){
           charts['overviewChart'] = new Chart(ctx, {
             type:'line',
             data:{
-              labels: ts.series.map(function(p){ var d = new Date(p.ts); return RANGE==='24h'?d.getHours()+':00':d.toLocaleDateString('es',{day:'numeric',month:'short'}); }),
+              labels: ts.series.map(function(p){ var d = new Date(p.ts); var locMap={en:'en-US',es:'es-AR',fr:'fr-FR'}; var loc=(typeof I18n!=='undefined'&&I18n.getCurrentLang)?(locMap[I18n.getCurrentLang()]||'en-US'):'en-US'; return RANGE==='24h'?d.getHours()+':00':d.toLocaleDateString(loc,{day:'numeric',month:'short'}); }),
               datasets:[{
                 label:'Sesiones', data:ts.series.map(function(p){return p.value;}),
                 borderColor:'#FE3E00', backgroundColor:'rgba(254,62,0,0.1)', fill:true,
@@ -323,7 +323,7 @@ var AnalyticsDashboard = (function(){
           charts['conversionChart'] = new Chart(ctx, {
             type:'line',
             data:{
-              labels: ts.series.map(function(p){ var d = new Date(p.ts); return RANGE==='24h'?d.getHours()+':00':d.toLocaleDateString('es',{day:'numeric',month:'short'}); }),
+              labels: ts.series.map(function(p){ var d = new Date(p.ts); var locMap={en:'en-US',es:'es-AR',fr:'fr-FR'}; var loc=(typeof I18n!=='undefined'&&I18n.getCurrentLang)?(locMap[I18n.getCurrentLang()]||'en-US'):'en-US'; return RANGE==='24h'?d.getHours()+':00':d.toLocaleDateString(loc,{day:'numeric',month:'short'}); }),
               datasets:[{
                 label:'Compras', data:ts.series.map(function(p){return p.value;}),
                 borderColor:'#00AA00', backgroundColor:'rgba(0,170,0,0.1)', fill:true,

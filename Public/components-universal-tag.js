@@ -1,8 +1,18 @@
 function translateTagText(text) {
   if (!text) return text;
   if (typeof I18n === 'undefined' || !I18n.getCurrentLang) return text;
-  if (I18n.getCurrentLang() === 'es') return text;
+  var lang = I18n.getCurrentLang();
+  if (lang === 'es') return text;
   var lower = text.toLowerCase();
+  if (lang === 'fr') {
+    if (lower.indexOf('multimillonaria') !== -1) {
+      return text.replace(/multimillonaria/gi, 'Multimillionnaire');
+    }
+    if (lower.indexOf('millonaria') !== -1) {
+      return text.replace(/millonaria/gi, 'Millionnaire');
+    }
+    return text;
+  }
   if (lower.indexOf('multimillonaria') !== -1) {
     return text.replace(/multimillonaria/gi, 'Multimillionaire');
   }
