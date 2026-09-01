@@ -329,8 +329,8 @@
     "ofTables": "tables",
     "searchTable": "Search table...",
     "noTablesFound": "No tables found",
-    "tagsAndBlocks": "tags /",
-    "blocks": "blocks",
+    "tagsAndBlocks": "{tags} tags / {blocks} blocks",
+    "blocks": "{n} blocks",
     "firstBlock": "First block #",
     "tagInfo": "Tag Information",
     "listView": "List view",
@@ -338,7 +338,7 @@
     "noTagInfo": "No information available for this tag",
     "noBlocksInTable": "This table has no blocks",
     "loadingMore": "Loading more...",
-    "blocksLoaded": "blocks loaded"
+    "blocksLoaded": "{n} blocks loaded"
   },
   "listedTags": {
     "title": "Listings Grouped by Tags",

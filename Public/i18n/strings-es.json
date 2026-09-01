@@ -329,8 +329,8 @@
     "ofTables": "tablas",
     "searchTable": "Buscar tabla...",
     "noTablesFound": "No se encontraron tablas",
-    "tagsAndBlocks": "etiquetas /",
-    "blocks": "bloques",
+    "tagsAndBlocks": "{tags} etiquetas / {blocks} bloques",
+    "blocks": "{n} bloques",
     "firstBlock": "Primer bloque #",
     "tagInfo": "Informacion de la etiqueta",
     "listView": "Vista lista",
@@ -338,7 +338,7 @@
     "noTagInfo": "Sin informacion disponible para esta etiqueta",
     "noBlocksInTable": "Esta tabla no tiene bloques",
     "loadingMore": "Cargando mas...",
-    "blocksLoaded": "bloques cargados"
+    "blocksLoaded": "{n} bloques cargados"
   },
   "listedTags": {
     "title": "Listados Agrupados por Etiquetas",
