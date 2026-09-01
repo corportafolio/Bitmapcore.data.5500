@@ -434,7 +434,7 @@ function TagInfoScreen(props) {
     React.createElement('div', { className:'flex-1 overflow-y-auto p-3 space-y-2' },
       TAG_NAMES.map(function(name, i) {
         var desc = TAG_DESCRIPTIONS[i] || '';
-        return React.createElement('div', { key:i, className:'bg-bitmap-surface border border-bitmap-border rounded-lg p-3' },
+        return React.createElement('div', { key:i, className:'bg-bitmap-surface border border-bitmap-border rounded-lg p-3 hover:border-bitmap-orange hover:bg-bitmap-orange/5 transition-colors cursor-default' },
           React.createElement('div', { className:'flex items-center gap-2 mb-1' },
             React.createElement('span', { className:'text-bitmap-muted text-xs font-bold' }, (i + 1) + '.'),
             React.createElement('span', { className:'inline-block px-2 py-0.5 bg-bitmap-orange/10 border border-bitmap-orange/30 rounded text-bitmap-orange text-xs font-alfaslab' }, name)
