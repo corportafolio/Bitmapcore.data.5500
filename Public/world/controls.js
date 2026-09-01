@@ -172,6 +172,8 @@ var WorldControls = (function() {
 
   function animateTo(targetTheta, targetPhi, targetDist) {
     if (animFrame) cancelAnimationFrame(animFrame);
+    if (zoomFrame) { cancelAnimationFrame(zoomFrame); zoomFrame = null; }
+    zoomTarget = null;
     animTarget = {
       theta: targetTheta,
       phi: targetPhi,

@@ -769,7 +769,7 @@ var WorldBlocks = (function() {
       var dTheta = Math.abs(theta - lastUpdateTheta);
       var dPhi = Math.abs(phi - lastUpdatePhi);
       var dDist = Math.abs(distance - lastUpdateDist);
-      if (dTheta < 0.01 && dPhi < 0.01 && dDist < 2) return;
+      if (dTheta < 0.01 && dPhi < 0.01 && dDist < 0.1) return;
     }
     lastUpdateTheta = theta;
     lastUpdatePhi = phi;
