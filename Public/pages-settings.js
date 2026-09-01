@@ -24,6 +24,8 @@ function SettingsPage(props) {
   };
 
   var handleSave = function() {
+    var prevLang = I18n.getCurrentLang();
+    if (typeof bcAnalytics !== 'undefined' && bcAnalytics.track) bcAnalytics.track('language_change', {from: prevLang, to: language});
     setIsSaving(true);
     if (typeof I18n !== 'undefined' && I18n.saveLanguage) {
       I18n.saveLanguage().then(function() {

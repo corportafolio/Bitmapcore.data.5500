@@ -377,6 +377,12 @@ app.get('/dashboard', authMiddleware, (req, res) => {
       }
     }
 
+    const languages = db.prepare(`SELECT json_extract(event_data, '$.to') as lang, COUNT(*) as changes, COUNT(DISTINCT user_id) as users FROM events WHERE event_type = 'language_change' AND json_extract(event_data, '$.to') IS NOT NULL AND created_at BETWEEN ? AND ? GROUP BY lang ORDER BY changes DESC`).all(start, end);
+
+    const languagesByBrowser = db.prepare(`SELECT browser, json_extract(event_data, '$.to') as lang, COUNT(*) as c FROM events WHERE event_type = 'language_change' AND json_extract(event_data, '$.to') IS NOT NULL AND created_at BETWEEN ? AND ? GROUP BY browser, lang ORDER BY c DESC`).all(start, end);
+
+    const languageChanges = db.prepare(`SELECT user_id, COUNT(*) as changes FROM events WHERE event_type = 'language_change' AND created_at BETWEEN ? AND ? GROUP BY user_id ORDER BY changes DESC`).all(start, end);
+
     res.json({
       summary: {
         sessions, prevSessions, users, prevUsers, pageViews, prevPageViews,
@@ -385,7 +391,8 @@ app.get('/dashboard', authMiddleware, (req, res) => {
         conversionRate, prevConversionRate,
         visitBounceRate, prevVisitBounceRate, totalVisits, prevTotalVisits
       },
-      topPages, eventTypes, devices, browsers, utmSources, walletTypes, countries, countriesSeries
+      topPages, eventTypes, devices, browsers, utmSources, walletTypes, countries, countriesSeries,
+      languages, languagesByBrowser, languageChanges
     });
   } catch (err) {
     console.error('Dashboard error:', err.message);
