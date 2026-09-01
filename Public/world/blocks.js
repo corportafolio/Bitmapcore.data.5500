@@ -109,6 +109,13 @@ var WorldBlocks = (function() {
       metalness: 0.05
     });
 
+    // dummy 1x1 texture so #include <map_fragment> is included in shader
+    var dummyImg = new Image();
+    dummyImg.width = 1; dummyImg.height = 1;
+    var dummyTex = new THREE.Texture(dummyImg);
+    dummyTex.needsUpdate = true;
+    mat.map = dummyTex;
+
     mat.onBeforeCompile = function(shader) {
       console.log('🗺️ createAtlasMaterial: onBeforeCompile RUNNING, map=', shader.uniforms.map ? 'yes' : 'no');
       shader.vertexShader = shader.vertexShader.replace(
@@ -127,7 +134,7 @@ var WorldBlocks = (function() {
       var mapChunk = '#include <map_fragment>';
       var mapReplace =
         'vec2 atlasUV = vAtlasUvOffset.xy + vUv * vAtlasUvOffset.zw;\n' +
-        'vec4 texelColor = texture2D( map, atlasUV );\n' +
+        'vec4 texelColor = texture( map, atlasUV );\n' +
         'texelColor = mapTexelToLinear( texelColor );\n' +
         'diffuseColor *= texelColor;\n';
 
@@ -454,7 +461,7 @@ var WorldBlocks = (function() {
       var pz = cached.nz * WORLD_RADIUS;
       var pos = new THREE.Vector3(px, py, pz);
 
-      var size = (BLOCK_SIZE * 40) * (cached.scale || 1.0);
+      var size = (BLOCK_SIZE * 20) * (cached.scale || 1.0);
       var geo = new THREE.PlaneGeometry(size, size);
       var mat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
       var plane = new THREE.Mesh(geo, mat);
@@ -789,7 +796,7 @@ var WorldBlocks = (function() {
     var distAtlasMin = cfg.DIST_ATLAS_MIN || 120;
     var distBlockMode = cfg.DIST_BLOCK_MODE || 105;
 
-    if (distance <= distAtlasMin && distance > distBlockMode) {
+    if (distance <= distAtlasMin && distance > 110) {
       // show atlas planes around central tile
       if (!atlasPlanesShown && visible.length > 0) {
         var centerBlock = visible[0].blockNum;
