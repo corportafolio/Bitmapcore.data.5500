@@ -62,11 +62,11 @@ function HeaderBar(props) {
     showBackButton ? React.createElement('button', {
       onClick: function() { if (navigate) navigate(-1); },
       className:'font-alfaslab text-bitmap-orange text-sm hover:text-bitmap-orange-light transition-colors mr-2'
-    }, '\u2190 Volver') : null,
+    }, I18n.t('ui.back')) : null,
     !showBackButton && onToggleCollapse ? React.createElement('button', {
       onClick: onToggleCollapse,
       className:'text-bitmap-muted text-[9px] mr-3 cursor-pointer hover:opacity-70 transition-opacity',
-      title: collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'
+      title: collapsed ? I18n.t('ui.expandSidebar') : I18n.t('ui.collapseSidebar')
     }, collapsed ? '\u25B6' : '\u25C0') : null,
     !showBackButton ? React.createElement('div', { className:'flex items-center gap-2 cursor-pointer', onClick: function() { navigate('/'); } },
       React.createElement('img', { src:'logo_bitmapcore_logo.png', alt:'BitmapCore', className:'h-6 w-6 object-contain' }),
@@ -94,7 +94,7 @@ function HeaderBar(props) {
     !showBackButton && onInfoClick ? React.createElement('button', {
       onClick: onInfoClick,
         className:'text-bitmap-orange hover:text-bitmap-orange-light transition-colors mr-2 text-[25px] cursor-pointer',
-      title:'Informacion de Etiquetas'
+      title: I18n.t('ui.tagInfo')
     }, React.createElement('svg', {
   className: 'w-[25px] h-[25px]',
   fill: 'currentColor',
@@ -332,22 +332,22 @@ function FloatingMarketplaceMenu(props) {
   var setShowConfirm = _confirm[1];
 
   var items = [
-    { id:'home', label:'Inicio', path:'/', icon:'\uD83C\uDFE0', isImage:false },
+    { id:'home', label: I18n.t('floatMenu.home'), path:'/', icon:'\uD83C\uDFE0', isImage:false },
     { id:'ordinalswallet', label:'Ordinalswallet', path:'/ordinalswallet', icon:'ordinalswallet_logo.png', isImage:true },
     { id:'unisat', label:'Unisat', path:'/unisat', icon:'unisat_logo.png', isImage:true },
     { id:'satflow', label:'Satflow', path:'/satflow', icon:'satflow-logo.png', isImage:true },
     { id:'local', label:'BitmapCore', path:'/local', icon:'logo_bitmapcore_logo.png', isImage:true },
-    { id:'discounts', label:'Descuentos', path:'/discounts', icon:'discount.svg', isImage:true },
+    { id:'discounts', label: I18n.t('floatMenu.discounts'), path:'/discounts', icon:'discount.svg', isImage:true },
     { id:'unified', label:'Unified', path:'/unified', icon:'layers.svg', isImage:true },
-    { id:'tags', label:'Etiquetas Listadas', path:'/listed-tags', icon:'\uD83C\uDFF7\uFE0F', isImage:false },
-    { id:'sales', label:'Ventas', path:'/sales', icon:'\uD83D\uDCB0', isImage:false }
+    { id:'tags', label: I18n.t('floatMenu.listedTags'), path:'/listed-tags', icon:'\uD83C\uDFF7\uFE0F', isImage:false },
+    { id:'sales', label: I18n.t('floatMenu.sales'), path:'/sales', icon:'\uD83D\uDCB0', isImage:false }
   ];
 
   return React.createElement('div', { className:'fm-container' },
     React.createElement('button', {
       className:'fm-toggle',
       onClick:function() { setIsOpen(!isOpen); },
-      title:'Marketplaces'
+      title: I18n.t('floatMenu.marketplaces')
     },
       React.createElement('svg', { width:'18', height:'24', viewBox:'0 0 18 24', fill:'var(--bitmap-orange)' },
         React.createElement('circle', { cx:'9', cy:'4', r:'2.5' }),
@@ -387,8 +387,8 @@ function ErrorBoundary(props) {
 
   if (hasError) {
     return React.createElement('div', { className:'flex flex-col items-center justify-center w-full h-full bg-bitmap-black p-8' },
-      React.createElement('h1', { className:'font-alfaslab text-2xl text-bitmap-orange mb-4' }, 'Error'),
-      React.createElement('p', { className:'font-acme text-bitmap-text mb-6' }, 'Algo sali\u00F3 mal'),
+      React.createElement('h1', { className:'font-alfaslab text-2xl text-bitmap-orange mb-4' }, I18n.t('ui.error')),
+      React.createElement('p', { className:'font-acme text-bitmap-text mb-6' }, I18n.t('ui.somethingWrong')),
       React.createElement('button', { onClick:function() { setHasError(false); }, className:'px-4 py-2 bg-bitmap-orange text-white rounded-lg font-alfaslab' }, I18n.t('app.retry'))
     );
   }
@@ -408,73 +408,25 @@ var TAG_NAMES = [
   "prime number", "fibonacci", "binary", "chinese lucky number", "pizza day"
 ];
 
-var TAG_DESCRIPTIONS = [
-  "Bloques que contienen transacciones individuales con salida de 10,000 BTC a 99,999 BTC",
-  "Bloques que contienen transacciones individuales con salida de 100,000 BTC o mas",
-  "Bloques cuya suma total de salidas esta entre 100,000 y 249,999 BTC",
-  "Bloques cuya suma total de salidas esta entre 250,000 y 499,999 BTC",
-  "Bloques cuya suma total de salidas esta entre 500,000 y 999,999 BTC",
-  "Bloques cuya suma total de salidas esta entre 1,000,000 y 1,999,999 BTC",
-  "Bloques cuya suma total de salidas esta entre 2,000,000 y 2,999,999 BTC",
-  "Bloques cuya suma total de salidas esta entre 3,000,000 y 4,999,999 BTC",
-  "Bloques cuya suma total de salidas es de 5,000,000 BTC o mas",
-  "Bloques cuyo hash contiene la cadena \"21e8\"",
-  "Bloques con exactamente 2 transacciones donde todas tienen exactamente la misma cantidad de BTC",
-  "Bloques con exactamente 3 transacciones donde todas tienen exactamente la misma cantidad de BTC",
-  "Bloques con exactamente 4 transacciones donde todas tienen exactamente la misma cantidad de BTC",
-  "Bloques con exactamente 6 transacciones donde todas tienen exactamente la misma cantidad de BTC",
-  "Bloques con patron Grid Punk (cuadricula) en su representacion visual",
-  "Bloques Grid Punk con 5 transacciones donde todas tienen exactamente la misma cantidad de BTC",
-  "Bloques Grid Punk con 10 transacciones donde todas tienen exactamente la misma cantidad de BTC",
-  "Bloques Grid Punk con mas de 100 transacciones donde todas tienen exactamente la misma cantidad de BTC",
-  "Bloques cuyo numero de bloque se lee igual al derecho y al reves",
-  "Bloques cuyo numero de bloque tiene todos sus digitos iguales (ej: 11, 22, 111, 222, 9999)",
-  "Bloques que contienen transacciones de las 4 billeteras legacy de MicroStrategy, la mayor empresa tenedora de Bitcoin del mundo, que acumula BTC desde el 6 de junio de 2018. Estas billeteras estan inactivas. Son 2,599 bloques, desde el 526,317 (6 de junio de 2018) hasta el 947,431. Las billeteras son:\n\n1LQoWist8KkaUXSPKZHNvEyfrEkPHzSsCd\n1P5ZEDWTKTFGxQjZphgWPQUpe554WKDfHQ\n1FzWLkAahHooV3kzTgyx6qsswXJ6sCXkSR\n1JHceFenZHACSRPD6tE4bfU6yJ83wTG6kH",
-  "Bloques con 2 transacciones: la coinbase es la cabeza (25% mas grande que la segunda tx, cuello ancho)",
-  "Bloques con 2 transacciones: la coinbase es la cabeza (50% mas grande que la segunda tx, estandar)",
-  "Bloques con 2 transacciones: la coinbase es la cabeza (75% mas grande que la segunda tx, pristino)",
-  "Bloques con 2 transacciones: la coinbase es mas pequena (hasta 2 veces menor que la segunda tx, va abajo como cuello)",
-  "Bloques con 8000 o mas transacciones",
-  "Bloques con 7000 a 7999 transacciones",
-  "Bloques con 6000 a 6999 transacciones",
-  "Bloques con 5000 a 5999 transacciones",
-  "Bloques con 4000 a 4999 transacciones",
-  "Bloques con 3000 a 3999 transacciones",
-  "Bloques con 2000 a 2999 transacciones",
-  "Bloques con 1000 a 1999 transacciones",
-  "Bloques con exactamente 1 transaccion",
-  "Bloques con exactamente 2 transacciones, excluyendo Punks y 2 tx GRID",
-  "Bloques minados durante el día bisiesto (29 de febrero) en la historia de Bitcoin, desde el génesis (3 de enero de 2009). El primer día bisiesto fue el 29 de febrero de 2012: se minaron 179 bloques, desde el 168,957 hasta el 169,135. El segundo fue el 29 de febrero de 2016: se minaron 133 bloques, desde el 400,468 hasta el 400,600. El tercero fue el 29 de febrero de 2020: se minaron 139 bloques, desde el 619,443 hasta el 619,581. El cuarto fue el 29 de febrero de 2024: se minaron 133 bloques, desde el 832,470 hasta el 832,602. En total son 4 días bisiestos y 584 bloques. El próximo día bisiesto será el 29 de febrero de 2028, que no está incluido porque aún no se han minado sus bloques.",
-  "Bloques desde el 50,001 hasta el 100,000",
-  "Bloques desde el 25,001 hasta el 50,000",
-  "Bloques desde el 10,001 hasta el 25,000",
-  "Bloques desde el 1,001 hasta el 10,000",
-  "Bloques desde el 1 hasta el 1,000",
-  "Bloques 10, 100, 1000, 10000 y 100000 (potencias exactas de 10)",
-  "El bloque genesis (bloque 0), minado por Satoshi Nakamoto el 3 de enero de 2009",
-  "Bloques en cada era de halving (multiplos de 210,000)",
-  "Bloques en cada ajuste de dificultad (multiplos de 2,016, ~2 semanas)",
-  "Bloque 170: la primera transaccion P2P de la historia (Satoshi a Hal Finney, 12 enero 2009)",
-  "Bloque 57,043: 10,000 BTC por 2 pizzas (22 de mayo de 2010)",
-  "Bloque 9: minado por Satoshi Nakamoto. No contiene transacciones entre usuarios, solo la coinbase. Sus 50 BTC se usaron como entrada de la primera transaccion P2P (bloque 170, Satoshi -> Hal Finney)",
-  "Bloque 78: primer bloque minado por Hal Finney (primer minero tras Satoshi)",
-  "Bloques entre 660,000 y 669,999 reconocidos por el 66 DAO. Un club/comunidad de Bitmap en X (@66DAOBITMAP) con 10,000 miembros. Solo acepta Bitmaps entre los bloques 660,000 y 669,999. Tienen su propio token ($66DAO) que reparten a los miembros",
-  "Bloques cuyo numero de bloque es primo (divisible solo por 1 y si mismo)",
-  "Bloques cuyo numero pertenece a la secuencia de Fibonacci",
-  "Bloques cuyo numero de bloque solo tiene digitos 0 y 1, como si fuera un numero binario (ej: 10, 100, 101, 1010, 11001, 111111)",
-  "Bloques cuyo numero de bloque contiene \"168\" (numero de la suerte chino)",
-  "Bloques 56,899 a 57,093: rango completo del dia de la pizza (22 mayo 2010)"
-];
+var TAG_DESCRIPTIONS = [];
+function loadTagDescriptions() {
+  if (TAG_DESCRIPTIONS.length > 0) return;
+  var d = I18n.t('tagDesc');
+  if (Array.isArray(d)) {
+    TAG_DESCRIPTIONS = d;
+  }
+}
 
 function TagInfoScreen(props) {
   var onBack = props.onBack;
+  loadTagDescriptions();
   return React.createElement('div', { className:'flex flex-col h-full bg-bitmap-black' },
     React.createElement('div', { className:'flex items-center h-12 px-3 border-b border-bitmap-border bg-bitmap-surface' },
       React.createElement('button', {
         onClick: onBack,
         className:'text-bitmap-orange hover:text-bitmap-orange-light transition-colors mr-3 text-lg'
       }, '\u2190'),
-      React.createElement('span', { className:'font-alfaslab text-white text-sm' }, 'Informacion de Etiquetas')
+      React.createElement('span', { className:'font-alfaslab text-white text-sm' }, I18n.t('ui.tagInfo'))
     ),
     React.createElement('div', { className:'flex-1 overflow-y-auto p-3 space-y-2' },
       TAG_NAMES.map(function(name, i) {

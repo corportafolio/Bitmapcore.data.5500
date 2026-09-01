@@ -89,9 +89,9 @@ function UnifiedPage(props) {
   };
 
   var sortButtons = [
-    { key: 'listedAtDesc', label: 'Recientes' },
-    { key: 'priceDesc', label: '$ Alto' },
-    { key: 'priceAsc', label: '$ Bajo' }
+    { key: 'listedAtDesc', label: I18n.t('marketplace.sortRecent') },
+    { key: 'priceDesc', label: I18n.t('marketplace.sortPriceHigh') },
+    { key: 'priceAsc', label: I18n.t('marketplace.sortPriceLow') }
   ];
 
   var _j = React.useState('');
@@ -109,7 +109,7 @@ function UnifiedPage(props) {
   var _k = React.useState(false);
   var showSortMenu = _k[0];
   var setShowSortMenu = _k[1];
-  var sortLabel = { listedAtDesc: 'Recientes', priceDesc: '$ Alto', priceAsc: '$ Bajo' };
+  var sortLabel = { listedAtDesc: I18n.t('marketplace.sortRecent'), priceDesc: I18n.t('marketplace.sortPriceHigh'), priceAsc: I18n.t('marketplace.sortPriceLow') };
 
   React.useEffect(function() {
     if (!showSortMenu) return;
@@ -122,20 +122,20 @@ function UnifiedPage(props) {
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border pl-14 pr-4 py-2', style: { backgroundColor: '#1A1A1A' } },
       React.createElement('div', { className: 'flex items-center gap-2 flex-wrap' },
         React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className:'h-[30px] w-[30px] object-contain rounded flex-shrink-0', style:{ margin:'2px' } }),
-        React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Todos los Mercados'),
+        React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, I18n.t('unified.title')),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
-          'listados: ',
+          I18n.t('marketplace.listings') + ': ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
-          'Piso: ',
+          I18n.t('mpBubble.floor'),
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
         ),
         React.createElement('div', { className: 'relative ml-auto md:ml-2' },
           React.createElement('button', {
             onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
             className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
-          }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+          }, I18n.t('marketplace.sortLabel') + sortLabel[currentSort] + ' \u25BE'),
           showSortMenu ? React.createElement('div', {
             className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
           },
@@ -155,17 +155,17 @@ function UnifiedPage(props) {
       React.createElement('input', {
         type: 'text', value: searchQuery,
         onChange: function(e) { setSearchQuery(e.target.value); },
-        placeholder: 'Buscar por numero de bitmap...',
+        placeholder: I18n.t('marketplace.searchPlaceholder'),
         className: 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
       })
     ),
     isLoading && listings.length === 0
       ? React.createElement('div', { className: 'flex items-center justify-center py-16' },
-          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, 'Cargando datos...')
+          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, I18n.t('marketplace.loadingData'))
         )
       : React.createElement('div', { ref: scrollContainerRef, onScroll: handleScrollCheck, className: 'flex-1 overflow-y-auto pl-14 pr-4' },
           filtered.length === 0
-            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
+            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, I18n.t('marketplace.noListings'))
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
                   var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
@@ -239,8 +239,8 @@ function UnifiedPage(props) {
                   );
                 })
               ),
-          vm.getIsLoadingMore() ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Cargando m\u00e1s...') : null,
-          !vm.getHasMore() && listings.length > 0 ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Todos los listados cargados') : null
+          vm.getIsLoadingMore() ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, I18n.t('marketplace.loadingMore')) : null,
+          !vm.getHasMore() && listings.length > 0 ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, I18n.t('marketplace.allLoaded')) : null
         )
   );
 }
@@ -304,7 +304,7 @@ function TagGroupsPage(props) {
 
   return React.createElement('div', { className:'p-4 lg:p-6' },
       React.createElement('div', { className:'max-w-4xl mx-auto space-y-4' },
-        React.createElement('h2', { className:'font-alfaslab text-xl text-white' }, 'Bloques con etiqueta: ' + tagName),
+        React.createElement('h2', { className:'font-alfaslab text-xl text-white' }, I18n.t('unified.blocksWithTag') + tagName),
         isLoading ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('app.loading')) :
         tagBlocks.length === 0 ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('tags.noBlocks')) :
         React.createElement('div', { className:'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3' },
@@ -349,7 +349,7 @@ function TagTablePage(props) {
 
   return React.createElement('div', { className:'p-4 lg:p-6' },
       React.createElement('div', { className:'max-w-4xl mx-auto space-y-4' },
-        React.createElement('h2', { className:'font-alfaslab text-xl text-white' }, 'Tabla de etiqueta: ' + tagName),
+        React.createElement('h2', { className:'font-alfaslab text-xl text-white' }, I18n.t('unified.tagTable') + tagName),
         isLoading ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('app.loading')) :
         tagBlocks.length === 0 ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('tags.noBlocks')) :
         React.createElement('div', { className:'space-y-2' },
@@ -454,7 +454,7 @@ function VentasPage(props) {
   };
 
   var formatDayHeader = function(key) {
-    var months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    var months = [I18n.t('unified.january'), I18n.t('unified.february'), I18n.t('unified.march'), I18n.t('unified.april'), I18n.t('unified.may'), I18n.t('unified.june'), I18n.t('unified.july'), I18n.t('unified.august'), I18n.t('unified.september'), I18n.t('unified.october'), I18n.t('unified.november'), I18n.t('unified.december')];
     var today = new Date();
     var todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
     var yesterday = new Date(today);
@@ -462,8 +462,8 @@ function VentasPage(props) {
     var yesterdayKey = yesterday.getFullYear() + '-' + String(yesterday.getMonth() + 1).padStart(2, '0') + '-' + String(yesterday.getDate()).padStart(2, '0');
     var d = new Date(key + 'T12:00:00');
     var label = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
-    if (key === todayKey) return 'HOY — ' + label;
-    if (key === yesterdayKey) return 'AYER — ' + label;
+    if (key === todayKey) return I18n.t('unified.today') + ' — ' + label;
+    if (key === yesterdayKey) return I18n.t('unified.yesterday') + ' — ' + label;
     return label;
   };
 
@@ -488,7 +488,7 @@ function VentasPage(props) {
     var volUsd = volume > 0 && btcPrice ? '$' + ((volume / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '$0.00';
     return React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },
       React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, label),
-      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, countStr + ' ventas'),
+      React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, countStr + ' ' + I18n.t('unified.salesCount')),
       React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, volBtc),
       React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, volUsd)
     );
@@ -499,13 +499,13 @@ function VentasPage(props) {
       React.createElement('div', { className: 'flex items-stretch justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
           React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[45px] w-[45px] object-contain rounded my-[2px]' }),
-          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Ventas Recientes')
+          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, I18n.t('unified.recentSales'))
         ),
         React.createElement('div', { className: 'flex items-stretch' },
-          renderStatCol('24 horas', h24.count, h24.volume),
-          renderStatCol('Última semana', d7.count, d7.volume),
+          renderStatCol(I18n.t('unified.last24h'), h24.count, h24.volume),
+          renderStatCol(I18n.t('unified.lastWeek'), d7.count, d7.volume),
           React.createElement('div', { className: 'flex flex-col items-center px-3' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Último mes'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('unified.lastMonth')),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, (d30.count ? BitmapUtils.formatNumber(d30.count) : '0') + ' ventas'),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, d30.volume > 0 ? BitmapUtils.formatBtcSat(d30.volume) + ' BTC' : '0 BTC'),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, d30.volume > 0 && btcPrice ? '$' + ((d30.volume / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '$0.00')
@@ -516,7 +516,7 @@ function VentasPage(props) {
     React.createElement('div', { className: 'pl-14 pr-4 py-1 border-b border-bitmap-border flex items-center gap-2 sticky top-0 z-10', style: { backgroundColor: '#080008' } },
       React.createElement('input', {
         type: 'text',
-        placeholder: 'Buscar por nombre o numero...',
+        placeholder: I18n.t('unified.searchNameOrNumber'),
         value: searchText,
         onChange: function(e) { setSearchText(e.target.value); },
         className: 'flex-1 bg-transparent border border-[#333] rounded px-3 py-1 font-acme text-xs text-white placeholder-[#666] focus:outline-none focus:border-bitmap-orange',
@@ -524,7 +524,7 @@ function VentasPage(props) {
       }),
       React.createElement('div', { className: 'flex gap-1 ml-2' },
         ['all', 'ordinalswallet', 'unisat', 'local'].map(function(src) {
-          var label = src === 'all' ? 'Todos' : sourceLabel(src);
+          var label = src === 'all' ? I18n.t('unified.all') : sourceLabel(src);
           var isActive = filterSource === src;
           var logo = src !== 'all' ? sourceLogo(src) : '';
           var children = [];
@@ -548,8 +548,8 @@ function VentasPage(props) {
       )
     ),
     React.createElement('div', { className: 'pl-14 pr-4 py-3 flex-1 overflow-y-auto' },
-      isLoading ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' }, 'Cargando ventas...') :
-      filteredSales.length === 0 ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' }, 'No hay ventas recientes') :
+      isLoading ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('app.loading')) :
+      filteredSales.length === 0 ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('unified.noRecentSales')) :
       React.createElement('div', null,
         grouped.order.map(function(dayKey) {
           var group = grouped.groups[dayKey];
@@ -557,7 +557,7 @@ function VentasPage(props) {
             React.createElement('div', { className: 'flex items-center gap-3 py-2 border-b border-[#333]' },
               React.createElement('span', { className: 'font-alfaslab text-sm text-white' }, formatDayHeader(dayKey)),
               React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
-                group.items.length + ' ventas  \u2022  ' + BitmapUtils.formatBtcSat(group.totalBtc * 100000000) + ' BTC'
+                group.items.length + ' ' + I18n.t('unified.salesCount') + '  \u2022  ' + BitmapUtils.formatBtcSat(group.totalBtc * 100000000) + ' BTC'
               )
             ),
             group.items.map(function(sale, i) {
@@ -593,11 +593,11 @@ function VentasPage(props) {
                         alt: ''
                       }),
                       sale.buyer_address ? React.createElement('span', { className: 'font-acme text-[10px] flex-shrink-0' },
-                        React.createElement('span', { style: { color: '#22C55E' } }, 'comprador: '),
+                        React.createElement('span', { style: { color: '#22C55E' } }, I18n.t('unified.buyer')),
                         React.createElement('span', { className: 'text-bitmap-muted' }, '...' + sale.buyer_address.slice(-4))
                       ) : null,
                       sale.seller_address ? React.createElement('span', { className: 'font-acme text-[10px] flex-shrink-0' },
-                        React.createElement('span', { style: { color: '#EF4444' } }, 'vendedor: '),
+                        React.createElement('span', { style: { color: '#EF4444' } }, I18n.t('unified.seller')),
                         React.createElement('span', { className: 'text-bitmap-muted' }, '...' + sale.seller_address.slice(-4))
                       ) : null
                     ),
@@ -629,7 +629,7 @@ function VentasPage(props) {
                       target: '_blank',
                       rel: 'noopener noreferrer',
                       className: 'font-acme text-[10px] text-bitmap-orange hover:underline'
-                    }, 'ver tx \u2197') : null
+                    }, I18n.t('unified.viewTx')) : null
                   )
                 )
               );

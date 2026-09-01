@@ -61,13 +61,13 @@ function ListedTagsPage(props) {
       React.createElement('div', { className: 'flex items-stretch justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
           React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[30px] w-[30px] object-contain rounded my-[2px]' }),
-          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Listados Agrupados por Etiquetas')
+          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, I18n.t('listedTags.title'))
         ),
         React.createElement('div', { className: 'flex items-stretch' },
-          renderStatCol('Piso', floorBtc, false),
-          renderStatCol('Listados', totalListings ? BitmapUtils.formatNumber(totalListings) : '0', false),
+          renderStatCol(I18n.t('listedTags.floor'), floorBtc, false),
+          renderStatCol(I18n.t('listedTags.listings'), totalListings ? BitmapUtils.formatNumber(totalListings) : '0', false),
           React.createElement('div', { className: 'flex flex-col items-center px-3' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Tablas'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('listedTags.tables')),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, (tagGroups.length || 0) + ' tablas')
           )
         )
@@ -76,7 +76,7 @@ function ListedTagsPage(props) {
 
     // Lista de filas
     React.createElement('div', { className: 'flex-1 overflow-y-auto pl-14 pr-4 py-3' },
-      isLoading ? React.createElement('div', { className: 'flex items-center justify-center h-64 font-acme text-bitmap-muted' }, 'Cargando etiquetas listadas...') :
+      isLoading ? React.createElement('div', { className: 'flex items-center justify-center h-64 font-acme text-bitmap-muted' }, I18n.t('listedTags.loading')) :
       React.createElement('div', { className: 'space-y-3' },
         filtered.map(function(group, i) {
           return React.createElement(ListedTagRow, {
@@ -86,7 +86,7 @@ function ListedTagsPage(props) {
           });
         })
       ),
-      !isLoading && filtered.length === 0 ? React.createElement('div', { className: 'text-center py-8 font-acme text-bitmap-muted' }, 'No hay tablas con listados en unificados') : null
+      !isLoading && filtered.length === 0 ? React.createElement('div', { className: 'text-center py-8 font-acme text-bitmap-muted' }, I18n.t('listedTags.noTables')) : null
     )
   );
 }
@@ -265,7 +265,7 @@ function ListedTagDetailPage(props) {
         ),
         React.createElement('div', { className: 'flex gap-1 ml-2' },
           ['all', 'ordinalswallet', 'unisat', 'local'].map(function(src) {
-            var label = src === 'all' ? 'Todos' : sourceLabel(src);
+            var label = src === 'all' ? I18n.t('listedTags.all') : sourceLabel(src);
             var isActive = filterSource === src;
             var logo = src !== 'all' ? sourceLogo(src) : '';
             var children = [];
@@ -291,9 +291,9 @@ function ListedTagDetailPage(props) {
     ),
     React.createElement('div', { className: 'flex-1 overflow-y-auto pl-14 pr-4 py-3' },
       isLoading
-        ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' }, 'Cargando listados...')
+        ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('listedTags.loadingListings'))
         : items.length === 0
-          ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' }, 'No hay listados con esta etiqueta')
+          ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('listedTags.noListings'))
           : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
               items.map(function(item, i) {
                 var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
@@ -348,13 +348,13 @@ function ListedTagDetailPage(props) {
                 );
               })
             ),
-      isLoadingMore ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Cargando m\u00e1s...') : null,
+      isLoadingMore ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, I18n.t('tagTable.loadingMore')) : null,
       !isLoading && items.length < total && items.length > 0 ? React.createElement('div', { className: 'text-center' },
         React.createElement('button', {
           onClick: loadMore,
           disabled: isLoadingMore,
           className: 'px-6 py-2 bg-bitmap-surface border border-bitmap-border rounded-lg font-alfaslab text-sm text-bitmap-orange hover:bg-bitmap-black/30 transition-colors disabled:opacity-50'
-        }, isLoadingMore ? 'Cargando...' : 'Cargar mas (' + items.length + ' / ' + total + ')')
+        }, isLoadingMore ? I18n.t('app.loading') : I18n.t('listedTags.loadMore') + ' (' + items.length + ' / ' + total + ')')
       ) : null
     )
   );

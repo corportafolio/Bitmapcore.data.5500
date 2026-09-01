@@ -31,7 +31,7 @@ function PantallaDeTablas(props) {
   return React.createElement('div', { className:'p-4 lg:p-6' },
       React.createElement('div', { className:'max-w-5xl mx-auto space-y-6' },
         React.createElement('div', { className:'flex items-center justify-between' },
-          React.createElement('h1', { className:'font-alfaslab text-2xl text-white' }, 'Tablas de Etiquetas'),
+          React.createElement('h1', { className:'font-alfaslab text-2xl text-white' }, I18n.t('tagTable.title')),
           React.createElement('span', { className:'font-acme text-sm text-bitmap-muted' }, filteredTags.length + ' / 56 tablas')
         ),
         React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-4' },
@@ -39,7 +39,7 @@ function PantallaDeTablas(props) {
             type:'text',
             value:searchQuery,
             onChange:function(e) { setSearchQuery(e.target.value); },
-            placeholder:'Buscar tabla...',
+            placeholder: I18n.t('tagTable.searchTable'),
             className:'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors h-10'
           })
         ),
@@ -232,7 +232,7 @@ function TagTableScreen(props) {
                 id: 'taginfo-btn',
                 onClick: function(e) { e.stopPropagation(); setShowTagInfo(!showTagInfo); },
                 className: 'text-bitmap-orange hover:text-bitmap-orange-light transition-colors cursor-pointer',
-                title: 'Informacion de la etiqueta'
+                title: I18n.t('tagTable.tagInfo')
               }, infoSVG)
             ),
             React.createElement('div', { className:'flex items-center gap-1' },
@@ -251,7 +251,7 @@ function TagTableScreen(props) {
             ),
             tagInfoIdx >= 0
               ? React.createElement('p', { className:'text-bitmap-text text-xs leading-relaxed', style:{whiteSpace:'pre-line'} }, TAG_DESCRIPTIONS[tagInfoIdx])
-              : React.createElement('p', { className:'font-acme text-xs text-bitmap-muted' }, 'Sin informacion disponible para esta etiqueta')
+              : React.createElement('p', { className:'font-acme text-xs text-bitmap-muted' }, I18n.t('tagTable.noTagInfo'))
           ) : null
         ),
         isLoading && blocks.length === 0 ? React.createElement('div', { className:'flex items-center justify-center h-64 font-acme text-bitmap-muted' }, I18n.t('app.loading')) : (
@@ -325,8 +325,8 @@ function TagTableScreen(props) {
                 })
               )
         ),
-        blocks.length === 0 && !isLoading ? React.createElement('div', { className:'text-center py-8 font-acme text-bitmap-muted' }, 'Esta tabla no tiene bloques') : null,
-        isLoadingMore ? React.createElement('div', { className:'text-center py-4 font-acme text-bitmap-muted' }, 'Cargando mas...') : null,
+        blocks.length === 0 && !isLoading ? React.createElement('div', { className:'text-center py-8 font-acme text-bitmap-muted' }, I18n.t('tagTable.noBlocksInTable')) : null,
+        isLoadingMore ? React.createElement('div', { className:'text-center py-4 font-acme text-bitmap-muted' }, I18n.t('tagTable.loadingMore')) : null,
         !hasMore && blocks.length > 0 ? React.createElement('div', { className:'text-center py-4 font-acme text-bitmap-muted' }, blocks.length + ' bloques cargados') : null
       )
   );

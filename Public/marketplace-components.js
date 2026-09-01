@@ -17,7 +17,7 @@ function MarketplaceBubble(props) {
       React.createElement('div', { className:'font-alfaslab text-sm text-white truncate' }, name),
       React.createElement('div', { className:'flex gap-3 mt-1' },
         React.createElement('span', { className:'font-acme text-xs text-bitmap-muted' }, listings + ' listados'),
-        floorPrice > 0 ? React.createElement('span', { className:'font-acme text-xs text-bitmap-orange-light' }, 'Piso: ' + BitmapUtils.formatBtc(floorPrice)) : null,
+        floorPrice > 0 ? React.createElement('span', { className:'font-acme text-xs text-bitmap-orange-light' }, I18n.t('mpBubble.floor') + BitmapUtils.formatBtc(floorPrice)) : null,
         sold > 0 ? React.createElement('span', { className:'font-acme text-xs text-bitmap-muted' }, sold + ' vendidos') : null
       )
     ),
@@ -58,7 +58,7 @@ function FloorPrice(props) {
   var marketplace = props.marketplace;
 
   return React.createElement('div', { className:'flex items-center justify-between bg-bitmap-surface border border-bitmap-border rounded-lg p-3' },
-    React.createElement('span', { className:'font-alfaslab text-xs text-bitmap-muted' }, 'Piso ' + (marketplace || '')),
+    React.createElement('span', { className:'font-alfaslab text-xs text-bitmap-muted' }, I18n.t('mpBubble.floor') + (marketplace || '')),
     React.createElement('span', { className:'font-acme text-sm font-semibold text-bitmap-orange-light' }, BitmapUtils.formatBtc(price) + ' BTC')
   );
 }
@@ -143,9 +143,9 @@ function SelectorBubble(props) {
         icon ? React.createElement('span', { className:'text-[15px]' }, icon) : null
       ),
       React.createElement('span', { className:'font-acme text-[11px] text-bitmap-muted whitespace-nowrap' },
-        React.createElement('span', { className:'text-bitmap-orange' }, 'Listados: '), listingsFmt,
+        React.createElement('span', { className:'text-bitmap-orange' }, I18n.t('listedTags.listings') + ': '), listingsFmt,
         ' / ',
-        React.createElement('span', { className:'text-bitmap-orange' }, 'Piso: '), floorBtc
+        React.createElement('span', { className:'text-bitmap-orange' }, I18n.t('mpBubble.floor')), floorBtc
       )
     );
 
@@ -176,7 +176,7 @@ function SelectorBubble(props) {
           )
         );
       })
-    ) : React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted mt-1' }, 'Sin etiquetas');
+    ) : React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted mt-1' }, I18n.t('mpBubble.noTags'));
 
     return React.createElement('div', {
       className:'border border-bitmap-border rounded-xl p-2 hover:border-bitmap-orange transition-all',
@@ -288,9 +288,9 @@ function SelectorBubble(props) {
       ' ', React.createElement('span', { className:'text-bitmap-orange' }, '/'), ' mes: ', React.createElement('span', { className:'text-bitmap-orange' }, d30.count || 0, ' ventas'), ' \u00B7 ', BitmapUtils.formatBtcSat(d30.volume || 0), ' BTC'
     ) :
     React.createElement('span', { className:'font-acme text-[11px] text-bitmap-muted whitespace-nowrap' },
-      React.createElement('span', { className:'text-bitmap-orange' }, 'Listados: '), listingsFmt,
+      React.createElement('span', { className:'text-bitmap-orange' }, I18n.t('listedTags.listings') + ': '), listingsFmt,
       ' / ',
-      React.createElement('span', { className:'text-bitmap-orange' }, 'Piso: '), floorBtc
+      React.createElement('span', { className:'text-bitmap-orange' }, I18n.t('mpBubble.floor')), floorBtc
     )
   );
 
@@ -349,7 +349,7 @@ var sourceLogo = preview.source === 'ordinalswallet' ? 'ordinalswallet_logo.png'
         React.createElement('polyline', { points:'9 18 15 12 9 6' })
       )
     ) : null
-  ) : React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' }, 'Sin previsualizaciones');
+  ) : React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' }, I18n.t('mpBubble.noPreview'));
 
   return React.createElement('div', {
     className:'border border-bitmap-border rounded-xl p-2 hover:border-bitmap-orange transition-all',

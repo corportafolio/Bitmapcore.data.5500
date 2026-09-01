@@ -304,19 +304,19 @@ function LocalPage(props) {
     var listingActivated = false;
 
     try {
-      setListingStatus({ toast:'Preparando listings...' });
+      setListingStatus({ toast:I18n.t('toast.preparingListings') });
       var pubKey = wallet.publicKey;
       if (!pubKey) {
-        setListingStatus({ toast:'Obteniendo clave publica...' });
+        setListingStatus({ toast:I18n.t('toast.gettingPublicKey') });
         try {
           pubKey = await StoreApp.getPublicKeyFresh();
         } catch(pke) {
-          setListingStatus({ toast:'Error: no se pudo obtener la clave publica de la wallet' });
+          setListingStatus({ toast:I18n.t('toast.publicKeyError') });
           return;
         }
       }
       if (!pubKey) {
-        setListingStatus({ toast:'Error: reconecta la wallet para obtener la clave publica' });
+        setListingStatus({ toast:I18n.t('toast.publicKeyReconnect') });
         return;
       }
 
@@ -340,7 +340,7 @@ function LocalPage(props) {
         };
       });
 
-      setListingStatus({ toast:'Creando listings...' });
+      setListingStatus({ toast:I18n.t('toast.creatingListings') });
       var createRes = await MarketplaceApi.batchList(batchItems);
       var createJson = await createRes;
 
@@ -351,22 +351,22 @@ function LocalPage(props) {
 
         if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
           try {
-            setListingStatus({ toast:'Firmando en Xverse...' });
+            setListingStatus({ toast:I18n.t('toast.signingXverse') });
             signedPsbtHexs = [];
             for (var xi = 0; xi < psbtToSigns.length; xi++) {
-              setListingStatus({ toast:'Firmando listing ' + (xi + 1) + ' de ' + psbtToSigns.length + ' en Xverse...' });
+              setListingStatus({ toast:I18n.t('toast.signingListingXverse') + ' ' + (xi + 1) + ' ' + I18n.t('toast.of') + ' ' + psbtToSigns.length + ' ' + I18n.t('toast.inXverse') });
               var singleSigned = await StoreApp._xverseSignPsbt(psbtToSigns[xi].unsignedPsbtHex, wallet.address, [0]);
               signedPsbtHexs.push(singleSigned);
             }
           } catch(xe) {
-            setListingStatus({ toast:'Xverse: firma cancelada o fallida' });
+            setListingStatus({ toast:I18n.t('toast.xverseSignFailed') });
           }
         } else if (window.unisat && window.unisat.signPsbt) {
           try {
-            setListingStatus({ toast:'Firmando en Unisat...' });
+            setListingStatus({ toast:I18n.t('toast.signingUnisat') });
             signedPsbtHexs = [];
             for (var ui = 0; ui < psbtHexArray.length; ui++) {
-              setListingStatus({ toast:'Firmando listing ' + (ui + 1) + ' de ' + psbtHexArray.length + ' en Unisat...' });
+              setListingStatus({ toast:I18n.t('toast.signingListingUnisat') + ' ' + (ui + 1) + ' ' + I18n.t('toast.of') + ' ' + psbtHexArray.length + ' ' + I18n.t('toast.inUnisat') });
               var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
                 autoFinalized: false,
                 toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
@@ -374,26 +374,26 @@ function LocalPage(props) {
               signedPsbtHexs.push(singleSigned);
             }
           } catch(ue) {
-            setListingStatus({ toast:'Unisat: firma cancelada o fallida' });
+            setListingStatus({ toast:I18n.t('toast.unisatSignFailed') });
           }
         } else {
-          setListingStatus({ toast:'Wallet no disponible para firmar' });
+          setListingStatus({ toast:I18n.t('toast.walletNotAvailable') });
         }
 
         if (signedPsbtHexs && signedPsbtHexs.length > 0) {
           var listingIds = createJson.data.listingIds || [];
           if (listingIds.length > 0) {
-            setListingStatus({ toast:'Activando listings...' });
+            setListingStatus({ toast:I18n.t('toast.activatingListings') });
             await MarketplaceApi.batchSign(listingIds, signedPsbtHexs, pubKey);
             listingActivated = true;
           }
           setSuccessItems(selected);
           setShowSuccessMenu(true);
         } else {
-          setListingStatus({ toast:'Firma cancelada. Los listings permanecen inactivos.' });
+          setListingStatus({ toast:I18n.t('toast.signCanceled') });
         }
       } else {
-        setListingStatus({ toast:'Error al crear listings' });
+        setListingStatus({ toast:I18n.t('toast.createListingsError') });
       }
     } catch(e) {
       setListingStatus({ toast:'Error: ' + e.message });
@@ -405,10 +405,10 @@ function LocalPage(props) {
         }
       }).catch(function() {});
       if (listingActivated) {
-        setSuccessToast({ message: selected.length + ' bitmaps listados correctamente', type: 'success' });
+        setSuccessToast({ message: selected.length + ' ' + I18n.t('toast.listedSuccess'), type: 'success' });
         setTimeout(function() { setSuccessToast(null); }, 20000);
       } else if (signedPsbtHexs) {
-        setSuccessToast({ message: 'No se pudo completar el listado', type: 'error' });
+        setSuccessToast({ message: I18n.t('toast.listingFailed'), type: 'error' });
         setTimeout(function() { setSuccessToast(null); }, 20000);
       }
     }
@@ -446,7 +446,7 @@ function LocalPage(props) {
     var wallet = StoreApp.get('wallet');
     if (!wallet || !wallet.address) {
       setShowBuyMenu(false);
-      setSuccessToast({ message: 'No hay wallet conectada, conecte su wallet para comerciar activos.', type: 'error' });
+      setSuccessToast({ message: I18n.t('toast.noWalletTrade'), type: 'error' });
       setTimeout(function() { setSuccessToast(null); }, 20000);
       return;
     }
@@ -459,7 +459,7 @@ function LocalPage(props) {
     if (window.bcAnalytics) window.bcAnalytics.track('buy_initiated', { itemCount: selected.length });
 
     setShowBuyMenu(true);
-    setBuyStatus({ message: 'Preparando compra batch...', type: 'loading' });
+    setBuyStatus({ message: I18n.t('toast.preparingBatch'), type: 'loading' });
     setBuyResult(null);
     setBuySuccessData(null);
 
@@ -488,7 +488,7 @@ function LocalPage(props) {
       if (!wallet.publicKey) {
         setShowBuyMenu(false);
         setBuyStatus(null);
-        setSuccessToast({ message: 'No se pudo obtener la clave publica. Reconecte su wallet: vaya a Configuracion > Conectar wallet.', type: 'error' });
+        setSuccessToast({ message: I18n.t('toast.publicKeyReconnectSettings'), type: 'error' });
         setTimeout(function() { setSuccessToast(null); }, 20000);
         return;
       }
@@ -502,7 +502,7 @@ function LocalPage(props) {
             if (xProvider) {
               var payResp = await xProvider.request('wallet_connect', {
                 addresses: ['payment'],
-                message: 'BitmapCore necesita tu clave publica de pago',
+                message: I18n.t('toast.needsPaymentKey'),
                 network: 'Mainnet'
               });
               var payAddrs = [];
@@ -546,9 +546,9 @@ function LocalPage(props) {
       if (window.bcAnalytics) window.bcAnalytics.track('buy_api_response', { success: buyJson.success, itemCount: selected.length });
 
       if (!buyJson.success || !buyJson.data || !buyJson.data.psbt) {
-        var errMsg = buyJson.error && buyJson.error.message ? buyJson.error.message : (buyJson.error || 'Error al crear PSBT batch');
+        var errMsg = buyJson.error && buyJson.error.message ? buyJson.error.message : (buyJson.error || I18n.t('toast.createPsbtError'));
         if (typeof errMsg === 'string' && errMsg.indexOf('Saldo disponible insuficiente') !== -1) {
-          throw new Error('Operación cancelada: no tienes fondos suficientes. Recarga tu billetera y vuelve a intentar la compra.');
+          throw new Error(I18n.t('toast.insufficientFunds'));
         }
         throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
       }
@@ -560,7 +560,7 @@ function LocalPage(props) {
       var serverMarketplaceFee = buyJson.data.marketplaceFee || 0;
       var signedPsbt = null;
 
-      setBuyStatus({ message: 'Firmando PSBT en wallet...', type: 'loading' });
+      setBuyStatus({ message: I18n.t('toast.signingPsbt'), type: 'loading' });
 
       if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
         try {
@@ -570,7 +570,7 @@ function LocalPage(props) {
           }
           signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.paymentAddress || wallet.address, buyerInputIndices);
         } catch(xe) {
-          throw new Error('Firma Xverse cancelada');
+          throw new Error(I18n.t('toast.xverseSignCanceled'));
         }
       } else if (window.unisat && window.unisat.signPsbt) {
         try {
@@ -584,17 +584,17 @@ function LocalPage(props) {
           }
           signedPsbt = await window.unisat.signPsbt(psbtHex, { toSignInputs: toSignInputs });
         } catch(ue) {
-          throw new Error('Firma Unisat cancelada');
+          throw new Error(I18n.t('toast.unisatSignCanceled'));
         }
       } else {
-        throw new Error('Wallet no disponible para firmar');
+        throw new Error(I18n.t('toast.walletNotAvailable'));
       }
 
       if (!signedPsbt) {
-        throw new Error('Firma cancelada');
+        throw new Error(I18n.t('toast.signCanceledShort'));
       }
 
-      setBuyStatus({ message: 'IMPORTANTE: No cierre esta pestaña hasta que se complete la transacción. Enviando a la mempool, esperando confirmación...', type: 'loading' });
+      setBuyStatus({ message: I18n.t('toast.dontClose'), type: 'loading' });
 
       var broadcastRes = await fetch('/api/v1/transaction/batch-broadcast', {
         method: 'POST',
@@ -612,12 +612,12 @@ function LocalPage(props) {
         if (broadcastRes.ok) {
           broadcastJson = { success: true, data: { txid: 'unknown_' + transactionId } };
         } else {
-          throw new Error('Error del servidor (' + broadcastRes.status + '): ' + broadcastText.substring(0, 200));
+          throw new Error(I18n.t('toast.serverError') + ' (' + broadcastRes.status + '): ' + broadcastText.substring(0, 200));
         }
       }
 
       if (!broadcastJson.success || !broadcastJson.data) {
-        var bErrMsg = broadcastJson.error && broadcastJson.error.message ? broadcastJson.error.message : (broadcastJson.error || 'Error al transmitir batch');
+        var bErrMsg = broadcastJson.error && broadcastJson.error.message ? broadcastJson.error.message : (broadcastJson.error || I18n.t('toast.transmitError'));
         throw new Error(typeof bErrMsg === 'string' ? bErrMsg : JSON.stringify(bErrMsg));
       }
 
@@ -693,11 +693,11 @@ function LocalPage(props) {
   };
 
   var sortButtons = [
-    { key: 'listedAtDesc', label: 'Recientes' },
-    { key: 'priceDesc', label: '$ Alto' },
-    { key: 'priceAsc', label: '$ Bajo' }
+    { key: 'listedAtDesc', label: I18n.t('marketplace.sortRecent') },
+    { key: 'priceDesc', label: I18n.t('marketplace.sortPriceHigh') },
+    { key: 'priceAsc', label: I18n.t('marketplace.sortPriceLow') }
   ];
-  var sortLabel = { listedAtDesc: 'Recientes', priceDesc: '$ Alto', priceAsc: '$ Bajo' };
+  var sortLabel = { listedAtDesc: I18n.t('marketplace.sortRecent'), priceDesc: I18n.t('marketplace.sortPriceHigh'), priceAsc: I18n.t('marketplace.sortPriceLow') };
 
   var filtered = listings.filter(function(l) {
     return !searchQuery || String(l.bitmapNumber || l.name || '').indexOf(searchQuery) !== -1;
@@ -747,31 +747,31 @@ function LocalPage(props) {
       React.createElement('div', { className: 'flex items-stretch justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
           React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[45px] w-[45px] object-contain rounded my-[2px]' }),
-          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Bitmapcore Marketplace')
+          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, I18n.t('marketplace.title'))
         ),
         React.createElement('div', { className: 'flex items-stretch' },
           React.createElement('div', { className: 'flex flex-col items-center px-2 border-r border-[#555]' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Piso Global'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('marketplace.globalFloor')),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, pisoBtc + ' BTC'),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, pisoUsd)
           ),
           React.createElement('div', { className: 'flex flex-col items-center px-2 border-r border-[#555]' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Volumen'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('marketplace.volume')),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, volumeBtc),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, volumeUsd)
           ),
           React.createElement('div', { className: 'flex flex-col items-center px-2 border-r border-[#555]' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Vol 24H'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('marketplace.volume24h')),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, volume24hBtc),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, volume24hUsd)
           ),
           React.createElement('div', { className: 'flex flex-col items-center px-2 border-r border-[#555]' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'listados'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('marketplace.listings')),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, BitmapUtils.formatNumber(totalListings)),
             React.createElement('span', null)
           ),
           React.createElement('div', { className: 'flex flex-col items-center px-2' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Ventas'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('marketplace.sales')),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, BitmapUtils.formatNumber(ventas)),
             React.createElement('span', null)
           )
@@ -786,7 +786,7 @@ function LocalPage(props) {
         type: 'text',
         value: searchQuery,
         onChange: function(e) { setSearchQuery(e.target.value); },
-        placeholder: 'Buscar por numero de bitmap...',
+        placeholder: I18n.t('marketplace.searchPlaceholder'),
         className: 'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-1 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
       }),
       React.createElement('div', { className: 'relative flex-shrink-0' },
@@ -796,7 +796,7 @@ function LocalPage(props) {
             var w = StoreApp.get('wallet');
             if (!w || !w.address) {
               setShowBuyMenu(false);
-              setSuccessToast({ message: 'No hay wallet conectada, conecte su wallet para comerciar activos.', type: 'error' });
+              setSuccessToast({ message: I18n.t('toast.noWalletTrade'), type: 'error' });
               setTimeout(function() { setSuccessToast(null); }, 20000);
               return;
             }
@@ -804,10 +804,10 @@ function LocalPage(props) {
             setShowBuyMenu(!showBuyMenu);
           },
           className: 'px-3 py-1 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors flex-shrink-0 font-bold'
-        }, 'Comprar ' + selectedBuyItems.length + ' seleccionados') : React.createElement('button', {
+        }, I18n.t('marketplace.buySelected') + ' (' + selectedBuyItems.length + ')') : React.createElement('button', {
           disabled: true,
           className: 'px-3 py-1 bg-bitmap-orange text-black font-acme text-xs rounded-lg flex-shrink-0 font-bold opacity-50'
-        }, 'Comprar seleccionados'),
+        }, I18n.t('marketplace.buySelected')),
         showBuyMenu ? React.createElement('div', {
           className: 'absolute right-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-[32rem] overflow-y-auto'
         },
@@ -820,35 +820,35 @@ function LocalPage(props) {
           ) :
           buyResult ? React.createElement(React.Fragment, null,
             React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border' },
-              React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Resultado de compra')
+              React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, I18n.t('marketplace.buyResult'))
             ),
             React.createElement('div', { className: 'px-3 py-2 max-h-48 overflow-y-auto' },
               buyResult.results.map(function(r, i) {
                 return React.createElement('div', { key: i, className: 'flex items-center justify-between py-1 border-b border-bitmap-border/30 last:border-0' },
                   React.createElement('span', { className: 'font-acme text-xs text-white truncate' }, r.name),
-                  r.status === 'success' ? React.createElement('span', { className: 'font-acme text-[10px] text-green-400 flex-shrink-0 ml-2' }, '\u2713 Comprado') :
-                  React.createElement('span', { className: 'font-acme text-[10px] text-red-400 flex-shrink-0 ml-2' }, r.reason || 'Error')
+                  r.status === 'success' ? React.createElement('span', { className: 'font-acme text-[10px] text-green-400 flex-shrink-0 ml-2' }, I18n.t('marketplace.purchased')) :
+                  React.createElement('span', { className: 'font-acme text-[10px] text-red-400 flex-shrink-0 ml-2' }, r.reason || I18n.t('app.error'))
                 );
               })
             ),
             React.createElement('div', { className: 'px-3 py-2 border-t border-bitmap-border' },
               React.createElement('div', { className: 'flex justify-between mb-1' },
-                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Total pagado:'),
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, I18n.t('marketplace.totalPaid')),
                 React.createElement('span', { className: 'font-acme text-[10px] text-white' }, BitmapUtils.formatBtcSat(buyResult.totalPaid) + ' BTC')
               ),
               React.createElement('div', { className: 'flex justify-between mb-2' },
-                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Fee marketplace:'),
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, I18n.t('marketplace.marketplaceFee')),
                 React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange' }, BitmapUtils.formatBtcSat(buyResult.totalFees) + ' BTC')
               ),
               React.createElement('button', {
                 onClick: function(e) { e.stopPropagation(); setShowBuyMenu(false); setBuyResult(null); setBuyStatus(null); },
                 className: 'w-full px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
-              }, 'Cerrar')
+              }, I18n.t('marketplace.close'))
             )
           ) :
           React.createElement(React.Fragment, null,
             React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border' },
-              React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Confirmar compra')
+              React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, I18n.t('marketplace.confirmPurchase'))
             ),
             React.createElement('div', { className: 'px-3 py-2 max-h-32 overflow-y-auto' },
               filtered.filter(function(item) {
@@ -863,19 +863,19 @@ function LocalPage(props) {
             ),
             React.createElement('div', { className: 'px-3 py-2 border-t border-bitmap-border' },
               React.createElement('div', { className: 'flex justify-between mb-1' },
-                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Subtotal (' + selectedBuyItems.length + ' items):'),
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, I18n.t('marketplace.subtotal') + ' (' + selectedBuyItems.length + ' ' + I18n.t('marketplace.items') + '):'),
                 React.createElement('span', { className: 'font-acme text-[10px] text-white' },
                   BitmapUtils.formatBtcSat(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + (item.listedPrice || item.price || 0); }, 0)) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-1' },
-                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, 'Fee marketplace (2%):'),
+                React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' }, I18n.t('marketplace.marketplaceFee') + ' (2%):'),
                 React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange' },
                   BitmapUtils.formatBtcSat(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { return sum + Math.max(546, Math.floor((item.listedPrice || item.price || 0) * 0.02)); }, 0)) + ' BTC'
                 )
               ),
               React.createElement('div', { className: 'flex justify-between mb-2 border-t border-bitmap-border/50 pt-1' },
-                React.createElement('span', { className: 'font-acme text-[10px] text-white font-bold' }, 'Total a pagar:'),
+                React.createElement('span', { className: 'font-acme text-[10px] text-white font-bold' }, I18n.t('marketplace.totalToPay')),
                 React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold' },
                   BitmapUtils.formatBtcSat(filtered.filter(function(item) { return selectedBuyItems.indexOf(item.bitmapId || item.id) !== -1; }).reduce(function(sum, item) { var p = item.listedPrice || item.price || 0; return sum + p + Math.max(546, Math.floor(p * 0.02)); }, 0)) + ' BTC'
                 )
@@ -894,29 +894,29 @@ function LocalPage(props) {
                     React.createElement('svg', { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none' },
                       React.createElement('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', stroke: '#FFD700', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' })
                     ),
-                    React.createElement('span', { className: 'font-acme text-[10px] font-bold', style: { color: '#FFD700' } }, 'Direcciones de la transaccion')
+                    React.createElement('span', { className: 'font-acme text-[10px] font-bold', style: { color: '#FFD700' } }, I18n.t('marketplace.transactionAddresses'))
                   ),
                   React.createElement('div', { className: 'space-y-1.5' },
                     React.createElement('div', null,
-                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, 'Vendedor:'),
+                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, I18n.t('marketplace.seller')),
                       React.createElement('span', { className: 'font-acme text-[10px] block truncate', style: { color: '#ccc', fontFamily: 'monospace' } },
                         sellerOrd ? BitmapUtils.truncateAddress(sellerOrd, 8) : '---'
                       )
                     ),
                     hasSellerPay ? React.createElement('div', null,
-                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, 'Pago del vendedor:'),
+                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, I18n.t('marketplace.sellerPayment')),
                       React.createElement('span', { className: 'font-acme text-[10px] block truncate', style: { color: '#FFAA00', fontFamily: 'monospace' } },
                         BitmapUtils.truncateAddress(sellerPay, 8)
                       )
                     ) : null,
                     React.createElement('div', { className: hasSellerPay || hasBuyerPay ? 'pt-1 mt-1' : '', style: (hasSellerPay || hasBuyerPay) ? { borderTop: '1px solid #333' } : {} },
-                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, 'Comprador:'),
+                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, I18n.t('marketplace.buyer')),
                       React.createElement('span', { className: 'font-acme text-[10px] block truncate', style: { color: '#00AA00', fontFamily: 'monospace' } },
                         buyerOrd ? BitmapUtils.truncateAddress(buyerOrd, 8) : '---'
                       )
                     ),
                     hasBuyerPay ? React.createElement('div', null,
-                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, 'Pago del comprador:'),
+                      React.createElement('span', { className: 'font-acme text-[9px] block', style: { color: '#888' } }, I18n.t('marketplace.buyerPayment')),
                       React.createElement('span', { className: 'font-acme text-[10px] block truncate', style: { color: '#00AA00', fontFamily: 'monospace' } },
                         BitmapUtils.truncateAddress(buyerPay, 8)
                       )
@@ -925,7 +925,7 @@ function LocalPage(props) {
                 );
               })(),
               React.createElement('div', { className: 'mb-2' },
-                React.createElement('span', { className: 'font-acme text-[10px] block mb-1.5', style: { color: '#888' } }, 'Fee de red (sats/vB):'),
+                React.createElement('span', { className: 'font-acme text-[10px] block mb-1.5', style: { color: '#888' } }, I18n.t('marketplace.networkFee')),
                 React.createElement('div', { className: 'flex gap-1.5' },
                   React.createElement('button', {
                     onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('baja'); setShowCustomFee(false); },
@@ -966,7 +966,7 @@ function LocalPage(props) {
                       border: '1px solid ' + (selectedFeeRate === 'custom' ? '#A0522D' : '#333'),
                       boxShadow: selectedFeeRate === 'custom' ? '0 2px 8px rgba(160,82,45,0.4), inset 0 1px 0 rgba(255,255,255,0.2)' : 'none'
                     }
-                  }, 'Custom')
+                  }, I18n.t('marketplace.custom'))
                 ),
                 selectedFeeRate === 'custom' ? React.createElement('div', { className: 'flex items-center gap-2 mt-2' },
                   React.createElement('input', {
@@ -987,7 +987,7 @@ function LocalPage(props) {
                 React.createElement('button', {
                   onClick: function(e) { e.stopPropagation(); setShowBuyMenu(false); },
                   className: 'flex-1 px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
-                }, 'Cancelar'),
+                }, I18n.t('app.cancel')),
                 React.createElement('button', {
                   onClick: function(e) { e.stopPropagation(); handleBuySelected(); },
                   className: 'flex-1 px-3 py-1.5 font-acme text-xs rounded font-bold transition-all',
@@ -997,7 +997,7 @@ function LocalPage(props) {
                     border: '1px solid #FF6B35',
                     boxShadow: '0 2px 8px rgba(255,107,53,0.4), inset 0 1px 0 rgba(255,255,255,0.3)'
                   }
-                }, 'Comprar')
+                }, I18n.t('marketplace.buySelected'))
               )
             )
           )
@@ -1008,18 +1008,18 @@ function LocalPage(props) {
           onClick: function(e) { e.stopPropagation(); fetchUserBitmapsForListing(); setShowListDropdown(true); },
           disabled: isLoadingDropdown,
           className: 'px-3 py-1 bg-bitmap-orange text-black font-acme text-xs rounded-lg hover:bg-bitmap-orange/80 transition-colors disabled:opacity-50'
-        }, isLoadingDropdown ? 'Cargando...' : 'Listar'),
+        }, isLoadingDropdown ? I18n.t('app.loading') : I18n.t('marketplace.list')),
 showListDropdown ? React.createElement('div', {
             className: 'absolute right-0 top-full mt-1 w-80 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-2 max-h-[32rem] overflow-y-auto'
           },
-            isLoadingDropdown ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'Cargando bitmaps...') :
+            isLoadingDropdown ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, I18n.t('app.loading')) :
             showConfirmMenu ? React.createElement(React.Fragment, null,
               React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border flex items-center gap-2' },
                 React.createElement('button', {
                   onClick: function(e) { e.stopPropagation(); setShowConfirmMenu(false); },
                   className: 'text-bitmap-muted hover:text-white transition-colors'
                 }, '\u2190'),
-                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, 'Confirmar listado')
+                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, I18n.t('marketplace.confirmListing'))
               ),
               React.createElement('div', { className: 'px-3 py-2 max-h-64 overflow-y-auto' },
                 confirmItems.map(function(item) {
@@ -1034,9 +1034,9 @@ showListDropdown ? React.createElement('div', {
                       ),
                       item.isListed ? React.createElement('span', {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'Listado') : React.createElement('span', {
+                      }, I18n.t('marketplace.listed')) : React.createElement('span', {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'No Listado')
+                      }, I18n.t('marketplace.notListed'))
                     ),
                     React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2', style: { color: '#666666' } },
                       item.priceStr + ' BTC'
@@ -1048,16 +1048,16 @@ showListDropdown ? React.createElement('div', {
                 React.createElement('button', {
                   onClick: function(e) { e.stopPropagation(); setShowConfirmMenu(false); },
                   className: 'flex-1 px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
-                }, 'Atr\u00e1s'),
+                }, I18n.t('app.back')),
                 React.createElement('button', {
                   onClick: function(e) { e.stopPropagation(); if (window.bcAnalytics) window.bcAnalytics.track('list_confirmed', { itemCount: confirmItems.length }); handleListFromDropdown(); },
                   className: 'flex-1 px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 transition-colors'
-                }, 'Confirmar')
+                }, I18n.t('app.confirm'))
               )
             ) :
             showSuccessMenu ? React.createElement(React.Fragment, null,
               React.createElement('div', { className: 'px-3 py-2 border-b border-bitmap-border flex items-center gap-2' },
-                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, '\u2713 \u00c9xito')
+                React.createElement('span', { className: 'font-acme text-xs text-white font-bold' }, I18n.t('marketplace.success'))
               ),
               React.createElement('div', { className: 'px-3 py-2 max-h-64 overflow-y-auto' },
                 successItems.map(function(item) {
@@ -1071,9 +1071,9 @@ showListDropdown ? React.createElement('div', {
                       ),
                       item.isListed ? React.createElement('span', {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'Listado') : React.createElement('span', {
+                      }, I18n.t('marketplace.listed')) : React.createElement('span', {
                         className: 'px-1 py-0.5 bg-bitmap-border/50 text-bitmap-muted font-acme text-[8px] rounded flex-shrink-0'
-                      }, 'No Listado')
+                      }, I18n.t('marketplace.notListed'))
                     ),
                     React.createElement('span', { className: 'font-acme text-xs flex-shrink-0 ml-2', style: { color: '#666666' } },
                       item.priceStr + ' BTC'
@@ -1085,21 +1085,21 @@ showListDropdown ? React.createElement('div', {
                 React.createElement('button', {
                   onClick: function(e) { e.stopPropagation(); setShowSuccessMenu(false); setShowListDropdown(false); },
                   className: 'w-full px-3 py-1.5 bg-bitmap-surface text-bitmap-text font-acme text-xs rounded hover:bg-bitmap-border transition-colors'
-                }, 'Cerrar')
+                }, I18n.t('marketplace.close'))
               )
             ) :
             noWalletForListing ? React.createElement('div', { className: 'p-4 text-center' },
-              React.createElement('div', { className: 'font-acme text-sm text-bitmap-muted mb-2' }, 'No hay wallet conectada'),
-              React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted' }, 'Conecte una wallet para listar sus activos.')
+              React.createElement('div', { className: 'font-acme text-sm text-bitmap-muted mb-2' }, I18n.t('marketplace.noWalletConnected')),
+              React.createElement('div', { className: 'font-acme text-xs text-bitmap-muted' }, I18n.t('marketplace.connectWalletToList'))
             ) :
-            listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, 'No hay bitmaps disponibles') :
+            listItems.length === 0 ? React.createElement('div', { className: 'p-3 text-center font-acme text-xs text-bitmap-muted' }, I18n.t('marketplace.noBitmapsAvailable')) :
             React.createElement(React.Fragment, null,
               React.createElement('div', { className: 'px-3 pb-2 border-b border-bitmap-border/50 flex items-center gap-2' },
                 React.createElement('input', {
                   type: 'text',
                   value: dropdownSearch,
                   onChange: function(e) { setDropdownSearch(e.target.value); },
-                  placeholder: 'Buscar por # de bloque...',
+                  placeholder: I18n.t('marketplace.searchByBlock'),
                   className: 'flex-1 min-w-0 bg-bitmap-surface border border-bitmap-border rounded px-2 py-1 font-acme text-xs text-white placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange',
                   onClick: function(e) { e.stopPropagation(); }
                 }),
@@ -1109,14 +1109,14 @@ showListDropdown ? React.createElement('div', {
               ),
               React.createElement('div', { className: 'flex items-center justify-between px-3 py-2 border-b border-bitmap-border/50' },
                 React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' },
-                  selectedCount > 0 ? selectedCount + ' seleccionado' + (selectedCount > 1 ? 's' : '') : 'Sin seleccionar'
+                  selectedCount > 0 ? selectedCount + ' ' + I18n.t('marketplace.selected') : I18n.t('marketplace.noneSelected')
                 ),
                 React.createElement('input', {
                   type: 'text',
                   value: bulkPrice,
                   onChange: function(e) { applyBulkPrice(e.target.value); },
                   onClick: function(e) { e.stopPropagation(); },
-                  placeholder: 'Precio BTC',
+                  placeholder: I18n.t('marketplace.priceBtc'),
                   className: 'w-20 bg-bitmap-black border border-bitmap-border rounded px-1 py-0.5 font-acme text-xs text-white text-right placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange'
                 })
               ),
@@ -1152,9 +1152,9 @@ showListDropdown ? React.createElement('div', {
                         ),
                         item.isListed ? React.createElement('span', {
                           className: 'px-1 py-0.5 bg-bitmap-orange/20 text-bitmap-orange font-acme text-[8px] rounded flex-shrink-0'
-                        }, 'Listado') : React.createElement('span', {
+                        }, I18n.t('marketplace.listed')) : React.createElement('span', {
                           className: 'px-1 py-0.5 bg-green-500/20 text-green-400 font-acme text-[8px] rounded flex-shrink-0'
-                        }, 'No Listado')
+                        }, I18n.t('marketplace.notListed'))
                       ),
                       React.createElement('div', { className: 'font-acme text-[10px] text-bitmap-muted' },
                         '#' + (item.inscriptionNumber || '')
@@ -1183,7 +1183,7 @@ showListDropdown ? React.createElement('div', {
                   },
                   disabled: listItems.filter(function(i) { return i.isSelected && i.priceSatoshis > 0; }).length === 0,
                   className: 'w-full px-3 py-1.5 bg-bitmap-orange text-white font-acme text-xs rounded hover:bg-bitmap-orange/80 disabled:opacity-50'
-                }, 'Listar seleccionados')
+                }, I18n.t('marketplace.listSelected'))
               )
             )
             )
@@ -1193,13 +1193,13 @@ showListDropdown ? React.createElement('div', {
           React.createElement('button', {
             onClick: function(e) { e.stopPropagation(); setViewMode(viewMode === 'list' ? 'grid' : 'list'); },
             className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors',
-            title: viewMode === 'list' ? 'Vista cuadros' : 'Vista lista'
+            title: viewMode === 'list' ? I18n.t('marketplace.gridView') : I18n.t('marketplace.listView')
           }, viewMode === 'list' ? '\u25A6' : '\u2261'),
           React.createElement('div', { className: 'relative' },
             React.createElement('button', {
               onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
               className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
-            }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+            }, I18n.t('marketplace.sortLabel') + sortLabel[currentSort] + ' \u25BE'),
           showSortMenu ? React.createElement('div', {
             className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
           },
@@ -1218,11 +1218,11 @@ showListDropdown ? React.createElement('div', {
 
     isLoading
       ? React.createElement('div', { className: 'flex items-center justify-center py-16' },
-          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, 'Cargando datos...')
+          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, I18n.t('marketplace.loadingData'))
         )
       : React.createElement('div', { ref: scrollContainerRef, className: 'flex-1 overflow-y-auto pl-14 pr-4' },
           filtered.length === 0
-            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
+            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, I18n.t('marketplace.noListings'))
             : viewMode === 'list'
               ? React.createElement('div', null,
                   filtered.map(function(item, i) {
@@ -1350,12 +1350,12 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
             ),
             React.createElement('div', null,
               React.createElement('h2', { className: 'font-alfaslab text-lg', style: { color: buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : '#00AA00' } },
-                buySuccessData.type === 'error' ? 'Error en la compra' : buySuccessData.type === 'partial' ? 'Compra parcial' : 'Compra exitosa'
+                buySuccessData.type === 'error' ? I18n.t('marketplace.buyError') : buySuccessData.type === 'partial' ? I18n.t('marketplace.partialPurchase') : I18n.t('marketplace.purchaseSuccessful')
               ),
               React.createElement('p', { className: 'font-acme text-xs', style: { color: '#888' } },
-                buySuccessData.type === 'error' ? 'No se completó la compra. Ningún bitmap fue comprado.' :
-                buySuccessData.type === 'partial' ? buySuccessData.items.length + ' bitmap' + (buySuccessData.items.length > 1 ? 's' : '') + ' comprado' + (buySuccessData.items.length > 1 ? 's' : '') + ' exitosamente' :
-                buySuccessData.items.length + ' bitmap' + (buySuccessData.items.length > 1 ? 's' : '') + ' comprado' + (buySuccessData.items.length > 1 ? 's' : '') + ' exitosamente'
+                buySuccessData.type === 'error' ? I18n.t('marketplace.purchaseFailed') :
+                buySuccessData.type === 'partial' ? buySuccessData.items.length + ' ' + I18n.t('marketplace.purchasedSuccess') :
+                buySuccessData.items.length + ' ' + I18n.t('marketplace.purchasedSuccess')
               )
             )
           ),
@@ -1379,19 +1379,19 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
           ) : null,
           buySuccessData.totalPaid > 0 ? React.createElement('div', { className: 'rounded-lg p-4 mb-4', style: { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' } },
             React.createElement('div', { className: 'flex justify-between mb-2' },
-              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Subtotal'),
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, I18n.t('marketplace.subtotal')),
               React.createElement('span', { className: 'font-acme text-xs', style: { color: '#ccc' } },
                 BitmapUtils.formatBtcSat(buySuccessData.totalPaid) + ' BTC'
               )
             ),
             React.createElement('div', { className: 'flex justify-between mb-2' },
-              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Fee marketplace'),
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, I18n.t('marketplace.marketplaceFee')),
               React.createElement('span', { className: 'font-acme text-xs', style: { color: '#aaa' } },
                 BitmapUtils.formatBtcSat(buySuccessData.totalFees) + ' BTC'
               )
             ),
             buySuccessData.totalNetworkFee > 0 ? React.createElement('div', { className: 'flex justify-between mb-2' },
-              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, 'Fee de red (mempool)'),
+              React.createElement('span', { className: 'font-acme text-xs', style: { color: '#888' } }, I18n.t('marketplace.networkFeeMempool')),
               React.createElement('span', { className: 'font-acme text-xs', style: { color: '#aaa' } },
                 BitmapUtils.formatBtcSat(buySuccessData.totalNetworkFee) + ' BTC'
               )
@@ -1400,7 +1400,7 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
               className: 'flex justify-between pt-2 mt-2',
               style: { borderTop: '1px solid #333' }
             },
-              React.createElement('span', { className: 'font-acme text-sm font-bold', style: { color: '#fff' } }, 'Total pagado'),
+              React.createElement('span', { className: 'font-acme text-sm font-bold', style: { color: '#fff' } }, I18n.t('marketplace.totalPaid')),
               React.createElement('span', { className: 'font-acme text-sm font-bold', style: { color: '#00AA00' } },
                 BitmapUtils.formatBtcSat(buySuccessData.totalPaid + buySuccessData.totalFees) + ' BTC'
               )
@@ -1412,7 +1412,7 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
             ) : null
           ) : null,
           buySuccessData.networkFees && buySuccessData.networkFees.length > 0 ? React.createElement('div', { className: 'mb-4' },
-            React.createElement('span', { className: 'font-acme text-[10px] block mb-2', style: { color: '#666' } }, 'Transacciones:'),
+            React.createElement('span', { className: 'font-acme text-[10px] block mb-2', style: { color: '#666' } }, I18n.t('marketplace.transactions')),
             React.createElement('div', { className: 'space-y-1.5' },
               buySuccessData.networkFees.map(function(nf, i) {
                 return React.createElement('a', {
@@ -1441,10 +1441,10 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
             )
           ) : null,
           buySuccessData.errors && buySuccessData.errors.length > 0 ? React.createElement('div', { className: 'mb-4 rounded-lg p-3', style: { backgroundColor: 'rgba(255,51,51,0.08)', border: '1px solid rgba(255,51,51,0.2)' } },
-            React.createElement('span', { className: 'font-acme text-[10px] block mb-1', style: { color: '#FF5555' } }, 'Bitmaps no comprados:'),
+            React.createElement('span', { className: 'font-acme text-[10px] block mb-1', style: { color: '#FF5555' } }, I18n.t('marketplace.notPurchased')),
             buySuccessData.errors.map(function(err, i) {
               return React.createElement('div', { key: i, className: 'font-acme text-[10px]', style: { color: '#aa5555' } },
-                err.name + ' \u2014 ' + (err.reason || 'Error')
+                err.name + ' \u2014 ' + (err.reason || I18n.t('app.error'))
               );
             })
           ) : null
@@ -1456,7 +1456,7 @@ var isPerfect = etiquetas.toLowerCase().indexOf('grid') !== -1;
             style: { background: buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : 'linear-gradient(180deg, #2F7D32, #1C4E20)', color: '#fff' },
             onMouseOver: function(e) { e.currentTarget.style.background = buySuccessData.type === 'error' ? '#ff7777' : buySuccessData.type === 'partial' ? '#ffc34d' : 'linear-gradient(180deg, #3A913D, #256028)'; },
             onMouseOut: function(e) { e.currentTarget.style.background = buySuccessData.type === 'error' ? '#FF5555' : buySuccessData.type === 'partial' ? '#FFAA00' : 'linear-gradient(180deg, #2F7D32, #1C4E20)'; }
-          }, 'Aceptar')
+          }, I18n.t('marketplace.accept'))
         )
       )
     ) : null,
@@ -1548,15 +1548,15 @@ function DescuentosPage(props) {
         ),
         React.createElement('div', { className: 'flex items-stretch' },
           React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Etiquetas'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('discounts.tags')),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, discounts.length)
           ),
           React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Promedio'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('discounts.average')),
             React.createElement('span', { className: 'font-acme text-[10px] text-green-400 font-bold leading-tight' }, '-' + avgDiscount + '%')
           ),
           React.createElement('div', { className: 'flex flex-col items-center px-3' },
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, 'Bitmaps baratos'),
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('discounts.cheapBitmaps')),
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, totalFloorItems)
           )
         )
@@ -1569,7 +1569,7 @@ function DescuentosPage(props) {
           )
         : filtered.length === 0
           ? React.createElement('div', { className: 'text-center py-12 font-acme text-bitmap-muted' },
-              discounts.length === 0 ? 'No hay descuentos disponibles' : 'No se encontraron resultados'
+              discounts.length === 0 ? I18n.t('discounts.noDiscounts') : I18n.t('discounts.noResults')
             )
           : React.createElement('div', { className: 'space-y-3' },
               filtered.map(function(d, i) {

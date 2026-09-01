@@ -70,9 +70,9 @@ function OrdinalswalletPage(props) {
   };
 
   var sortButtons = [
-    { key: 'listedAtDesc', label: 'Recientes' },
-    { key: 'priceDesc', label: '$ Alto' },
-    { key: 'priceAsc', label: '$ Bajo' }
+    { key: 'listedAtDesc', label: I18n.t('marketplace.sortRecent') },
+    { key: 'priceDesc', label: I18n.t('marketplace.sortPriceHigh') },
+    { key: 'priceAsc', label: I18n.t('marketplace.sortPriceLow') }
   ];
 
   var _j = React.useState('');
@@ -91,7 +91,7 @@ function OrdinalswalletPage(props) {
   var showSortMenu = _k[0];
   var setShowSortMenu = _k[1];
 
-  var sortLabel = { listedAtDesc: 'Recientes', priceDesc: '$ Alto', priceAsc: '$ Bajo' };
+  var sortLabel = { listedAtDesc: I18n.t('marketplace.sortRecent'), priceDesc: I18n.t('marketplace.sortPriceHigh'), priceAsc: I18n.t('marketplace.sortPriceLow') };
 
   React.useEffect(function() {
     if (!showSortMenu) return;
@@ -106,18 +106,18 @@ function OrdinalswalletPage(props) {
         React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className:'h-[30px] w-[30px] object-contain rounded flex-shrink-0', style:{ margin:'2px' } }),
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Ordinalswallet Marketplace'),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
-          'listados: ',
+          I18n.t('marketplace.listings') + ': ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
-          'Piso: ',
+          I18n.t('mpBubble.floor'),
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
         ),
         React.createElement('div', { className: 'relative ml-auto md:ml-2' },
           React.createElement('button', {
             onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
             className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
-          }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+          }, I18n.t('marketplace.sortLabel') + sortLabel[currentSort] + ' \u25BE'),
           showSortMenu ? React.createElement('div', {
             className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
           },
@@ -138,17 +138,17 @@ function OrdinalswalletPage(props) {
         type: 'text',
         value: searchQuery,
         onChange: function(e) { setSearchQuery(e.target.value); },
-        placeholder: 'Buscar por numero de bitmap...',
+        placeholder: I18n.t('marketplace.searchPlaceholder'),
         className: 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
       })
     ),
     isLoading && listings.length === 0
       ? React.createElement('div', { className: 'flex items-center justify-center py-16' },
-          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, 'Cargando datos...')
+          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, I18n.t('marketplace.loadingData'))
         )
       : React.createElement('div', { ref: scrollContainerRef, onScroll: handleScrollCheck, className: 'flex-1 overflow-y-auto pl-14 pr-4' },
           filtered.length === 0
-            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
+            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, I18n.t('marketplace.noListings'))
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
                   var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
@@ -196,8 +196,8 @@ function OrdinalswalletPage(props) {
                   );
                 })
               ),
-          vm.getIsLoadingMore() ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Cargando m\u00e1s...') : null,
-          !vm.getHasMore() && listings.length > 0 ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Todos los listados cargados') : null
+          vm.getIsLoadingMore() ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, I18n.t('marketplace.loadingMore')) : null,
+          !vm.getHasMore() && listings.length > 0 ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, I18n.t('marketplace.allLoaded')) : null
         )
   );
 }
@@ -273,9 +273,9 @@ function UnisatPage(props) {
   };
 
   var sortButtons = [
-    { key: 'listedAtDesc', label: 'Recientes' },
-    { key: 'priceDesc', label: '$ Alto' },
-    { key: 'priceAsc', label: '$ Bajo' }
+    { key: 'listedAtDesc', label: I18n.t('marketplace.sortRecent') },
+    { key: 'priceDesc', label: I18n.t('marketplace.sortPriceHigh') },
+    { key: 'priceAsc', label: I18n.t('marketplace.sortPriceLow') }
   ];
 
   var _j = React.useState('');
@@ -294,7 +294,7 @@ function UnisatPage(props) {
   var showSortMenu = _k[0];
   var setShowSortMenu = _k[1];
 
-  var sortLabel = { listedAtDesc: 'Recientes', priceDesc: '$ Alto', priceAsc: '$ Bajo' };
+  var sortLabel = { listedAtDesc: I18n.t('marketplace.sortRecent'), priceDesc: I18n.t('marketplace.sortPriceHigh'), priceAsc: I18n.t('marketplace.sortPriceLow') };
 
   React.useEffect(function() {
     if (!showSortMenu) return;
@@ -309,18 +309,18 @@ function UnisatPage(props) {
         React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className:'h-[30px] w-[30px] object-contain rounded flex-shrink-0', style:{ margin:'2px' } }),
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Unisat Marketplace'),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
-          'listados: ',
+          I18n.t('marketplace.listings') + ': ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
-          'Piso: ',
+          I18n.t('mpBubble.floor'),
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
         ),
         React.createElement('div', { className: 'relative ml-auto md:ml-2' },
           React.createElement('button', {
             onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
             className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
-          }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+          }, I18n.t('marketplace.sortLabel') + sortLabel[currentSort] + ' \u25BE'),
           showSortMenu ? React.createElement('div', {
             className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
           },
@@ -341,17 +341,17 @@ function UnisatPage(props) {
         type: 'text',
         value: searchQuery,
         onChange: function(e) { setSearchQuery(e.target.value); },
-        placeholder: 'Buscar por numero de bitmap...',
+        placeholder: I18n.t('marketplace.searchPlaceholder'),
         className: 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
       })
     ),
     isLoading && listings.length === 0
       ? React.createElement('div', { className: 'flex items-center justify-center py-16' },
-          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, 'Cargando datos...')
+          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, I18n.t('marketplace.loadingData'))
         )
       : React.createElement('div', { ref: scrollContainerRef, onScroll: handleScrollCheck, className: 'flex-1 overflow-y-auto pl-14 pr-4' },
           filtered.length === 0
-            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
+            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, I18n.t('marketplace.noListings'))
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
                   var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
@@ -399,8 +399,8 @@ function UnisatPage(props) {
                   );
                 })
               ),
-          vm.getIsLoadingMore() ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Cargando m\u00e1s...') : null,
-          !vm.getHasMore() && listings.length > 0 ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Todos los listados cargados') : null
+          vm.getIsLoadingMore() ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, I18n.t('marketplace.loadingMore')) : null,
+          !vm.getHasMore() && listings.length > 0 ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, I18n.t('marketplace.allLoaded')) : null
         )
   );
 }
@@ -480,9 +480,9 @@ function SatflowPage(props) {
   };
 
   var sortButtons = [
-    { key: 'listedAtDesc', label: 'Recientes' },
-    { key: 'priceDesc', label: '$ Alto' },
-    { key: 'priceAsc', label: '$ Bajo' }
+    { key: 'listedAtDesc', label: I18n.t('marketplace.sortRecent') },
+    { key: 'priceDesc', label: I18n.t('marketplace.sortPriceHigh') },
+    { key: 'priceAsc', label: I18n.t('marketplace.sortPriceLow') }
   ];
 
   var _k = React.useState('');
@@ -501,7 +501,7 @@ function SatflowPage(props) {
   var showSortMenu = _l[0];
   var setShowSortMenu = _l[1];
 
-  var sortLabel = { listedAtDesc: 'Recientes', priceDesc: '$ Alto', priceAsc: '$ Bajo' };
+  var sortLabel = { listedAtDesc: I18n.t('marketplace.sortRecent'), priceDesc: I18n.t('marketplace.sortPriceHigh'), priceAsc: I18n.t('marketplace.sortPriceLow') };
 
   React.useEffect(function() {
     if (!showSortMenu) return;
@@ -516,18 +516,18 @@ function SatflowPage(props) {
         React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className:'h-[30px] w-[30px] object-contain rounded flex-shrink-0', style:{ margin:'2px' } }),
         React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide' }, 'Satflow Marketplace'),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text ml-auto hidden md:inline' },
-          'listados: ',
+          I18n.t('marketplace.listings') + ': ',
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, BitmapUtils.formatNumber(totalListings))
         ),
         React.createElement('span', { className: 'font-acme text-xs text-bitmap-text hidden md:inline' },
-          'Piso: ',
+          I18n.t('mpBubble.floor'),
           React.createElement('span', { className: 'text-bitmap-orange font-bold' }, floorBtc + ' BTC')
         ),
         React.createElement('div', { className: 'relative ml-auto md:ml-2' },
           React.createElement('button', {
             onClick: function(e) { e.stopPropagation(); setShowSortMenu(!showSortMenu); },
             className: 'px-2 py-1 rounded font-acme text-xs bg-bitmap-surface text-bitmap-text border border-bitmap-border hover:border-bitmap-orange transition-colors'
-          }, 'orden: ' + sortLabel[currentSort] + ' \u25BE'),
+          }, I18n.t('marketplace.sortLabel') + sortLabel[currentSort] + ' \u25BE'),
           showSortMenu ? React.createElement('div', {
             className: 'absolute right-0 top-full mt-1 w-32 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1'
           },
@@ -548,17 +548,17 @@ function SatflowPage(props) {
         type: 'text',
         value: searchQuery,
         onChange: function(e) { setSearchQuery(e.target.value); },
-        placeholder: 'Buscar por numero de bitmap...',
+        placeholder: I18n.t('marketplace.searchPlaceholder'),
         className: 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors'
       })
     ),
     isLoading && listings.length === 0
       ? React.createElement('div', { className: 'flex items-center justify-center py-16' },
-          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, 'Cargando datos...')
+          React.createElement('div', { className: 'font-acme text-bitmap-muted' }, I18n.t('marketplace.loadingData'))
         )
       : React.createElement('div', { ref: scrollContainerRef, onScroll: handleScrollCheck, className: 'flex-1 overflow-y-auto pl-14 pr-4' },
           filtered.length === 0
-            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, 'No hay listados disponibles')
+            ? React.createElement('div', { className: 'text-center py-16 font-acme text-bitmap-muted' }, I18n.t('marketplace.noListings'))
             : React.createElement('div', { className: 'divide-y divide-bitmap-border' },
                 filtered.map(function(item, i) {
                   var btcPrice = item.listedPrice ? BitmapUtils.formatBtcSat(item.listedPrice) : '0';
@@ -606,8 +606,8 @@ function SatflowPage(props) {
                   );
                 })
               ),
-            vm.getIsLoadingMore() ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Cargando m\u00e1s...') : null,
-            !vm.getHasMore() && listings.length > 0 ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, 'Todos los listados cargados') : null
+            vm.getIsLoadingMore() ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, I18n.t('marketplace.loadingMore')) : null,
+            !vm.getHasMore() && listings.length > 0 ? React.createElement('div', { className: 'text-center py-4 font-acme text-bitmap-muted text-xs' }, I18n.t('marketplace.allLoaded')) : null
           )
   );
 }
