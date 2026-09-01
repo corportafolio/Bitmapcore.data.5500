@@ -37,6 +37,18 @@ var PagesWorld = (function() {
 
       updateBlockInfoThrottled(theta, phi, distance);
       WorldBlocks.scheduleLoad(theta, phi);
+      var cfg = window.WorldConfig || {};
+      try {
+        if (WorldAvatar && WorldAvatar.setScaleFactor) {
+          if (distance < (cfg.DIST_BLOCK_MODE || 105)) {
+            WorldAvatar.setScaleFactor((cfg.AVATAR_SCALE_MAX || 3));
+          } else if (distance < (cfg.DIST_ATLAS_MIN || 120)) {
+            WorldAvatar.setScaleFactor((cfg.AVATAR_SCALE_NEAR || 2));
+          } else {
+            WorldAvatar.setScaleFactor(1);
+          }
+        }
+      } catch (e) { console.warn('avatar scale update error', e); }
     }, []);
 
     var lastInfoUpdate = 0;
@@ -99,6 +111,21 @@ var PagesWorld = (function() {
         initialized = false;
       };
     }, [onControlsChange]);
+
+    function goToAvatar() {
+      try {
+        var pos = WorldAvatar.getPosition();
+        var targetTheta = pos.theta;
+        var targetPhi = pos.phi;
+        var cfg = window.WorldConfig || {};
+        var targetDist = cfg.DIST_BLOCK_MODE || 105;
+        if (WorldControls && WorldControls.animateTo) {
+          WorldControls.animateTo(targetTheta, targetPhi, targetDist);
+        }
+      } catch (e) {
+        console.error('goToAvatar error', e);
+      }
+    }
 
     return React.createElement('div', {
       style: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', overflow: 'hidden', background: '#080008', zIndex: 0 }
@@ -191,6 +218,19 @@ var PagesWorld = (function() {
       },
         createZoomButton('+', 'zoomIn', 'Acercar'),
         createZoomButton('−', 'zoomOut', 'Alejar')
+      ),
+      React.createElement('div', {
+        style: { position: 'fixed', right: '20px', bottom: '20px', zIndex: 210 }
+      },
+        React.createElement('button', {
+          onClick: goToAvatar,
+          title: 'Ir al avatar',
+          style: {
+            width: '56px', height: '56px', borderRadius: '12px',
+            background: '#FE3E00', border: '2px solid #2A2A2A',
+            color: '#080008', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
+          }
+        }, 'Ir avatar')
       ),
       React.createElement('div', {
         ref: infoRef,

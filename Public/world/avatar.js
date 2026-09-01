@@ -158,6 +158,11 @@ var WorldAvatar = (function() {
     return heading;
   }
 
+  function setScaleFactor(s) {
+    if (!mesh) return;
+    mesh.scale.set(s, s, s);
+  }
+
   function destroy() {
     if (mesh && mesh.parent) mesh.parent.remove(mesh);
     mesh = null;
@@ -169,6 +174,7 @@ var WorldAvatar = (function() {
     getPosition: getPosition,
     setPosition: setPosition,
     getHeading: getHeading,
+    setScaleFactor: setScaleFactor,
     moveForward: moveForward,
     moveBackward: moveBackward,
     moveLeft: moveLeft,

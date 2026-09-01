@@ -38,6 +38,18 @@ var WorldBlocks = (function() {
   var _up = new THREE.Vector3(0, 1, 0);
   var _normalVec = new THREE.Vector3();
   var streetGroundMesh = null;
+  var streetVisible = false;
+
+  var atlasPlanesGroup = null;
+  var atlasPlanesShown = false;
+  var atlasPlaneMap = {}; // tileId -> mesh
+
+  var prefetchQueue = [];
+  var prefetchInFlight = 0;
+  var blockImageMeshes = {};
+  var blockImageTextures = {};
+  var blockImageQueue = [];
+  var blockImageInFlight = 0;
 
   function getPhiFromGz(gz) {
     if (gz < 500) {
@@ -257,6 +269,11 @@ var WorldBlocks = (function() {
         texture.minFilter = THREE.NearestFilter;
         texture.needsUpdate = true;
         tileTextures[tileId] = texture;
+        // If we have an atlas plane shown for this tile, update its material
+        if (atlasPlaneMap[tileId]) {
+          atlasPlaneMap[tileId].material.map = texture;
+          atlasPlaneMap[tileId].material.needsUpdate = true;
+        }
 
         URL.revokeObjectURL(url);
         console.log('🗺️ loadTileImageData: texture created for tile', tileId);
@@ -303,6 +320,167 @@ var WorldBlocks = (function() {
     var dy = py - camPos.y;
     var dz = pz - camPos.z;
     return dx * dx + dy * dy + dz * dz;
+  }
+
+  function enqueuePrefetch(tileId) {
+    if (!AtlasCache) return;
+    if (tileTextures[tileId]) return;
+    if (prefetchQueue.indexOf(tileId) !== -1) return;
+    prefetchQueue.push(tileId);
+    processPrefetchQueue();
+  }
+
+  function processPrefetchQueue() {
+    var MAX = (window.WorldConfig && window.WorldConfig.MAX_CONCURRENT_FETCHES) || 6;
+    while (prefetchInFlight < MAX && prefetchQueue.length > 0) {
+      var next = prefetchQueue.shift();
+      prefetchInFlight++;
+      loadTileImageData(next, function(tex) {
+        prefetchInFlight--;
+        // continue processing
+        setTimeout(processPrefetchQueue, 0);
+      });
+    }
+  }
+
+  function prefetchNeighbors(tileIds) {
+    if (!tileIds || !tileIds.length) return;
+    tileIds.forEach(function(tid) { if (tid >= 0 && tid < 956) enqueuePrefetch(tid); });
+  }
+
+  function enqueueBlockImage(blockNum) {
+    var cfg = window.WorldConfig || {};
+    if (blockImageMeshes[blockNum]) return;
+    if (blockImageQueue.indexOf(blockNum) !== -1) return;
+    blockImageQueue.push(blockNum);
+    processBlockImageQueue();
+  }
+
+  function processBlockImageQueue() {
+    var cfg = window.WorldConfig || {};
+    var MAX = cfg.MAX_CONCURRENT_FETCHES_BLOCKS || 3;
+    while (blockImageInFlight < MAX && blockImageQueue.length > 0 && Object.keys(blockImageMeshes).length < (cfg.MAX_BLOCK_IMAGES_AT_3 || 15)) {
+      var bn = blockImageQueue.shift();
+      blockImageInFlight++;
+      fetchBlockImage(bn).then(function(mesh) {
+        blockImageInFlight--;
+        setTimeout(processBlockImageQueue, 0);
+      }).catch(function() { blockImageInFlight--; setTimeout(processBlockImageQueue,0); });
+    }
+  }
+
+  function buildBlockImageUrl(blockNum) {
+    var block = allBlocks[blockNum] || { etiquetas: '', tx: 1, hash: '' };
+    var etiquetas = encodeURIComponent(block.etiquetas || '');
+    var tx = block.tx || 1;
+    var hash = encodeURIComponent(block.hash || '');
+    var isPerfect = (block.etiquetas || '').toLowerCase().indexOf('grid') !== -1;
+    var isPunk = (block.etiquetas || '').toLowerCase().indexOf('punk') !== -1;
+    return '/api/v1/block-image/' + blockNum + '?v=5&size=256&etiquetas=' + etiquetas + '&tx=' + tx + '&hash=' + hash + '&grid=' + isPerfect + '&punk=' + isPunk;
+  }
+
+  function fetchBlockImage(blockNum) {
+    return new Promise(function(resolve, reject) {
+      if (blockImageMeshes[blockNum]) return resolve(blockImageMeshes[blockNum]);
+      var url = buildBlockImageUrl(blockNum);
+      fetch(url).then(function(r){ if (!r.ok) throw new Error('fetch failed'); return r.blob(); }).then(function(blob){
+        var imgUrl = URL.createObjectURL(blob);
+        var img = new Image();
+        img.onload = function() {
+          var tex = new THREE.Texture(img);
+          tex.magFilter = THREE.NearestFilter;
+          tex.minFilter = THREE.NearestFilter;
+          tex.needsUpdate = true;
+          blockImageTextures[blockNum] = tex;
+          URL.revokeObjectURL(imgUrl);
+
+          // create box mesh
+          var geo = new THREE.BoxGeometry(BLOCK_SIZE * 2.5, BLOCK_SIZE * 2.5, BLOCK_SIZE * 2.5);
+          var mat = new THREE.MeshBasicMaterial({ map: tex });
+          var mesh = new THREE.Mesh(geo, mat);
+          var cached = WorldGrid.getCachedBlockInfo(blockNum);
+          var radius = WORLD_RADIUS + INSTANCE_OFFSET;
+          mesh.position.set(cached.nx * radius, cached.ny * radius, cached.nz * radius);
+          mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), new THREE.Vector3(cached.nx, cached.ny, cached.nz));
+          mesh.frustumCulled = false;
+          scene.add(mesh);
+          blockImageMeshes[blockNum] = mesh;
+          resolve(mesh);
+        };
+        img.onerror = function() { URL.revokeObjectURL(imgUrl); reject(new Error('img error')); };
+        img.src = imgUrl;
+      }).catch(function(err){ console.warn('fetchBlockImage error', err); reject(err); });
+    });
+  }
+
+  function clearBlockImages() {
+    for (var bn in blockImageMeshes) {
+      var m = blockImageMeshes[bn];
+      if (m && m.parent) m.parent.remove(m);
+      if (m && m.geometry) m.geometry.dispose();
+      if (m && m.material) m.material.dispose();
+    }
+    blockImageMeshes = {};
+    // keep textures maybe
+  }
+
+  function createAtlasPlanes(tileIds) {
+    if (!atlasPlanesGroup) {
+      atlasPlanesGroup = new THREE.Group();
+      atlasPlanesGroup.frustumCulled = false;
+      atlasPlanesGroup.renderOrder = 10;
+      scene.add(atlasPlanesGroup);
+    }
+    atlasPlaneMap = atlasPlaneMap || {};
+    // dispose previous children before clearing to avoid leaks
+    if (atlasPlanesGroup.children && atlasPlanesGroup.children.length > 0) {
+      var old = atlasPlanesGroup.children.slice();
+      for (var i = 0; i < old.length; i++) {
+        var c = old[i];
+        atlasPlanesGroup.remove(c);
+        if (c.geometry) c.geometry.dispose();
+        if (c.material && c.material.map === undefined) c.material.dispose();
+      }
+    }
+    tileIds.forEach(function(tileId) {
+      var tileGx = tileId % 25;
+      var tileGz = Math.floor(tileId / 25);
+      var gx = tileGx * 40 + 20;
+      var gz;
+      if (tileGz < 20) gz = tileGz * 25 + 12; else gz = 500 + (tileGz - 20) * 25 + 12;
+      var cached = WorldGrid.getCachedBlockInfo(gz * 1000 + gx);
+      var px = cached.nx * WORLD_RADIUS;
+      var py = cached.ny * WORLD_RADIUS;
+      var pz = cached.nz * WORLD_RADIUS;
+      var pos = new THREE.Vector3(px, py, pz);
+
+      var size = (BLOCK_SIZE * 40) * (cached.scale || 1.0);
+      var geo = new THREE.PlaneGeometry(size, size);
+      var mat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
+      var plane = new THREE.Mesh(geo, mat);
+      plane.position.copy(pos.clone().multiplyScalar(1.01));
+      plane.lookAt(new THREE.Vector3(0,0,0));
+      atlasPlanesGroup.add(plane);
+      atlasPlaneMap[tileId] = plane;
+      // hide instanced mesh for this tile if exists
+      if (tileInstanced[tileId]) tileInstanced[tileId].visible = false;
+      // if texture loaded, apply
+      if (tileTextures[tileId]) { plane.material.map = tileTextures[tileId]; plane.material.needsUpdate = true; }
+    });
+    atlasPlanesShown = true;
+  }
+
+  function removeAtlasPlanes() {
+    if (!atlasPlanesGroup) return;
+    atlasPlanesGroup.children.slice().forEach(function(c) {
+      atlasPlanesGroup.remove(c);
+      if (c.geometry) c.geometry.dispose();
+      if (c.material && c.material.map === undefined) c.material.dispose();
+    });
+    atlasPlaneMap = {};
+    // restore instanced meshes
+    for (var tid in tileInstanced) { if (tileInstanced[tid]) tileInstanced[tid].visible = true; }
+    atlasPlanesShown = false;
   }
 
   function rebuildTileInstanced(tileId) {
@@ -482,11 +660,25 @@ var WorldBlocks = (function() {
   function updateStreetGround() {
     if (!streetGroundMesh) return;
     var distance = getDistance();
-    if (distance > 120) {
-      streetGroundMesh.visible = false;
-      return;
+    var cfg = window.WorldConfig || {};
+    var showDist = cfg.STREETS_SHOW_DIST || 120;
+    var hideDist = cfg.STREETS_HIDE_DIST || 150;
+
+    if (streetVisible) {
+      if (distance > hideDist) {
+        streetVisible = false;
+        streetGroundMesh.visible = false;
+        return;
+      }
+    } else {
+      if (distance < showDist) {
+        streetVisible = true;
+        streetGroundMesh.visible = true;
+      } else {
+        streetGroundMesh.visible = false;
+        return;
+      }
     }
-    streetGroundMesh.visible = true;
 
     var camPos = getCameraPosition();
     var camDir = new THREE.Vector3(camPos.x, camPos.y, camPos.z).normalize();
@@ -591,6 +783,45 @@ var WorldBlocks = (function() {
     var visible = calculateVisibleBlocks(nearDir, distance);
 
     applyVisible(visible);
+
+    // LOD: mostrar planos atlas 3x3 cuando estamos en rango de DIST_ATLAS_MIN..DIST_BLOCK_MODE
+    var cfg = window.WorldConfig || {};
+    var distAtlasMin = cfg.DIST_ATLAS_MIN || 120;
+    var distBlockMode = cfg.DIST_BLOCK_MODE || 105;
+
+    if (distance <= distAtlasMin && distance > distBlockMode) {
+      // show atlas planes around central tile
+      if (!atlasPlanesShown && visible.length > 0) {
+        var centerBlock = visible[0].blockNum;
+        var tileCentral = WorldGrid.getAtlasTile(centerBlock);
+        var vecinos = [
+          tileCentral - 26, tileCentral - 25, tileCentral - 24,
+          tileCentral - 1,  tileCentral,       tileCentral + 1,
+          tileCentral + 24, tileCentral + 25, tileCentral + 26
+        ];
+        vecinos = vecinos.filter(function(tid) { return tid >= 0 && tid < 956; });
+        prefetchNeighbors(vecinos);
+        createAtlasPlanes(vecinos);
+      }
+    } else {
+      if (atlasPlanesShown) {
+        removeAtlasPlanes();
+      }
+    }
+
+    // NIVEL 2: block images when very near
+    if (distance <= distBlockMode) {
+      // hide atlas planes if any
+      if (atlasPlanesShown) removeAtlasPlanes();
+      // select top ~9 visible blocks
+      var top = visible.slice(0, 20).filter(function(e){ return e && e.blockNum !== 0; });
+      var selected = top.slice(0, (window.WorldConfig && window.WorldConfig.MAX_BLOCK_IMAGES_AT_3) || 9).map(function(e){ return e.blockNum; });
+      // enqueue fetch for each
+      selected.forEach(function(bn){ enqueueBlockImage(bn); });
+    } else {
+      // leaving block mode: clear block images
+      if (Object.keys(blockImageMeshes).length > 0) clearBlockImages();
+    }
 
     rebuildDirtyTiles();
     updateStreetGround();
