@@ -52,9 +52,15 @@ var I18nManager = (function() {
     });
   }
 
-  function t(key) {
+  function t(key, params) {
     var val = getNested(strings, key);
-    return val !== null ? val : key;
+    if (val === null) return key;
+    if (params && typeof val === 'string') {
+      Object.keys(params).forEach(function(k) {
+        val = val.replace(new RegExp('\\{' + k + '\\}', 'g'), params[k]);
+      });
+    }
+    return val;
   }
 
   function setLanguage(lang) {

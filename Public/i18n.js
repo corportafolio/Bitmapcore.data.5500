@@ -9,8 +9,8 @@ var I18n = (function() {
       });
     },
 
-    t: function(key) {
-      return I18nManager.t(key);
+    t: function(key, params) {
+      return I18nManager.t(key, params);
     },
 
     setLanguage: function(lang) {

@@ -117,7 +117,7 @@
     "noRecentSales": "No hay ventas recientes",
     "buyer": "comprador: ",
     "seller": "vendedor: ",
-    "ago": "atras",
+    "ago": "hace",
     "viewTx": "ver tx",
     "january": "enero",
     "february": "febrero",
@@ -312,7 +312,7 @@
     "today": "HOY — ",
     "yesterday": "AYER — ",
     "tags": "tags",
-    "ago": "atras",
+    "ago": "hace",
     "viewTx": "ver tx",
     "months": ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
   },
@@ -446,5 +446,11 @@
     "Bloques cuyo numero de bloque solo tiene digitos 0 y 1, como si fuera un numero binario (ej: 10, 100, 101, 1010, 11001, 111111)",
     "Bloques cuyo numero de bloque contiene \"168\" (numero de la suerte chino)",
     "Bloques 56,899 a 57,093: rango completo del dia de la pizza (22 mayo 2010)"
-  ]
+  ],
+  "time": {
+    "justNow": "hace unos segundos",
+    "agoMin": "hace {n} min",
+    "agoHours": "hace {n}h",
+    "agoDays": "hace {n}d"
+  }
 }

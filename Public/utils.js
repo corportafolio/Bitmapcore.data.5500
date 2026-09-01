@@ -26,10 +26,10 @@ var BitmapUtils = {
   },
   timeAgo: function(date) {
     var diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-    if (diff < 60) return 'hace unos segundos';
-    if (diff < 3600) return 'hace ' + Math.floor(diff / 60) + ' min';
-    if (diff < 86400) return 'hace ' + Math.floor(diff / 3600) + 'h';
-    return 'hace ' + Math.floor(diff / 86400) + 'd';
+    if (diff < 60) return I18n.t('time.justNow');
+    if (diff < 3600) return I18n.t('time.agoMin', { n: Math.floor(diff / 60) });
+    if (diff < 86400) return I18n.t('time.agoHours', { n: Math.floor(diff / 3600) });
+    return I18n.t('time.agoDays', { n: Math.floor(diff / 86400) });
   },
   formatNumber: function(n) { return (n || 0).toLocaleString('es-AR'); },
   formatFileSize: function(bytes) {

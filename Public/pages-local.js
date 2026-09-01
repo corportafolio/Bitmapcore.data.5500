@@ -1544,7 +1544,7 @@ function DescuentosPage(props) {
       React.createElement('div', { className: 'flex items-stretch justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
           React.createElement('img', { src: 'BITMAP.png', alt: 'BitmapCore', className: 'h-[30px] w-[30px] object-contain rounded my-[2px]' }),
-          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, 'Descuentos')
+          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, I18n.t('discounts.title'))
         ),
         React.createElement('div', { className: 'flex items-stretch' },
           React.createElement('div', { className: 'flex flex-col items-center px-3 border-r border-[#555]' },

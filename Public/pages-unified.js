@@ -622,7 +622,7 @@ function VentasPage(props) {
                     )
                   ),
                     React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted' },
-                      timeAgo(sale.sold_at) + (sale.sold_at ? ' atras' : '')
+                      timeAgo(sale.sold_at) + (sale.sold_at ? (' ' + I18n.t('unified.ago')) : '')
                     ),
                     sale.txid ? React.createElement('a', {
                       href: 'https://mempool.space/tx/' + sale.txid,

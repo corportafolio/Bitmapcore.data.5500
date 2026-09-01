@@ -446,5 +446,11 @@
     "Blocks whose block number only has digits 0 and 1, like a binary number (e.g., 10, 100, 101, 1010, 11001, 111111)",
     "Blocks whose block number contains \"168\" (Chinese lucky number)",
     "Blocks 56,899 to 57,093: complete pizza day range (May 22, 2010)"
-  ]
+  ],
+  "time": {
+    "justNow": "just now",
+    "agoMin": "{n} min ago",
+    "agoHours": "{n}h ago",
+    "agoDays": "{n}d ago"
+  }
 }
