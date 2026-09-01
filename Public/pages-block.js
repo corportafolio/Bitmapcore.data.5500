@@ -188,7 +188,7 @@ function PantallaDeBloqueEspecifico(props) {
     e.stopPropagation();
     var w = StoreApp.get('wallet');
     if (!w || !w.address) {
-      showToast('No hay wallet conectada, conecte su wallet para comerciar activos.', 'error');
+      showToast(I18n.t('toast.noWalletTrade'), 'error');
       return;
     }
     fetchMempoolFees();
@@ -199,14 +199,14 @@ function PantallaDeBloqueEspecifico(props) {
     var wallet = StoreApp.get('wallet');
     if (!wallet || !wallet.address) {
       setShowBuyMenu(false);
-      showToast('No hay wallet conectada, conecte su wallet para comerciar activos.', 'error');
+      showToast(I18n.t('toast.noWalletTrade'), 'error');
       return;
     }
     if (!localListing) return;
     if (window.bcAnalytics) window.bcAnalytics.track('buy_initiated', { itemCount: 1 });
 
     setShowBuyMenu(true);
-    setBuyStatus({ message: 'Preparando compra...', type: 'loading' });
+    setBuyStatus({ message: I18n.t('toast.preparingBatch'), type: 'loading' });
     setBuySuccessData(null);
 
     var buyResult = null;
@@ -215,7 +215,7 @@ function PantallaDeBloqueEspecifico(props) {
     var feeRate = getFeeRateSats();
 
     try {
-      setBuyStatus({ message: 'Creando PSBT...', type: 'loading' });
+      setBuyStatus({ message: I18n.t('toast.creatingPsbt') + '...', type: 'loading' });
 
       if (!wallet.publicKey) {
         try {
@@ -305,7 +305,7 @@ function PantallaDeBloqueEspecifico(props) {
       var serverMarketplaceFee = buyJson.data.marketplaceFee || 0;
       var signedPsbt = null;
 
-      setBuyStatus({ message: 'Firmando PSBT en wallet...', type: 'loading' });
+      setBuyStatus({ message: I18n.t('toast.signingPsbt'), type: 'loading' });
 
       if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
         try {
@@ -336,7 +336,7 @@ function PantallaDeBloqueEspecifico(props) {
       }
 
       if (!signedPsbt) {
-        throw new Error('Firma cancelada');
+        throw new Error(I18n.t('toast.signCanceledShort'));
       }
 
       setBuyStatus({ message: 'IMPORTANTE: No cierre esta pestaña hasta que se complete la transacción. Enviando a la mempool, esperando confirmación...', type: 'loading' });
@@ -386,7 +386,7 @@ function PantallaDeBloqueEspecifico(props) {
         btcPrice: btcPrice
       };
 
-      setBuyStatus({ message: 'Compra exitosa', type: 'done' });
+      setBuyStatus({ message: I18n.t('marketplace.purchaseSuccessful'), type: 'done' });
       if (window.bcAnalytics) window.bcAnalytics.track('buy_completed', { successCount: 1, errorCount: 0, totalPaid: totalPaid });
 
       fetch('/api/v1/internal/refresh-local', { method: 'POST' }).catch(function() {});
@@ -493,7 +493,7 @@ function PantallaDeBloqueEspecifico(props) {
                         color: selectedFeeRate === 'baja' ? '#000' : '#888',
                         border: '1px solid ' + (selectedFeeRate === 'baja' ? '#FFD700' : '#333')
                       }
-                    }, React.createElement('div', null, 'Baja'), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'baja' ? '#000' : '#666' } }, '~' + getMempoolBaja())),
+                    }, React.createElement('div', null, I18n.t('marketplace.low')), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'baja' ? '#000' : '#666' } }, '~' + getMempoolBaja())),
                     React.createElement('button', {
                       onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('media'); setShowCustomFee(false); },
                       className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-all text-center',
@@ -502,7 +502,7 @@ function PantallaDeBloqueEspecifico(props) {
                         color: selectedFeeRate === 'media' ? '#000' : '#888',
                         border: '1px solid ' + (selectedFeeRate === 'media' ? '#FFD700' : '#333')
                       }
-                    }, React.createElement('div', null, 'Media'), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'media' ? '#000' : '#666' } }, '~' + getMempoolMedia())),
+                    }, React.createElement('div', null, I18n.t('marketplace.medium')), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'media' ? '#000' : '#666' } }, '~' + getMempoolMedia())),
                     React.createElement('button', {
                       onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('alta'); setShowCustomFee(false); },
                       className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-all text-center',
@@ -511,7 +511,7 @@ function PantallaDeBloqueEspecifico(props) {
                         color: selectedFeeRate === 'alta' ? '#000' : '#888',
                         border: '1px solid ' + (selectedFeeRate === 'alta' ? '#FFD700' : '#333')
                       }
-                    }, React.createElement('div', null, 'Alta'), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'alta' ? '#000' : '#666' } }, '~' + getMempoolAlta())),
+                    }, React.createElement('div', null, I18n.t('marketplace.high')), React.createElement('div', { className: 'text-[8px]', style: { color: selectedFeeRate === 'alta' ? '#000' : '#666' } }, '~' + getMempoolAlta())),
                     React.createElement('button', {
                       onClick: function(e) { e.stopPropagation(); setSelectedFeeRate('custom'); setShowCustomFee(true); },
                       className: 'flex-1 px-2 py-1.5 rounded font-acme text-[10px] font-bold transition-all text-center',
@@ -602,10 +602,10 @@ function PantallaDeBloqueEspecifico(props) {
               ),
               React.createElement('div', null,
                 React.createElement('h2', { className: 'font-alfaslab text-lg', style: { color: buySuccessData.type === 'error' ? '#FF5555' : '#00AA00' } },
-                  buySuccessData.type === 'error' ? 'Error en la compra' : 'Compra exitosa'
+                  buySuccessData.type === 'error' ? I18n.t('marketplace.buyError') : I18n.t('marketplace.purchaseSuccessful')
                 ),
                 React.createElement('p', { className: 'font-acme text-xs', style: { color: '#888' } },
-                  buySuccessData.type === 'error' ? 'No se completó la compra.' : buySuccessData.items.length + ' bitmap comprado exitosamente'
+                  buySuccessData.type === 'error' ? I18n.t('marketplace.purchaseFailed') : buySuccessData.items.length + ' bitmap comprado exitosamente'
                 )
               )
             ),

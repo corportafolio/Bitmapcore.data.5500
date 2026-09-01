@@ -26,12 +26,17 @@ function SettingsPage(props) {
   var handleSave = function() {
     setIsSaving(true);
     if (typeof I18n !== 'undefined' && I18n.saveLanguage) {
-      I18n.saveLanguage();
+      I18n.saveLanguage().then(function() {
+        setIsSaving(false);
+        setTimeout(function() { location.reload(); }, 400);
+      }).catch(function() {
+        setIsSaving(false);
+        setTimeout(function() { location.reload(); }, 400);
+      });
+    } else {
+      setIsSaving(false);
+      setTimeout(function() { location.reload(); }, 400);
     }
-    setIsSaving(false);
-    setTimeout(function() {
-      location.reload();
-    }, 800);
   };
 
   return React.createElement('div', { className:'p-4 lg:p-6' },

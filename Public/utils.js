@@ -18,11 +18,13 @@ var BitmapUtils = {
   isValidBlockNumber: function(n) { return n >= 0 && n <= 999999 && Number.isInteger(n); },
   formatDate: function(date) {
     var d = new Date(date);
-    return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+    var locale = (typeof I18n !== 'undefined' && I18n.getCurrentLang && I18n.getCurrentLang() === 'es') ? 'es-AR' : 'en-US';
+    return d.toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric' });
   },
   formatDateTime: function(date) {
     var d = new Date(date);
-    return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    var locale = (typeof I18n !== 'undefined' && I18n.getCurrentLang && I18n.getCurrentLang() === 'es') ? 'es-AR' : 'en-US';
+    return d.toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   },
   timeAgo: function(date) {
     var diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -31,7 +33,10 @@ var BitmapUtils = {
     if (diff < 86400) return I18n.t('time.agoHours', { n: Math.floor(diff / 3600) });
     return I18n.t('time.agoDays', { n: Math.floor(diff / 86400) });
   },
-  formatNumber: function(n) { return (n || 0).toLocaleString('es-AR'); },
+  formatNumber: function(n) {
+    var locale = (typeof I18n !== 'undefined' && I18n.getCurrentLang && I18n.getCurrentLang() === 'es') ? 'es-AR' : 'en-US';
+    return (n || 0).toLocaleString(locale);
+  },
   formatFileSize: function(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';

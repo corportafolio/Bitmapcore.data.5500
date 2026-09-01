@@ -189,7 +189,7 @@ var StoreApp = {
           if (window.bcAnalytics) window.bcAnalytics.track('wallet_connected', { walletType: 'xverse', address: ordinalsAddr.address });
           resolve(ordinalsAddr.address);
         }).catch(function() {
-          StoreApp._showWalletError('Xverse: conexion cancelada o fallida');
+          StoreApp._showWalletError(I18n.t('toast.xverseSignFailed'));
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
@@ -265,13 +265,13 @@ var StoreApp = {
           StoreApp._emit('wallet');
           resolve(ordAddr2.address);
         }).catch(function() {
-          StoreApp._showWalletError('Xverse: conexion cancelada o fallida');
+          StoreApp._showWalletError(I18n.t('toast.xverseSignFailed'));
           StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
           StoreApp._emit('wallet');
           resolve(null);
         });
       } else {
-        StoreApp._showWalletError('No se detecto ninguna wallet. Instala Unisat o Xverse.');
+        StoreApp._showWalletError(I18n.t('toast.walletNotAvailable'));
         StoreApp._state.wallet = { address:null, publicKey:null, balance:0, isConnected:false, network:'mainnet', walletType:null };
         StoreApp._emit('wallet');
         resolve(null);

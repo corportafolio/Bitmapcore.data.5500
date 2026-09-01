@@ -447,11 +447,11 @@ function MisActivosPage(props) {
         )
       ),
       !wallet.isConnected ? React.createElement('div', { className:'text-center py-12' },
-        React.createElement('p', { className:'font-acme text-bitmap-muted mb-4' }, 'No hay wallet conectada'),
+        React.createElement('p', { className:'font-acme text-bitmap-muted mb-4' }, I18n.t('marketplace.noWalletConnected')),
         React.createElement('button', {
           onClick:function() { if (window.bcAnalytics) window.bcAnalytics.track('wallet_connect_clicked', { walletType: 'unisat', source: 'assets_page' }); StoreApp.connectWallet('unisat'); },
           className:'px-4 py-2 bg-bitmap-orange text-white rounded-lg font-alfaslab text-sm'
-        }, 'Conectar Wallet')
+        }, I18n.t('app.connectWallet'))
       ) :
       isLoading ? React.createElement('div', { className:'text-center py-12' },
         React.createElement('div', { className:'inline-block w-8 h-8 border-2 border-bitmap-orange border-t-transparent rounded-full animate-spin' }),
@@ -1074,7 +1074,7 @@ function DetallePage(props) {
           setListingStatus({ listing:true, count:1, toast:'Firmando en Xverse...' });
           signedPsbt = await StoreApp._xverseSignPsbt(unsignedPsbt, wallet.address);
         } catch(xe) {
-          throw new Error('Xverse: ' + (xe.message || 'Firma cancelada'));
+          throw new Error('Xverse: ' + (xe.message || I18n.t('toast.signCanceledShort')));
         }
       } else if (window.unisat && window.unisat.signPsbt) {
         try {
@@ -1085,7 +1085,7 @@ function DetallePage(props) {
           });
           signedPsbt = await Promise.race([signPromise, signTimeout]);
         } catch(ue) {
-          throw new Error('Unisat: ' + (ue.message || 'Firma cancelada'));
+          throw new Error('Unisat: ' + (ue.message || I18n.t('toast.signCanceledShort')));
         }
       } else {
         throw new Error('Wallet no disponible para firmar');
@@ -1147,7 +1147,7 @@ function DetallePage(props) {
 
   if (!wallet.address) {
     return React.createElement('div', { className:'flex items-center justify-center h-full' },
-      React.createElement('p', { className:'font-acme text-bitmap-muted' }, 'No hay wallet conectada')
+      React.createElement('p', { className:'font-acme text-bitmap-muted' }, I18n.t('marketplace.noWalletConnected'))
     );
   }
 

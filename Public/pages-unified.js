@@ -267,7 +267,7 @@ function TagTablesPage(props) {
       React.createElement('div', { className:'max-w-3xl mx-auto space-y-3' },
         React.createElement('h2', { className:'font-alfaslab text-xl text-white mb-4' }, I18n.t('tags.subtitle')),
         isLoading ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('app.loading')) :
-        tags.length === 0 ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, 'No hay etiquetas disponibles') :
+        tags.length === 0 ? React.createElement('div', { className:'text-center py-12 font-acme text-bitmap-muted' }, I18n.t('mpBubble.noTags')) :
         tags.map(function(tag, i) {
           return React.createElement(TagGroupCard, {
             key:i,

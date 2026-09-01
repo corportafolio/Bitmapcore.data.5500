@@ -101,7 +101,7 @@ function ImageGallery(props) {
   var columns = props.columns || 3;
 
   if (images.length === 0) {
-    return React.createElement('div', { className:'text-center py-8 font-acme text-bitmap-muted text-sm' }, 'No hay imágenes disponibles');
+    return React.createElement('div', { className:'text-center py-8 font-acme text-bitmap-muted text-sm' }, I18n.t('marketplace.noListings'));
   }
 
   return React.createElement('div', {

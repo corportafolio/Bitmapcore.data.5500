@@ -3,7 +3,6 @@ var I18nManager = (function() {
   var pendingLang = 'en';
   var strings = {};
   var loaded = false;
-  var loadPromise = null;
 
   function getNested(obj, path) {
     var parts = path.split('.');
@@ -18,10 +17,8 @@ var I18nManager = (function() {
     return val;
   }
 
-  function loadStrings(lang) {
-    if (loadPromise) return loadPromise;
-
-    loadPromise = fetch('/i18n/strings-' + lang + '.json')
+  function fetchStrings(lang) {
+    return fetch('/i18n/strings-' + lang + '.json')
       .then(function(res) {
         if (!res.ok) throw new Error('Failed to load ' + lang);
         return res.json();
@@ -36,17 +33,17 @@ var I18nManager = (function() {
       .catch(function(err) {
         console.warn('Failed to load ' + lang + ', falling back to en:', err);
         if (lang !== 'en') {
-          return loadStrings('en');
+          return fetchStrings('en');
         }
         throw err;
       });
-    return loadPromise;
   }
 
   function init() {
     var saved = (typeof localStorage !== 'undefined') ? localStorage.getItem('lang') : null;
-    var lang = saved || 'en';
-    return loadStrings(lang).then(function() {
+    var explicit = (typeof localStorage !== 'undefined') ? localStorage.getItem('lang_explicit') : null;
+    var lang = (explicit === 'true' && saved) ? saved : 'en';
+    return fetchStrings(lang).then(function() {
       document.documentElement.lang = currentLang;
       window.dispatchEvent(new CustomEvent('i18n:ready', { detail: { lang: currentLang } }));
     });
@@ -64,19 +61,20 @@ var I18nManager = (function() {
   }
 
   function setLanguage(lang) {
-    if (lang === currentLang) return;
     if (lang !== 'en' && lang !== 'es') return;
     pendingLang = lang;
   }
 
   function saveLanguage() {
-    if (pendingLang === currentLang) return;
     currentLang = pendingLang;
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('lang', currentLang);
+      localStorage.setItem('lang_explicit', 'true');
     }
-    document.documentElement.lang = currentLang;
-    window.dispatchEvent(new CustomEvent('i18n:change', { detail: { lang: currentLang } }));
+    return fetchStrings(currentLang).then(function() {
+      document.documentElement.lang = currentLang;
+      window.dispatchEvent(new CustomEvent('i18n:change', { detail: { lang: currentLang } }));
+    });
   }
 
   function getCurrentLang() {

@@ -52,7 +52,7 @@ function PantallaDeTablas(props) {
             });
           })
         ),
-        !isLoading && filteredTags.length === 0 ? React.createElement('div', { className:'text-center py-8 font-acme text-bitmap-muted' }, 'No se encontraron tablas') : null
+        !isLoading && filteredTags.length === 0 ? React.createElement('div', { className:'text-center py-8 font-acme text-bitmap-muted' }, I18n.t('tagTable.noTablesFound')) : null
       )
   );
 }

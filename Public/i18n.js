@@ -1,7 +1,6 @@
 var I18n = (function() {
   return {
     currentLang: 'en',
-    translations: {},
 
     init: function() {
       return I18nManager.init().then(function() {
@@ -15,12 +14,12 @@ var I18n = (function() {
 
     setLanguage: function(lang) {
       I18nManager.setLanguage(lang);
-      I18n.currentLang = I18nManager.getPendingLang();
     },
 
     saveLanguage: function() {
-      I18nManager.saveLanguage();
-      I18n.currentLang = I18nManager.getCurrentLang();
+      return I18nManager.saveLanguage().then(function() {
+        I18n.currentLang = I18nManager.getCurrentLang();
+      });
     },
 
     getCurrentLang: function() {
