@@ -368,7 +368,8 @@
     "perWeek": "/ semana:",
     "perMonth": "/ mes:",
     "noPreview": "Sin previsualizaciones",
-    "blocks": "bloques"
+    "blocks": "bloques",
+    "salesCount": "ventas"
   },
   "floatMenu": {
     "home": "Inicio",

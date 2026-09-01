@@ -16,7 +16,7 @@ function MarketplaceBubble(props) {
     React.createElement('div', { className:'flex-1 min-w-0' },
       React.createElement('div', { className:'font-alfaslab text-sm text-white truncate' }, name),
       React.createElement('div', { className:'flex gap-3 mt-1' },
-        React.createElement('span', { className:'font-acme text-xs text-bitmap-muted' }, listings + ' listados'),
+        React.createElement('span', { className:'font-acme text-xs text-bitmap-muted' }, listings + ' ' + I18n.t('listedTags.listings')),
         floorPrice > 0 ? React.createElement('span', { className:'font-acme text-xs text-bitmap-orange-light' }, I18n.t('mpBubble.floor') + BitmapUtils.formatBtc(floorPrice)) : null,
         sold > 0 ? React.createElement('span', { className:'font-acme text-xs text-bitmap-muted' }, sold + ' vendidos') : null
       )
@@ -97,7 +97,7 @@ function TagGroupCard(props) {
   },
     React.createElement('div', null,
       React.createElement('div', { className:'font-alfaslab text-sm font-semibold text-white' }, tag),
-      React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, count + ' bloques')
+      React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, count + ' ' + I18n.t('mpBubble.blocks'))
     ),
     React.createElement('div', { className:'font-acme text-sm text-bitmap-orange-light' },
       BitmapUtils.formatBtc(floorPrice) + ' BTC'
@@ -171,7 +171,7 @@ function SelectorBubble(props) {
             overflow:'hidden', textOverflow:'ellipsis'
           }}, tag.tagName),
           React.createElement('div', { className:'flex items-center gap-2 ml-2' },
-            React.createElement('span', { className:'font-acme text-[10px] text-bitmap-muted whitespace-nowrap' }, countFmt + ' bitmaps'),
+            React.createElement('span', { className:'font-acme text-[10px] text-bitmap-muted whitespace-nowrap' }, countFmt + ' ' + I18n.t('mpBubble.bitmaps')),
             React.createElement('span', { className:'font-acme text-[10px] text-bitmap-orange whitespace-nowrap' }, tagFloorBtc)
           )
         );
@@ -283,9 +283,9 @@ function SelectorBubble(props) {
       icon ? React.createElement('span', { className:'text-[15px]' }, icon) : null
     ),
     salesStats ? React.createElement('span', { className:'font-acme text-[10px] text-bitmap-muted whitespace-nowrap' },
-      '24 Horas: ', React.createElement('span', { className:'text-bitmap-orange' }, h24.count || 0, ' ventas'), ' \u00B7 ', BitmapUtils.formatBtcSat(h24.volume || 0), ' BTC',
-      ' ', React.createElement('span', { className:'text-bitmap-orange' }, '/'), ' semana: ', React.createElement('span', { className:'text-bitmap-orange' }, d7.count || 0, ' ventas'), ' \u00B7 ', BitmapUtils.formatBtcSat(d7.volume || 0), ' BTC',
-      ' ', React.createElement('span', { className:'text-bitmap-orange' }, '/'), ' mes: ', React.createElement('span', { className:'text-bitmap-orange' }, d30.count || 0, ' ventas'), ' \u00B7 ', BitmapUtils.formatBtcSat(d30.volume || 0), ' BTC'
+      I18n.t('mpBubble.hours24') + ' ', React.createElement('span', { className:'text-bitmap-orange' }, h24.count || 0, ' ' + I18n.t('mpBubble.salesCount')), ' \u00B7 ', BitmapUtils.formatBtcSat(h24.volume || 0), ' BTC',
+      ' ', React.createElement('span', { className:'text-bitmap-orange' }, '/'), I18n.t('mpBubble.perWeek') + ' ', React.createElement('span', { className:'text-bitmap-orange' }, d7.count || 0, ' ' + I18n.t('mpBubble.salesCount')), ' \u00B7 ', BitmapUtils.formatBtcSat(d7.volume || 0), ' BTC',
+      ' ', React.createElement('span', { className:'text-bitmap-orange' }, '/'), I18n.t('mpBubble.perMonth') + ' ', React.createElement('span', { className:'text-bitmap-orange' }, d30.count || 0, ' ' + I18n.t('mpBubble.salesCount')), ' \u00B7 ', BitmapUtils.formatBtcSat(d30.volume || 0), ' BTC'
     ) :
     React.createElement('span', { className:'font-acme text-[11px] text-bitmap-muted whitespace-nowrap' },
       React.createElement('span', { className:'text-bitmap-orange' }, I18n.t('listedTags.listings') + ': '), listingsFmt,

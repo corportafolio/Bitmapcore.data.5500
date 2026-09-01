@@ -409,11 +409,14 @@ var TAG_NAMES = [
 ];
 
 var TAG_DESCRIPTIONS = [];
+var TAG_DESCRIPTIONS_LANG = '';
 function loadTagDescriptions() {
-  if (TAG_DESCRIPTIONS.length > 0) return;
+  var currentLang = (typeof I18n !== 'undefined' && I18n.getCurrentLang) ? I18n.getCurrentLang() : 'en';
+  if (TAG_DESCRIPTIONS.length > 0 && TAG_DESCRIPTIONS_LANG === currentLang) return;
   var d = I18n.t('tagDesc');
   if (Array.isArray(d)) {
     TAG_DESCRIPTIONS = d;
+    TAG_DESCRIPTIONS_LANG = currentLang;
   }
 }
 

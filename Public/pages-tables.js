@@ -74,11 +74,11 @@ function TagPreviewCard(props) {
     React.createElement('div', { className:'flex flex-col items-center text-center mb-2' },
       React.createElement(UniversalTag, { text:tag.name, fontSize:12 }),
       isMultiTagBlock ? React.createElement('div', { className:'font-acme text-xs text-bitmap-muted mt-1' },
-        totalEtiquetas + ' etiquetas / ' + totalBloquesUnicos + ' bloques'
+        I18n.t('tagTable.tagsAndBlocks', { tags: totalEtiquetas, blocks: totalBloquesUnicos })
       ) : React.createElement('div', { className:'font-acme text-xs text-bitmap-muted mt-1' },
-        totalBloquesUnicos + ' bloques'
+        I18n.t('tagTable.blocks', { n: totalBloquesUnicos })
       ),
-      React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' }, 'Primer bloque #' + blockNum)
+      React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' }, I18n.t('tagTable.firstBlock') + blockNum)
     ),
     preview ? React.createElement('div', { className:'w-full aspect-square rounded-lg overflow-hidden bg-bitmap-black relative' },
       React.createElement('img', {
@@ -236,11 +236,11 @@ function TagTableScreen(props) {
               }, infoSVG)
             ),
             React.createElement('div', { className:'flex items-center gap-1' },
-              React.createElement('span', { className:'font-acme text-sm text-bitmap-muted whitespace-nowrap' }, totalCount + ' bloques'),
+              React.createElement('span', { className:'font-acme text-sm text-bitmap-muted whitespace-nowrap' }, I18n.t('tagTable.blocks', { n: totalCount })),
               React.createElement('button', {
                 onClick: function() { setViewMode(viewMode === 'grid' ? 'list' : 'grid'); },
                 className: 'p-1 rounded transition-colors ' + (viewMode === 'list' ? 'text-bitmap-orange' : 'text-bitmap-muted hover:text-white'),
-                title: viewMode === 'grid' ? 'Vista lista' : 'Vista grilla'
+                title: viewMode === 'grid' ? I18n.t('tagTable.listView') : I18n.t('tagTable.gridView')
               }, viewMode === 'grid' ? listIcon : gridIcon)
             )
           ),
@@ -327,7 +327,7 @@ function TagTableScreen(props) {
         ),
         blocks.length === 0 && !isLoading ? React.createElement('div', { className:'text-center py-8 font-acme text-bitmap-muted' }, I18n.t('tagTable.noBlocksInTable')) : null,
         isLoadingMore ? React.createElement('div', { className:'text-center py-4 font-acme text-bitmap-muted' }, I18n.t('tagTable.loadingMore')) : null,
-        !hasMore && blocks.length > 0 ? React.createElement('div', { className:'text-center py-4 font-acme text-bitmap-muted' }, blocks.length + ' bloques cargados') : null
+        !hasMore && blocks.length > 0 ? React.createElement('div', { className:'text-center py-4 font-acme text-bitmap-muted' }, I18n.t('tagTable.blocksLoaded', { n: blocks.length })) : null
       )
   );
 }

@@ -68,7 +68,7 @@ function ListedTagsPage(props) {
           renderStatCol(I18n.t('listedTags.listings'), totalListings ? BitmapUtils.formatNumber(totalListings) : '0', false),
           React.createElement('div', { className: 'flex flex-col items-center px-3' },
             React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-muted leading-tight' }, I18n.t('listedTags.tables')),
-            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, (tagGroups.length || 0) + ' tablas')
+            React.createElement('span', { className: 'font-acme text-[10px] text-bitmap-orange font-bold leading-tight' }, (tagGroups.length || 0) + ' ' + I18n.t('listedTags.tables'))
           )
         )
       )
@@ -147,7 +147,7 @@ function ListedTagRow(props) {
           floorBtc + ' BTC'
         ),
         React.createElement('span', { className: 'font-acme text-[12px] text-bitmap-muted whitespace-nowrap' },
-          group.count + ' listados'
+          group.count + ' ' + I18n.t('listedTags.listings')
         )
       )
     ),
@@ -260,7 +260,7 @@ function ListedTagDetailPage(props) {
           }),
           React.createElement(UniversalTag, { text: tagName, fontSize: 13 }),
           React.createElement('span', { className: 'font-acme text-xs text-bitmap-muted' },
-            total + ' listados' + (floorPrice > 0 ? ' / piso ' + BitmapUtils.formatBtcSat(floorPrice) + ' BTC' : '')
+            total + ' ' + I18n.t('listedTags.listings') + (floorPrice > 0 ? ' ' + I18n.t('listedTags.floorBtc') + ' ' + BitmapUtils.formatBtcSat(floorPrice) + ' BTC' : '')
           )
         ),
         React.createElement('div', { className: 'flex gap-1 ml-2' },
