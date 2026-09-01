@@ -405,6 +405,7 @@
       var browserRows = (data.browsers||[]).map(function(b){ return [b.browser||'unknown', fmt(b.c)]; });
       var utmRows = (data.utmSources||[]).map(function(u){ return [u.utm_source, fmt(u.c)]; });
       var countryRows = (data.countries||[]).map(function(c){ return [flagEmoji(c.country)+' '+c.country, fmt(c.c)]; });
+      var langRows = (data.languages||[]).map(function(l){ return [l.lang||'?', fmt(l.changes), fmt(l.users)]; });
       var countLabel = countMode === 'unique' ? 'Navegadores unicos' : 'Sesiones';
       var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 style="color:#fff;margin:0;font-size:16px">Tecnologia</h3><div style="display:flex;gap:4px">';
       html += '<button class="range-btn'+(countMode==='all'?' active':'')+'" onclick="setCountMode(\'all\')" style="font-size:11px;padding:4px 10px">Todos</button>';
@@ -414,6 +415,10 @@
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Dispositivos</h3>' + dataTable(['Dispositivo', countLabel], deviceRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techDevicesChart"></canvas></div></div>';
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Navegadores</h3>' + dataTable(['Navegador', countLabel], browserRows) + '<div class="card" style="margin-top:12px;max-height:200px"><canvas id="techBrowsersChart"></canvas></div></div>';
       html += '<div><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Fuentes UTM</h3>' + dataTable(['Fuente UTM','Sesiones'], utmRows) + '</div>';
+      html += '</div>';
+
+      html += '<div style="margin-top:16px"><h3 style="color:#fff;margin:0 0 12px 0;font-size:16px">Idiomas seleccionados</h3>';
+      html += langRows.length ? dataTable(['Idioma','Cambios','Usuarios'], langRows) : '<div class="card" style="padding:16px;color:#666">Sin cambios de idioma aun.</div>';
       html += '</div>';
 
       var countryTypes = [{id:'doughnut',label:'Dona'},{id:'bar',label:'Barras'},{id:'line',label:'Evolucion'}];
