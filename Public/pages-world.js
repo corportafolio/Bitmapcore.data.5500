@@ -128,7 +128,7 @@ var PagesWorld = (function() {
     }
 
     return React.createElement('div', {
-      style: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', overflow: 'hidden', background: '#080008', zIndex: 0 }
+      style: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', overflow: 'clip', background: '#080008', zIndex: 0 }
     },
       React.createElement('div', {
         ref: ref,
@@ -224,13 +224,13 @@ var PagesWorld = (function() {
       },
         React.createElement('button', {
           onClick: goToAvatar,
-          title: 'Ir al avatar',
+          title: 'Go to avatar',
           style: {
             width: '56px', height: '56px', borderRadius: '12px',
             background: '#FE3E00', border: '2px solid #2A2A2A',
             color: '#080008', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
           }
-        }, 'Ir avatar')
+        }, 'Avatar')
       ),
       React.createElement('div', {
         ref: infoRef,
