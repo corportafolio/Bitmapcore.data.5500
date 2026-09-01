@@ -117,8 +117,7 @@ var PagesWorld = (function() {
         var pos = WorldAvatar.getPosition();
         var targetTheta = pos.theta;
         var targetPhi = pos.phi;
-        var cfg = window.WorldConfig || {};
-        var targetDist = cfg.DIST_BLOCK_MODE || 105;
+        var targetDist = 101;
         if (WorldControls && WorldControls.animateTo) {
           WorldControls.animateTo(targetTheta, targetPhi, targetDist);
         }

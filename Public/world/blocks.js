@@ -215,8 +215,7 @@ var WorldBlocks = (function() {
     if (tileInstanced[tileId]) return tileInstanced[tileId];
 
     var tileGeo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-    var mat = sharedMaterial.clone();
-    var mesh = new THREE.InstancedMesh(tileGeo, mat, 1000);
+    var mesh = new THREE.InstancedMesh(tileGeo, sharedMaterial, 1000);
     mesh.frustumCulled = false;
     mesh.count = 0;
     mesh.userData = { tileId: tileId, isInstanced: true };
@@ -796,7 +795,9 @@ var WorldBlocks = (function() {
     var distAtlasMin = cfg.DIST_ATLAS_MIN || 120;
     var distBlockMode = cfg.DIST_BLOCK_MODE || 105;
 
-    if (distance <= distAtlasMin && distance > 110) {
+    // No crear atlas planes si vamos a entrar en block mode (distance <= 110)
+    // Evita flash de plano grande durante animación
+    if (distance <= distAtlasMin && distance > 112) {
       // show atlas planes around central tile
       if (!atlasPlanesShown && visible.length > 0) {
         var centerBlock = visible[0].blockNum;
