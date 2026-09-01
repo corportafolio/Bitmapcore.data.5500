@@ -29,7 +29,8 @@
     "ordinalswallet": "Ordinalswallet",
     "unisat": "Unisat",
     "local": "Local",
-    "parcels": "Parcelas"
+    "parcels": "Parcelas",
+    "bitmapMarkets": "Mercados Bitmap"
   },
   "home": {
     "title": "BitmapCore",
@@ -80,7 +81,9 @@
     "subtitle": "Explora bloques por etiquetas",
     "blocksWithTag": "Bloques con etiqueta",
     "noBlocks": "No hay bloques para esta etiqueta",
-    "viewDetails": "Ver detalles"
+    "viewDetails": "Ver detalles",
+    "millionaire": "millonaria",
+    "multimillionaire": "multimillonaria"
   },
   "sales": {
     "title": "Ventas Recientes",

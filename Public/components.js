@@ -106,7 +106,7 @@ function HeaderBar(props) {
     !showBackButton ? React.createElement('button', {
       onClick: function() { navigate('/selector'); },
       className:'font-alfaslab text-bitmap-orange text-xs px-2 py-1 border border-bitmap-orange rounded hover:bg-bitmap-orange hover:text-black transition-colors mr-2 whitespace-nowrap'
-    }, 'Mercados Bitmap') : null,
+    }, I18n.t('nav.bitmapMarkets')) : null,
     React.createElement('div', { className:'relative' },
       React.createElement('button', {
         onClick: function(e) { e.stopPropagation(); setShowHamburgerMenu(!showHamburgerMenu); },

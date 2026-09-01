@@ -1618,7 +1618,7 @@ function ParcelsMarketPage(props) {
               React.createElement('div', { className: 'px-3 py-2 space-y-3' },
               React.createElement('div', null,
                 React.createElement('div', { className: 'mb-1' },
-                  React.createElement(UniversalTag, { text: 'millonaria', fontSize: 9 })
+                  React.createElement(UniversalTag, { text: I18n.t('tags.millionaire'), fontSize: 9 })
                 ),
                 React.createElement('p', { className: 'font-acme text-[10px] text-bitmap-text leading-relaxed' },
                   'Parcelas cuya transaccion tiene salidas de 10,000 BTC a 99,999 BTC'
@@ -1626,7 +1626,7 @@ function ParcelsMarketPage(props) {
               ),
               React.createElement('div', null,
                 React.createElement('div', { className: 'mb-1' },
-                  React.createElement(UniversalTag, { text: 'multimillonaria', fontSize: 9 })
+                  React.createElement(UniversalTag, { text: I18n.t('tags.multimillionaire'), fontSize: 9 })
                 ),
                 React.createElement('p', { className: 'font-acme text-[10px] text-bitmap-text leading-relaxed' },
                   'Parcelas cuya transaccion tiene salidas de 100,000 BTC o mas'

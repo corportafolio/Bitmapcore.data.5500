@@ -1,5 +1,19 @@
+function translateTagText(text) {
+  if (!text) return text;
+  if (typeof I18n === 'undefined' || !I18n.getCurrentLang) return text;
+  if (I18n.getCurrentLang() === 'es') return text;
+  var lower = text.toLowerCase();
+  if (lower.indexOf('multimillonaria') !== -1) {
+    return text.replace(/multimillonaria/gi, 'Multimillionaire');
+  }
+  if (lower.indexOf('millonaria') !== -1) {
+    return text.replace(/millonaria/gi, 'Millionaire');
+  }
+  return text;
+}
+
 function UniversalTag(props) {
-  var text = props.text;
+  var text = translateTagText(props.text);
   var fontSize = props.fontSize || 12;
   var onPress = props.onPress;
   var paddingH = Math.round(fontSize * 0.28);
