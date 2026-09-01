@@ -230,6 +230,10 @@ var AnalyticsDashboard = (function(){
     var utmHeaders = ['Fuente UTM','Sesiones'];
     var utmRows = (data.utmSources||[]).map(function(u){ return [u.utm_source, fmt(u.c)]; });
 
+    var langs = data.languages || [];
+    var langHeaders = ['Idioma','Cambios','Usuarios'];
+    var langRows = langs.map(function(l){ return [l.lang||'?', fmt(l.changes), fmt(l.users)]; });
+
     return React.createElement('div', {style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))',gap:'16px'}},
       React.createElement('div', null,
         React.createElement('h3', {style:{color:'#fff',margin:'0 0 12px 0',fontSize:'16px'}}, 'Dispositivos'),
@@ -246,45 +250,12 @@ var AnalyticsDashboard = (function(){
         )
       ),
       React.createElement('div', null,
+        React.createElement('h3', {style:{color:'#fff',margin:'0 0 12px 0',fontSize:'16px'}}, 'Idiomas'),
+        DataTable(langHeaders, langRows)
+      ),
+      React.createElement('div', null,
         React.createElement('h3', {style:{color:'#fff',margin:'0 0 12px 0',fontSize:'16px'}}, 'Fuentes UTM'),
         DataTable(utmHeaders, utmRows)
-      )
-    );
-  }
-
-  function renderLanguages(data){
-    var langs = data.languages || [];
-    var byBrowser = data.languagesByBrowser || [];
-    var changes = data.languageChanges || [];
-
-    var totalChanges = changes.reduce(function(s,c){ return s + c.changes; }, 0);
-    var repeatUsers = changes.filter(function(c){ return c.changes > 1; }).length;
-
-    var headers = ['Idioma','Cambios','Usuarios','%'];
-    var rows = langs.map(function(l){ return [l.lang||'?', fmt(l.changes), fmt(l.users), totalChanges > 0 ? (l.changes/totalChanges*100).toFixed(1)+'%' : '0%']; });
-
-    var browserHeaders = ['Navegador','Idioma','Cambios'];
-    var browserRows = byBrowser.slice(0,15).map(function(b){ return [b.browser||'?', b.lang||'?', fmt(b.c)]; });
-
-    return React.createElement('div', {style:{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))',gap:'16px'}},
-      React.createElement('div', {style:{display:'flex',gap:'12px',flexWrap:'wrap',gridColumn:'1 / -1'}},
-        KPICard('Total cambios', fmt(totalChanges), ''),
-        KPICard('Usuarios con cambios', fmt(changes.length), ''),
-        KPICard('Repetidores', fmt(repeatUsers), '', repeatUsers > 0 ? '#FE3E00' : '#B0B0B0')
-      ),
-      React.createElement('div', null,
-        React.createElement('h3', {style:{color:'#fff',margin:'0 0 12px 0',fontSize:'16px'}}, 'Distribución de Idiomas'),
-        DataTable(headers, rows),
-        React.createElement('div', {style:{background:'#191217',border:'1px solid #2A2A2A',borderRadius:'10px',padding:'16px',marginTop:'12px',maxHeight:'200px'}},
-          React.createElement('canvas', {id:'langDistChart'})
-        )
-      ),
-      React.createElement('div', null,
-        React.createElement('h3', {style:{color:'#fff',margin:'0 0 12px 0',fontSize:'16px'}}, 'Idioma × Navegador'),
-        DataTable(browserHeaders, browserRows),
-        React.createElement('div', {style:{background:'#191217',border:'1px solid #2A2A2A',borderRadius:'10px',padding:'16px',marginTop:'12px',maxHeight:'200px'}},
-          React.createElement('canvas', {id:'langBrowserChart'})
-        )
       )
     );
   }
@@ -392,46 +363,6 @@ var AnalyticsDashboard = (function(){
           });
         }
       }
-
-      if(currentTab === 'languages'){
-        var langs = data.languages || [];
-        var byBrowser = data.languagesByBrowser || [];
-        if(langs.length > 0){
-          destroyChart('langDistChart');
-          var lCtx = document.getElementById('langDistChart');
-          if(lCtx){
-            charts['langDistChart'] = new Chart(lCtx, {
-              type:'doughnut',
-              data:{labels:langs.map(function(l){return l.lang||'?';}),datasets:[{data:langs.map(function(l){return l.changes;}),backgroundColor:chartColors(langs.length),borderWidth:0}]},
-              options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#B0B0B0',font:{size:11}}}}}
-            });
-          }
-        }
-        if(byBrowser.length > 0){
-          destroyChart('langBrowserChart');
-          var lbCtx = document.getElementById('langBrowserChart');
-          if(lbCtx){
-            var browserMap = {};
-            var browserLabels = [];
-            byBrowser.forEach(function(b){
-              if(!browserMap[b.browser]){ browserMap[b.browser] = {}; browserLabels.push(b.browser); }
-              browserMap[b.browser][b.lang] = b.c;
-            });
-            var allLangs = [];
-            byBrowser.forEach(function(b){ if(allLangs.indexOf(b.lang) === -1) allLangs.push(b.lang); });
-            charts['langBrowserChart'] = new Chart(lbCtx, {
-              type:'bar',
-              data:{
-                labels:browserLabels,
-                datasets:allLangs.map(function(lang,i){
-                  return {label:lang,data:browserLabels.map(function(br){return (browserMap[br]&&browserMap[br][lang])||0;}),backgroundColor:chartColors(allLangs.length)[i]};
-                })
-              },
-              options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#B0B0B0',font:{size:11}}}},scales:{x:{stacked:true,ticks:{color:'#666'},grid:{display:false}},y:{stacked:true,ticks:{color:'#666'},grid:{color:'#2A2A2A'}}}}
-            });
-          }
-        }
-      }
     }, 100);
   }
 
@@ -467,15 +398,13 @@ var AnalyticsDashboard = (function(){
       else if(currentTab === 'events') tabContent = renderEvents(data);
       else if(currentTab === 'conversions') tabContent = renderConversions(data);
       else if(currentTab === 'tech') tabContent = renderTech(data);
-      else if(currentTab === 'languages') tabContent = renderLanguages(data);
 
       var tabs = TabBar([
         {id:'overview', label:'Overview'},
         {id:'pages', label:'Paginas'},
         {id:'events', label:'Eventos'},
         {id:'conversions', label:'Conversiones'},
-        {id:'tech', label:'Tecnologia'},
-        {id:'languages', label:'Idiomas'}
+        {id:'tech', label:'Tecnologia'}
       ]);
 
       var el = React.createElement('div', null, header, tabs, tabContent);
