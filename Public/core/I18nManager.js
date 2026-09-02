@@ -61,7 +61,7 @@ var I18nManager = (function() {
   }
 
   function setLanguage(lang) {
-    if (lang !== 'en' && lang !== 'es' && lang !== 'fr' && lang !== 'ja') return;
+    if (lang !== 'en' && lang !== 'es' && lang !== 'fr' && lang !== 'ja' && lang !== 'zh') return;
     pendingLang = lang;
   }
 
