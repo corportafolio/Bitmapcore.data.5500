@@ -103,18 +103,24 @@ var WorldBlocks = (function() {
     sharedMaterial = null;
   }
 
+  function createEmptyTexture() {
+    var canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, 1, 1);
+    var tex = new THREE.Texture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
   function createAtlasMaterial() {
     var mat = new THREE.MeshStandardMaterial({
       roughness: 0.6,
-      metalness: 0.05
+      metalness: 0.05,
+      map: createEmptyTexture()
     });
-
-    // dummy 1x1 texture so #include <map_fragment> is included in shader
-    var dummyImg = new Image();
-    dummyImg.width = 1; dummyImg.height = 1;
-    var dummyTex = new THREE.Texture(dummyImg);
-    dummyTex.needsUpdate = true;
-    mat.map = dummyTex;
 
     mat.onBeforeCompile = function(shader) {
       console.log('🗺️ createAtlasMaterial: onBeforeCompile RUNNING, map=', shader.uniforms.map ? 'yes' : 'no');
@@ -215,7 +221,7 @@ var WorldBlocks = (function() {
     if (tileInstanced[tileId]) return tileInstanced[tileId];
 
     var tileGeo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-    var mesh = new THREE.InstancedMesh(tileGeo, sharedMaterial, 1000);
+    var mesh = new THREE.InstancedMesh(tileGeo, createAtlasMaterial(), 1000);
     mesh.frustumCulled = false;
     mesh.count = 0;
     mesh.userData = { tileId: tileId, isInstanced: true };
