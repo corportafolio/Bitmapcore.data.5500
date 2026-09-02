@@ -12,7 +12,7 @@ function SelectorScreenPage(props) {
     { id:'unisat', label:'UNISAT', path:'/unisat', logo:'unisat_logo.png' },
     { id:'local', label:'BITMAPCORE', path:'/local', logo:'logo_bitmapcore_logo.png' },
     { id:'discounts', label: I18n.t('selector.discounts'), path:'/discounts', logo:'discount.svg' },
-    { id:'unified', label:'UNIFIED', path:'/unified', logo:'layers.svg' },
+    { id:'unified', label: I18n.t('nav.unified'), path:'/unified', logo:'layers.svg' },
     { id:'tags', label: I18n.t('selector.listedTags'), path:'/tag-tables', icon:'\uD83C\uDFF7\uFE0F' },
     { id:'sales', label: I18n.t('selector.sales'), path:'/sales', icon:'\uD83D\uDCB0' }
   ];

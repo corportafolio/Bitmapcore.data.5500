@@ -260,7 +260,7 @@ function MarketplaceSelectorPage(props) {
     { id:'unisat', label:'Unisat', icon:'\uD83D\uDFE1', path:'/unisat' },
     { id:'local', label:'BitmapCore', icon:'\uD83D\uDFE0', path:'/local' },
     { id:'discounts', label: I18n.t('nav.discounts'), icon:'\uD83D\uDFE2', path:'/discounts', isDiscount:true },
-    { id:'unified', label:'Unified', icon:'\uD83D\uDD35', path:'/unified' },
+    { id:'unified', label: I18n.t('nav.unified'), icon:'\uD83D\uDD35', path:'/unified' },
     { id:'tags', label: I18n.t('nav.tags'), icon:'\uD83C\uDFF7\uFE0F', path:'/tag-tables' },
     { id:'sales', label: I18n.t('nav.sales'), icon:'\uD83D\uDCB0', path:'/sales' }
   ];

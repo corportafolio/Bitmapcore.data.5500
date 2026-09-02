@@ -338,7 +338,7 @@ function FloatingMarketplaceMenu(props) {
     { id:'satflow', label:'Satflow', path:'/satflow', icon:'satflow-logo.png', isImage:true },
     { id:'local', label:'BitmapCore', path:'/local', icon:'logo_bitmapcore_logo.png', isImage:true },
     { id:'discounts', label: I18n.t('floatMenu.discounts'), path:'/discounts', icon:'discount.svg', isImage:true },
-    { id:'unified', label:'Unified', path:'/unified', icon:'layers.svg', isImage:true },
+    { id:'unified', label: I18n.t('nav.unified'), path:'/unified', icon:'layers.svg', isImage:true },
     { id:'tags', label: I18n.t('floatMenu.listedTags'), path:'/listed-tags', icon:'\uD83C\uDFF7\uFE0F', isImage:false },
     { id:'sales', label: I18n.t('floatMenu.sales'), path:'/sales', icon:'\uD83D\uDCB0', isImage:false }
   ];
