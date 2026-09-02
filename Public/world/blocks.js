@@ -108,7 +108,7 @@ var WorldBlocks = (function() {
     canvas.width = 1;
     canvas.height = 1;
     var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#2a2a2a';
     ctx.fillRect(0, 0, 1, 1);
     var tex = new THREE.Texture(canvas);
     tex.needsUpdate = true;

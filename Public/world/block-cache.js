@@ -289,7 +289,7 @@ var MAX_CONCURRENT_FETCHES = 6;
   }
 
   var ATLAS_TOTAL = 956;
-  var ATLAS_CONCURRENT = 20;
+  var ATLAS_CONCURRENT = 50;
   var preloadRunning = false;
 
   function preloadAll(callback) {
@@ -308,6 +308,28 @@ var MAX_CONCURRENT_FETCHES = 6;
         if (callback) callback(true);
         return;
       }
+
+      // Ordenar por cercanía al centro de vista actual de la cámara
+      var camRow = 0, camCol = 6;
+      try {
+        if (typeof WorldControls !== 'undefined' && WorldControls.getState) {
+          var st = WorldControls.getState();
+          var t = st.theta, p = st.phi;
+          var gx = Math.round((t / (Math.PI * 2)) * 1000) % 1000;
+          camCol = Math.floor(gx / 40);
+          if (p >= 0) camRow = Math.floor((p / (Math.PI / 2)) * 499 / 25);
+          else camRow = 20 + Math.floor(((-p / (Math.PI / 2)) * 455) / 25);
+          camRow = Math.max(0, Math.min(38, camRow));
+        }
+      } catch (e) {}
+      pending.sort(function(a, b) {
+        var ra = Math.floor(a / 25), ca = a % 25;
+        var rb = Math.floor(b / 25), cb = b % 25;
+        var da = Math.abs(ra - camRow) + Math.abs(ca - camCol);
+        var db = Math.abs(rb - camRow) + Math.abs(cb - camCol);
+        return da - db;
+      });
+
       var i = 0;
       function next() {
         if (i >= pending.length) {
