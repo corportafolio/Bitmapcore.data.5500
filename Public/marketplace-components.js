@@ -122,6 +122,7 @@ function DiscountBadge(props) {
 }
 
 function SelectorBubble(props) {
+  var id = props.id;
   var name = props.name;
   var logo = props.logo;
   var icon = props.icon;
@@ -131,7 +132,7 @@ function SelectorBubble(props) {
   var salesStats = props.salesStats || null;
   var onClick = props.onClick;
 
-  var isTagsBubble = name === 'LISTADOS AGRUPADOS POR ETIQUETAS';
+  var isTagsBubble = id === 'tags';
 
     if (isTagsBubble) {
     var floorBtc = floorPrice > 0 && floorPrice !== 0x7fffffffffffffff ? BitmapUtils.formatBtcSat(floorPrice) + ' BTC' : 'N/A';

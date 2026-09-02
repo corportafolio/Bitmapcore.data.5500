@@ -43,6 +43,7 @@ function SelectorScreenPage(props) {
         var data = SelectorScreenViewModel.getMarketplaceData(mp.id);
         return React.createElement(SelectorBubble, {
           key: mp.id,
+          id: mp.id,
           name: mp.label,
           logo: mp.logo,
           icon: mp.icon,
