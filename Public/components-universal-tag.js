@@ -2,7 +2,7 @@ function translateTagText(text) {
   if (!text) return text;
   if (typeof I18n === 'undefined' || !I18n.getCurrentLang) return text;
   var lang = I18n.getCurrentLang();
-  if (lang === 'es') return text;
+  if (lang === 'es' || lang === 'ja') return text;
   var lower = text.toLowerCase();
   if (lang === 'fr') {
     if (lower.indexOf('multimillonaria') !== -1) {
