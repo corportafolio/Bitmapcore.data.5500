@@ -141,7 +141,6 @@ var WorldBlocks = (function() {
       var mapReplace =
         'vec2 atlasUV = vAtlasUvOffset.xy + vUv * vAtlasUvOffset.zw;\n' +
         'vec4 texelColor = texture( map, atlasUV );\n' +
-        'texelColor = mapTexelToLinear( texelColor );\n' +
         'diffuseColor *= texelColor;\n';
 
       if (shader.fragmentShader.indexOf(mapChunk) !== -1) {
