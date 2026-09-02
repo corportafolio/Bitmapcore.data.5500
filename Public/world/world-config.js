@@ -9,6 +9,7 @@
     ZOOM_BLOCK_MODE: 3.0,
 
     // Distancias de cámara (aprox. correlacionadas con los zooms)
+    DIST_ATLAS2_MIN: 200,  // distancia para activar atlas2 (vista lejana)
     DIST_ATLAS_MIN: 120,   // distancia aproximada para activar atlas 2.7-2.9
     DIST_BLOCK_MODE: 105,  // distancia aproximada para activar modo bloque (3.0)
 

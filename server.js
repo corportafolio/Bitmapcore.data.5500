@@ -2242,6 +2242,23 @@ app.get('/api/v1/world/atlas/:gz', (req, res) => {
   }
 });
 
+app.get('/api/v1/world/atlas2/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id < 0) return res.status(400).send('Invalid id');
+
+    if (!dbImages) return res.status(503).send('DB not ready');
+    const row = dbImages.prepare('SELECT image_data FROM atlas2_images WHERE tile_id=?').get(id);
+    if (!row) return res.status(404).send('Atlas2 not found');
+
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(row.image_data);
+  } catch(err) {
+    res.status(500).send('Internal error');
+  }
+});
+
 // ===== SPA CATCH-ALL =====
 app.use(function(req, res) {
   res.sendFile(path.join(publicDir, 'index.html'));

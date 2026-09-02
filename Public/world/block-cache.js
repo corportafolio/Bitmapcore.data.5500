@@ -430,3 +430,150 @@ var MAX_CONCURRENT_FETCHES = 6;
     preloadAll: preloadAll
   };
 })();
+
+var Atlas2Cache = (function() {
+  var DB_NAME = 'BitmapCoreAtlas2Cache';
+  var DB_VERSION = 1;
+  var STORE_NAME = 'atlas2';
+  var db = null;
+  var cachedKeys = {};
+  var loaded = false;
+  var loadAllKeysPromise = null;
+  var fetchQueue = [];
+  var activeFetches = 0;
+  var MAX_CONCURRENT = 6;
+  var TOTAL_TILES = 36;
+
+  function openDB() {
+    return new Promise(function(resolve, reject) {
+      if (db) return resolve(db);
+      var request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onerror = function() { reject(request.error); };
+      request.onsuccess = function() { db = request.result; resolve(db); };
+      request.onupgradeneeded = function(e) {
+        var database = e.target.result;
+        if (!database.objectStoreNames.contains(STORE_NAME)) {
+          database.createObjectStore(STORE_NAME, { keyPath: 'tileId' });
+        }
+      };
+    });
+  }
+
+  function getBlob(tileId) {
+    return openDB().then(function(database) {
+      return new Promise(function(resolve, reject) {
+        var tx = database.transaction(STORE_NAME, 'readonly');
+        var request = tx.objectStore(STORE_NAME).get(tileId);
+        request.onsuccess = function() {
+          var row = request.result;
+          if (row && row.blob) { cachedKeys[tileId] = true; resolve(row.blob); }
+          else resolve(null);
+        };
+        request.onerror = function() { reject(request.error); };
+      });
+    });
+  }
+
+  function saveBlob(tileId, blob) {
+    cachedKeys[tileId] = true;
+    return openDB().then(function(database) {
+      return new Promise(function(resolve, reject) {
+        var tx = database.transaction(STORE_NAME, 'readwrite');
+        var request = tx.objectStore(STORE_NAME).put({ tileId: tileId, blob: blob });
+        request.onsuccess = function() { resolve(); };
+        request.onerror = function() { reject(request.error); };
+      });
+    });
+  }
+
+  function loadAllKeys() {
+    if (loaded) return Promise.resolve();
+    if (loadAllKeysPromise) return loadAllKeysPromise;
+    loadAllKeysPromise = openDB().then(function(database) {
+      return new Promise(function(resolve) {
+        var tx = database.transaction(STORE_NAME, 'readonly');
+        var request = tx.objectStore(STORE_NAME).openCursor();
+        var count = 0;
+        request.onsuccess = function(e) {
+          var cursor = e.target.result;
+          if (cursor) { cachedKeys[cursor.key] = true; count++; cursor.continue(); }
+          else { loaded = true; loadAllKeysPromise = null; resolve(); }
+        };
+        request.onerror = function() { loaded = true; loadAllKeysPromise = null; resolve(); };
+      });
+    });
+    return loadAllKeysPromise;
+  }
+
+  function preloadAll(callback) {
+    loadAllKeys().then(function() {
+      var pending = [];
+      for (var i = 0; i < TOTAL_TILES; i++) {
+        if (!cachedKeys[i]) pending.push(i);
+      }
+      if (pending.length === 0) { if (callback) callback(true); return; }
+      console.log('🗺️ Atlas2Cache: Preloading', pending.length, 'tiles');
+      var done = 0;
+      var i = 0;
+      function next() {
+        if (i >= pending.length) { if (done + 0 >= pending.length && callback) callback(true); return; }
+        var tileId = pending[i++];
+        fetchTile(tileId, function(blob) {
+          done++;
+          setTimeout(next, 0);
+        });
+      }
+      for (var c = 0; c < MAX_CONCURRENT && c < pending.length; c++) next();
+    });
+  }
+
+  function fetchTile(tileId, callback) {
+    if (activeFetches >= MAX_CONCURRENT) { fetchQueue.push({ tileId: tileId, callback: callback }); return; }
+    activeFetches++;
+    var url = '/api/v1/world/atlas2/' + tileId;
+    fetch(url).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.blob();
+    }).then(function(blob) {
+      activeFetches--;
+      saveBlob(tileId, blob).catch(function() {});
+      if (callback) callback(blob);
+      processQueue();
+    }).catch(function() {
+      activeFetches--;
+      if (callback) callback(null);
+      processQueue();
+    });
+  }
+
+  function processQueue() {
+    while (fetchQueue.length > 0 && activeFetches < MAX_CONCURRENT) {
+      var task = fetchQueue.shift();
+      activeFetches++;
+      fetchTile(task.tileId, task.callback);
+    }
+  }
+
+  function ensureAtlas2(tileId, callback) {
+    loadAllKeys().then(function() {
+      if (cachedKeys[tileId]) {
+        getBlob(tileId).then(function(blob) {
+          if (blob) callback(blob);
+          else { delete cachedKeys[tileId]; fetchTile(tileId, callback); }
+        });
+        return;
+      }
+      fetchTile(tileId, callback);
+    });
+  }
+
+  return {
+    openDB: openDB,
+    ensureAtlas2: ensureAtlas2,
+    getBlob: getBlob,
+    saveBlob: saveBlob,
+    loadAllKeys: loadAllKeys,
+    preloadAll: preloadAll,
+    TOTAL_TILES: TOTAL_TILES
+  };
+})();

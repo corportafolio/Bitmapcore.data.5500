@@ -232,6 +232,112 @@ var WorldGrid = (function() {
   function getRadius() { return RADIUS; }
   function getGridSize() { return GRID_SIZE; }
 
+  var A2_AT1_COLS = 3;
+  var A2_AT1_ROWS = 10;
+  var A2_NORTH_REG_COLS = Math.floor(TILES_X / A2_AT1_COLS);
+  var A2_NORTH_REG_ROWS = Math.ceil(TILES_NORTH / A2_AT1_ROWS);
+  var A2_SOUTH_REG_ROWS = Math.ceil((39 - TILES_NORTH) / A2_AT1_ROWS);
+  var A2_TILES_PER_COL = A2_NORTH_REG_ROWS + A2_SOUTH_REG_ROWS;
+  var A2_TOTAL_REG = A2_NORTH_REG_COLS * A2_TILES_PER_COL;
+  var A2_SPECIAL_COL = TILES_X - (TILES_X % A2_AT1_COLS);
+
+  function getAtlas2Tile(blockNumber) {
+    var gx = blockNumber % GRID_SIZE;
+    var gz = Math.floor(blockNumber / GRID_SIZE);
+    var tileGx = Math.floor(gx / ATLAS_COLS);
+    var tileGz;
+    if (gz < 500) {
+      tileGz = Math.floor(gz / ATLAS_ROWS);
+    } else {
+      tileGz = TILES_NORTH + Math.floor((gz - 500) / ATLAS_ROWS);
+    }
+
+    if (tileGx >= A2_SPECIAL_COL) {
+      if (gz < 500) {
+        return A2_TOTAL_REG + Math.floor(tileGz / A2_AT1_ROWS);
+      } else {
+        var southRow = tileGz - TILES_NORTH;
+        return A2_TOTAL_REG + A2_NORTH_REG_ROWS + Math.floor(southRow / A2_AT1_ROWS);
+      }
+    }
+
+    var a2Col = Math.floor(tileGx / A2_AT1_COLS);
+    var isNorth = gz < 500;
+    var a2Row, localRow;
+    if (isNorth) {
+      a2Row = Math.floor(tileGz / A2_AT1_ROWS);
+      localRow = tileGz % A2_AT1_ROWS;
+    } else {
+      var sRow = tileGz - TILES_NORTH;
+      a2Row = Math.floor(sRow / A2_AT1_ROWS);
+      localRow = sRow % A2_AT1_ROWS;
+    }
+    return a2Col * A2_TILES_PER_COL + (isNorth ? a2Row : A2_NORTH_REG_ROWS + a2Row);
+  }
+
+  function atlas2Info(blockNumber) {
+    var gx = blockNumber % GRID_SIZE;
+    var gz = Math.floor(blockNumber / GRID_SIZE);
+    var tileGx = Math.floor(gx / ATLAS_COLS);
+    var tileGz;
+    if (gz < 500) {
+      tileGz = Math.floor(gz / ATLAS_ROWS);
+    } else {
+      tileGz = TILES_NORTH + Math.floor((gz - 500) / ATLAS_ROWS);
+    }
+
+    var isSpecial = tileGx >= A2_SPECIAL_COL;
+    var tileId;
+
+    if (isSpecial) {
+      tileId = getAtlas2Tile(blockNumber);
+      var localGz;
+      if (gz < 500) {
+        localGz = gz % (A2_AT1_ROWS * ATLAS_ROWS);
+      } else {
+        localGz = (gz - 500) % (A2_AT1_ROWS * ATLAS_ROWS);
+      }
+      var localRow = Math.floor(localGz / ATLAS_ROWS);
+      var row = (A2_AT1_ROWS - 1) - localRow;
+      var cellSizeV = 1 / A2_AT1_ROWS;
+      return {
+        tile: tileId,
+        gz: gz,
+        u0: 0,
+        v0: 1 - (row + 1) * cellSizeV,
+        u1: 1,
+        v1: 1 - row * cellSizeV
+      };
+    }
+
+    tileId = getAtlas2Tile(blockNumber);
+    var localCol = tileGx % A2_AT1_COLS;
+    var isNorth = gz < 500;
+    var a2Row, localRowInTile;
+    if (isNorth) {
+      a2Row = Math.floor(tileGz / A2_AT1_ROWS);
+      localRowInTile = tileGz % A2_AT1_ROWS;
+    } else {
+      var sRow = tileGz - TILES_NORTH;
+      a2Row = Math.floor(sRow / A2_AT1_ROWS);
+      localRowInTile = sRow % A2_AT1_ROWS;
+    }
+
+    var col = gx % ATLAS_COLS;
+    var cellSizeU = 1 / (A2_AT1_COLS * ATLAS_COLS);
+    var cellSizeV = 1 / A2_AT1_ROWS;
+    var row = (A2_AT1_ROWS - 1) - localRowInTile;
+
+    return {
+      tile: tileId,
+      gz: gz,
+      u0: localCol * ATLAS_COLS * cellSizeU + col * cellSizeU,
+      v0: 1 - (row + 1) * cellSizeV,
+      u1: localCol * ATLAS_COLS * cellSizeU + (col + 1) * cellSizeU,
+      v1: 1 - row * cellSizeV
+    };
+  }
+
   return {
     create: create,
     blockToSphere: blockToSphere,
@@ -241,6 +347,8 @@ var WorldGrid = (function() {
     isBlockInPolarZone: isBlockInPolarZone,
     atlasInfo: atlasInfo,
     getAtlasTile: getAtlasTile,
+    atlas2Info: atlas2Info,
+    getAtlas2Tile: getAtlas2Tile,
     getPhiFromGz: getPhiFromGz,
     getCachedBlockInfo: getCachedBlockInfo,
     getRadius: getRadius,

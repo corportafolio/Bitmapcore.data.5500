@@ -22,6 +22,11 @@ var WorldBlocks = (function() {
   var tileTextures = {};
   var tileInstanceCount = {};
 
+  var atlas2Textures = {};
+  var atlas2Meshes = {};
+  var atlas2Dirty = {};
+  var currentLOD = 'atlas1';
+
   var blocksByTile = {};
   var instanceBlockMap = {};
 
@@ -69,7 +74,16 @@ var WorldBlocks = (function() {
     createBlock0();
     loadAllData();
     createStreetGround();
-    if (typeof AtlasCache !== 'undefined' && AtlasCache.preloadAll) {
+    if (typeof Atlas2Cache !== 'undefined' && Atlas2Cache.preloadAll) {
+      Atlas2Cache.preloadAll(function() {
+        console.log('🗺️ WorldBlocks: Atlas2 precarga completada (36 tiles)');
+        if (typeof AtlasCache !== 'undefined' && AtlasCache.preloadAll) {
+          AtlasCache.preloadAll(function() {
+            console.log('🗺️ WorldBlocks: Atlas1 precarga completada');
+          });
+        }
+      });
+    } else if (typeof AtlasCache !== 'undefined' && AtlasCache.preloadAll) {
       AtlasCache.preloadAll(function() {
         console.log('🗺️ WorldBlocks: Atlas precarga completada');
       });
@@ -87,10 +101,21 @@ var WorldBlocks = (function() {
       if (m && m.material) m.material.dispose();
     }
 
+    for (var tid in atlas2Meshes) {
+      var m2 = atlas2Meshes[tid];
+      if (m2 && m2.parent) m2.parent.remove(m2);
+      if (m2 && m2.geometry) m2.geometry.dispose();
+      if (m2 && m2.material) m2.material.dispose();
+    }
+
     tileInstanced = {};
     tileDirty = {};
     tileTextures = {};
     tileInstanceCount = {};
+    atlas2Meshes = {};
+    atlas2Textures = {};
+    atlas2Dirty = {};
+    currentLOD = 'atlas1';
     blocksByTile = {};
     instanceBlockMap = {};
     shownBlocks = {};
@@ -554,6 +579,7 @@ var WorldBlocks = (function() {
   }
 
   function rebuildDirtyTiles() {
+    if (currentLOD === 'atlas2') return;
     var dirtyList = [];
     for (var tileId in tileDirty) {
       if (tileDirty[tileId]) dirtyList.push(parseInt(tileId));
@@ -601,6 +627,125 @@ var WorldBlocks = (function() {
         console.warn('🗺️ loadTileTexture: texture load failed for tile', tileId);
       }
     });
+  }
+
+  function loadAtlas2Texture(tileId, mesh) {
+    if (atlas2Textures[tileId]) {
+      if (mesh.material.map !== atlas2Textures[tileId]) {
+        mesh.material.map = atlas2Textures[tileId];
+        mesh.material.needsUpdate = true;
+      }
+      return;
+    }
+    if (typeof Atlas2Cache !== 'undefined' && Atlas2Cache.ensureAtlas2) {
+      Atlas2Cache.ensureAtlas2(tileId, function(blob) {
+        if (!blob) return;
+        var url = URL.createObjectURL(blob);
+        var img = new Image();
+        img.onload = function() {
+          var tex = new THREE.Texture(img);
+          tex.magFilter = THREE.NearestFilter;
+          tex.minFilter = THREE.NearestFilter;
+          tex.needsUpdate = true;
+          atlas2Textures[tileId] = tex;
+          if (mesh) {
+            mesh.material.map = tex;
+            mesh.material.needsUpdate = true;
+          }
+          URL.revokeObjectURL(url);
+        };
+        img.src = url;
+      });
+    }
+  }
+
+  function getOrCreateAtlas2Mesh(tileId) {
+    if (atlas2Meshes[tileId]) return atlas2Meshes[tileId];
+    var geo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+    var mat = createAtlasMaterial();
+    var mesh = new THREE.InstancedMesh(geo, mat, 1000);
+    mesh.frustumCulled = false;
+    mesh.count = 0;
+    mesh.userData = { tileId: tileId, isAtlas2: true };
+    mesh.visible = false;
+    scene.add(mesh);
+    atlas2Meshes[tileId] = mesh;
+    return mesh;
+  }
+
+  function rebuildAtlas2Mesh() {
+    for (var tid in atlas2Meshes) {
+      var m = atlas2Meshes[tid];
+      if (m && m.parent) m.parent.remove(m);
+      if (m && m.geometry) m.geometry.dispose();
+      if (m && m.material) m.material.dispose();
+    }
+    atlas2Meshes = {};
+
+    var blocksByA2Tile = {};
+    for (var blockNum in shownBlocks) {
+      var bn = parseInt(blockNum);
+      if (bn === 0) continue;
+      var a2Tile = WorldGrid.getAtlas2Tile(bn);
+      if (!blocksByA2Tile[a2Tile]) blocksByA2Tile[a2Tile] = {};
+      blocksByA2Tile[a2Tile][bn] = true;
+    }
+
+    for (var a2TileStr in blocksByA2Tile) {
+      var a2Tile = parseInt(a2TileStr);
+      var blocks = blocksByA2Tile[a2Tile];
+      var count = 0;
+      for (var k in blocks) count++;
+      if (count === 0) continue;
+
+      var mesh = getOrCreateAtlas2Mesh(a2Tile);
+      mesh.count = count;
+
+      var dummy = new THREE.Object3D();
+      var uvData = new Float32Array(count * 4);
+      var idx = 0;
+
+      for (var k in blocks) {
+        var blockNum = parseInt(k);
+        var cached = WorldGrid.getCachedBlockInfo(blockNum);
+        var data = allBlocks[blockNum] || { tx: 1 };
+        var height = mapHeight(data.tx);
+        var radius = WORLD_RADIUS + INSTANCE_OFFSET;
+
+        dummy.position.set(cached.nx * radius, cached.ny * radius, cached.nz * radius);
+        dummy.quaternion.setFromUnitVectors(_up, _normalVec.set(cached.nx, cached.ny, cached.nz));
+        dummy.scale.set(cached.scale, height / BLOCK_SIZE, cached.scale);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(idx, dummy.matrix);
+
+        var info = WorldGrid.atlas2Info(blockNum);
+        uvData[idx * 4] = info.u0;
+        uvData[idx * 4 + 1] = info.v0;
+        uvData[idx * 4 + 2] = info.u1 - info.u0;
+        uvData[idx * 4 + 3] = info.v1 - info.v0;
+        idx++;
+      }
+
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.geometry.setAttribute('aUvOffset', new THREE.InstancedBufferAttribute(uvData, 4));
+      loadAtlas2Texture(a2Tile, mesh);
+    }
+  }
+
+  function showAtlas2LOD() {
+    if (currentLOD === 'atlas2') return;
+    currentLOD = 'atlas2';
+    for (var tid in tileInstanced) { if (tileInstanced[tid]) tileInstanced[tid].visible = false; }
+    rebuildAtlas2Mesh();
+    for (var tid in atlas2Meshes) { if (atlas2Meshes[tid]) atlas2Meshes[tid].visible = true; }
+  }
+
+  function hideAtlas2LOD() {
+    if (currentLOD !== 'atlas2') return;
+    currentLOD = 'atlas1';
+    for (var tid in atlas2Meshes) { if (atlas2Meshes[tid]) atlas2Meshes[tid].visible = false; }
+    for (var tid in tileDirty) { tileDirty[tid] = true; }
+    for (var tid in tileInstanced) { if (tileInstanced[tid]) tileInstanced[tid].visible = true; }
   }
 
   function createStreetGround() {
@@ -795,13 +940,17 @@ var WorldBlocks = (function() {
 
     applyVisible(visible);
 
-    // LOD: mostrar planos atlas 3x3 cuando estamos en rango de DIST_ATLAS_MIN..DIST_BLOCK_MODE
     var cfg = window.WorldConfig || {};
+    var DIST_ATLAS2_MIN = cfg.DIST_ATLAS2_MIN || 200;
     var distAtlasMin = cfg.DIST_ATLAS_MIN || 120;
     var distBlockMode = cfg.DIST_BLOCK_MODE || 105;
 
-    // No crear atlas planes si vamos a entrar en block mode (distance <= 110)
-    // Evita flash de plano grande durante animación
+    if (distance > DIST_ATLAS2_MIN) {
+      showAtlas2LOD();
+    } else {
+      hideAtlas2LOD();
+    }
+
     if (distance <= distAtlasMin && distance > 112) {
       // show atlas planes around central tile
       if (!atlasPlanesShown && visible.length > 0) {
