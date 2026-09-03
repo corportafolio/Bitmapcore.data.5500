@@ -2497,30 +2497,26 @@ app.get('/api/v1/block-image/:blockNumber', async (req, res) => {
     ).all(blockNumber);
 
     if (available.length > 0) {
-      const largest = available[0]; // size más grande (ej. 240)
+      const largest = available[0];
       const { createCanvas, Image } = require('canvas');
       
       try {
-        // Decodificar la imagen PNG original
         const decodedImg = new Image();
         decodedImg.src = Buffer.from(largest.image_data);
         
-        // Esperar a que se decodifique con timeout
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error('Image decode timeout')), 5000);
-          decodedImg.onload = () => { clearTimeout(timeout); resolve(); };
-          decodedImg.onerror = (err) => { clearTimeout(timeout); reject(err); };
-        });
+        // En node-canvas, la imagen se decodifica sincrónicamente
+        // Verificar que se decodificó correctamente
+        if (!decodedImg.complete || decodedImg.width === 0 || decodedImg.height === 0) {
+          throw new Error('Image decode failed');
+        }
         
         console.log(`[block-image] Decoded image ${blockNumber} size ${largest.size} -> resizing to ${size}`);
         
-        // Redimensionar
         const outCanvas = createCanvas(size, size);
         const outCtx = outCanvas.getContext('2d');
         outCtx.drawImage(decodedImg, 0, 0, size, size);
         const png = outCanvas.toBuffer('image/png');
         
-        // Cachear el size pedido con su options_hash
         dbImages.prepare('INSERT OR REPLACE INTO block_images VALUES (?,?,?,?,CURRENT_TIMESTAMP)')
           .run(blockNumber, size, optsHash, png);
         
