@@ -2505,12 +2505,15 @@ app.get('/api/v1/block-image/:blockNumber', async (req, res) => {
         const decodedImg = new Image();
         decodedImg.src = Buffer.from(largest.image_data);
         
-        // Esperar a que se decodifique
+        // Esperar a que se decodifique con timeout
         await new Promise((resolve, reject) => {
-          decodedImg.onload = resolve;
-          decodedImg.onerror = reject;
+          const timeout = setTimeout(() => reject(new Error('Image decode timeout')), 5000);
+          decodedImg.onload = () => { clearTimeout(timeout); resolve(); };
+          decodedImg.onerror = (err) => { clearTimeout(timeout); reject(err); };
         });
-
+        
+        console.log(`[block-image] Decoded image ${blockNumber} size ${largest.size} -> resizing to ${size}`);
+        
         // Redimensionar
         const outCanvas = createCanvas(size, size);
         const outCtx = outCanvas.getContext('2d');
@@ -2521,9 +2524,10 @@ app.get('/api/v1/block-image/:blockNumber', async (req, res) => {
         dbImages.prepare('INSERT OR REPLACE INTO block_images VALUES (?,?,?,?,CURRENT_TIMESTAMP)')
           .run(blockNumber, size, optsHash, png);
         
+        console.log(`[block-image] Resized and cached ${blockNumber} size ${size}`);
         return sendImage(png);
       } catch (e) {
-        console.error('Resize error:', e);
+        console.error('Resize error for block', blockNumber, ':', e);
       }
     }
 
