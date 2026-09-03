@@ -57,6 +57,7 @@ setInterval(() => {
   const dbsToVacuum = [
     { name: 'ordinalswallet_cache', handle: () => dbOw },
     { name: 'unisat_cache', handle: () => dbUnisat },
+    { name: 'satflow_cache', handle: () => dbSatflow },
     { name: 'unified_cache', handle: () => dbUnified },
     { name: 'sales_history', handle: () => dbSales }
   ];
@@ -213,6 +214,38 @@ try {
   console.log('Unified cache DB connected');
 } catch (err) {
   console.error('Unified cache DB not created:', err.message);
+}
+
+let dbSatflow = null;
+try {
+  const fs = require('fs');
+  const dataDir = path.join(__dirname, 'data');
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  dbSatflow = new Database(path.join(dataDir, 'satflow_cache.db'));
+  dbSatflow.pragma('journal_mode = WAL');
+  dbSatflow.exec(`
+    CREATE TABLE IF NOT EXISTS satflow_cache (
+      bitmapNumber  INTEGER,
+      bitmapId      TEXT PRIMARY KEY,
+      listedPrice   INTEGER,
+      listedAt      INTEGER,
+      ownerAddress  TEXT,
+      extraData     TEXT,
+      extraData2    TEXT,
+      timestamp     INTEGER DEFAULT 0,
+      insertionOrder INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_sf_listedAt ON satflow_cache(listedAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_sf_insertion ON satflow_cache(insertionOrder DESC);
+    CREATE TABLE IF NOT EXISTS satflow_stats (
+      key       TEXT PRIMARY KEY,
+      value     INTEGER,
+      updatedAt INTEGER
+    );
+  `);
+  console.log('Satflow cache DB connected');
+} catch (err) {
+  console.error('Satflow cache DB not created:', err.message);
 }
 
 let dbSales = null;
@@ -1579,6 +1612,158 @@ async function pollUnisat() {
 pollUnisat();
 setInterval(pollUnisat, 300000);
 
+// ===== SATFLOW POLLING SERVICE + CACHE =====
+
+let sfPollingActive = false;
+let sfLastPollTime = 0;
+let sfScraper = null;
+try { sfScraper = require('./satflow-scraper'); } catch (e) { console.error('[SF] Scraper module not found:', e.message); }
+
+async function pollSatflow() {
+  if (sfPollingActive) return;
+  if (!dbSatflow) return;
+  sfPollingActive = true;
+  try {
+    console.error('[SF] Starting poll...');
+    const now = Date.now();
+    const API_KEY = process.env.SATFLOW_API_KEY;
+
+    const lastTsRow = dbSatflow.prepare("SELECT MAX(listedAt) as m FROM satflow_cache").get();
+    const lastTs = lastTsRow?.m || 0;
+    const isFirstSync = lastTs === 0;
+
+    const insertStmt = dbSatflow.prepare(`
+      INSERT OR REPLACE INTO satflow_cache
+      (bitmapNumber, bitmapId, listedPrice, listedAt, ownerAddress, extraData, extraData2, timestamp, insertionOrder)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let totalSaved = 0;
+    let insertionOrder = (dbSatflow.prepare("SELECT MAX(insertionOrder) as m FROM satflow_cache").get()?.m || 0) + 1;
+
+    if (API_KEY) {
+      console.error('[SF] Using official API...');
+      let page = 1;
+      let hasMore = true;
+      const headers = { 'accept': 'application/json', 'x-api-key': API_KEY };
+      let allItems = [];
+
+      while (hasMore) {
+        try {
+          const response = await axios.get('https://api.satflow.com/v1/activity/listings', {
+            params: { collectionSlug: 'bitmap', active: true, page, pageSize: 100, sortBy: 'createdAt', sortDirection: 'desc' },
+            headers,
+            timeout: 30000
+          });
+          const body = response.data;
+          if (!body || !body.data || !body.data.items) { hasMore = false; break; }
+          allItems = allItems.concat(body.data.items);
+          const pagination = body.data.pagination || {};
+          if (page >= (pagination.totalPages || 1) || body.data.items.length < 100) { hasMore = false; }
+          else { page++; await new Promise(r => setTimeout(r, 200)); }
+        } catch (e) {
+          console.error('[SF] API error page ' + page + ': ' + e.message);
+          hasMore = false;
+        }
+      }
+
+      const currentInsIds = new Set();
+      for (const item of allItems) {
+        const insId = item.inscriptionId || '';
+        if (insId) currentInsIds.add(insId);
+      }
+
+      for (const item of allItems) {
+        const insId = item.inscriptionId || '';
+        if (!insId) continue;
+        let ts = item.timestamp ? new Date(item.timestamp).getTime() : now;
+        if (isNaN(ts)) ts = now;
+        if (!isFirstSync && ts <= lastTs) continue;
+        const name = item.collectionItemName || item.collection_item_name || insId;
+        insertStmt.run(parseBitmapNumber(name), insId, item.price || 0, ts, item.sellerAddress || item.seller_address || '', name, null, now, insertionOrder++);
+        totalSaved++;
+      }
+
+      if (!isFirstSync && currentInsIds.size > 0) {
+        const cacheRows = dbSatflow.prepare("SELECT bitmapId FROM satflow_cache WHERE bitmapId != ''").all();
+        const staleIds = cacheRows.filter(r => !currentInsIds.has(r.bitmapId)).map(r => r.bitmapId);
+        if (staleIds.length > 0) {
+          const delStmt = dbSatflow.prepare("DELETE FROM satflow_cache WHERE bitmapId=?");
+          dbSatflow.transaction((ids) => { for (const sid of ids) delStmt.run(sid); })(staleIds);
+          console.error('[SF] Reconciled: ' + staleIds.length + ' stale');
+        }
+      }
+
+      try {
+        const statsRes = await axios.get('https://api.satflow.com/v1/collection-stats', { params: { collectionId: 'bitmap' }, headers, timeout: 15000 });
+        if (statsRes.data?.data) {
+          dbSatflow.prepare("INSERT OR REPLACE INTO satflow_stats (key, value, updatedAt) VALUES ('floor_price',?,?)").run(statsRes.data.data.floor || 0, now);
+          dbSatflow.prepare("INSERT OR REPLACE INTO satflow_stats (key, value, updatedAt) VALUES ('total_listed',?,?)").run(statsRes.data.data.listedCount || 0, now);
+        }
+      } catch (e) { console.error('[SF] Stats error: ' + e.message); }
+    } else if (sfScraper) {
+      console.error('[SF] Using tRPC backend (no API key)...');
+      try {
+        const { stats, sales } = await sfScraper.scrapeSatflowData();
+
+        if (stats) {
+          dbSatflow.prepare("INSERT OR REPLACE INTO satflow_stats (key, value, updatedAt) VALUES ('floor_price',?,?)").run(stats.floor, now);
+          dbSatflow.prepare("INSERT OR REPLACE INTO satflow_stats (key, value, updatedAt) VALUES ('total_listed',?,?)").run(stats.listedCount, now);
+          dbSatflow.prepare("INSERT OR REPLACE INTO satflow_stats (key, value, updatedAt) VALUES ('top_bid',?,?)").run(stats.topBid, now);
+          console.error('[SF] Stats saved: floor=' + stats.floor + ', listed=' + stats.listedCount);
+        }
+
+        let salesSaved = 0;
+        for (const sale of sales) {
+          const ask = sale.ask || sale.bid || {};
+          const insId = ask.inscriptionId || '';
+          if (!insId) continue;
+          const ts = sale.timestamp ? new Date(sale.timestamp).getTime() : now;
+          if (isNaN(ts)) ts = now;
+          if (!isFirstSync && ts <= lastTs) continue;
+          const name = ask.collectionItemName || ask.collection_item_name || insId;
+          insertStmt.run(parseBitmapNumber(name), insId, ask.price || sale.price || 0, ts, ask.sellerOrdAddress || ask.bidderAddress || '', name, sale.id || '', now, insertionOrder++);
+          salesSaved++;
+          if (dbSales) {
+            try {
+              dbSales.prepare("INSERT OR IGNORE INTO all_sales (bitmap_name, bitmap_number, inscription_id, price, buyer_address, seller_address, source, txid, sold_at, synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(
+                name, parseBitmapNumber(name), insId, ask.price || sale.price || 0,
+                sale.fillAddress || '', ask.sellerOrdAddress || ask.bidderAddress || '',
+                'satflow', sale.fillTx || '', ts, now
+              );
+            } catch (se) { /* duplicate */ }
+          }
+        }
+        totalSaved = salesSaved;
+        console.error('[SF] Saved ' + salesSaved + ' sales as activity data');
+      } catch (e) {
+        console.error('[SF] Scraper error: ' + e.message);
+      }
+    } else {
+      console.error('[SF] No API key and no scraper available');
+      sfPollingActive = false;
+      return;
+    }
+
+    dbSatflow.prepare("INSERT OR REPLACE INTO satflow_stats (key, value, updatedAt) VALUES ('last_poll_time',?,?)").run(now, now);
+
+    const freshTs = (dbSatflow.prepare("SELECT MAX(listedAt) as m FROM satflow_cache").get() || {}).m || 0;
+    if (freshTs > lastTs) {
+      dbSatflow.prepare("INSERT OR REPLACE INTO satflow_stats (key, value, updatedAt) VALUES ('lastPollTimestamp',?,?)").run(freshTs, now);
+    }
+
+    console.error('[SF] Poll done: ' + totalSaved + ' items saved');
+    sfLastPollTime = now;
+  } catch (err) {
+    console.error('[SF] FATAL: ' + err.message);
+  }
+  sfPollingActive = false;
+  pollUnified();
+}
+
+pollSatflow();
+setInterval(pollSatflow, 300000);
+
 // ===== UNIFIED POLLING =====
 
 async function pollUnified() {
@@ -1618,6 +1803,16 @@ async function pollUnified() {
         total++;
       }
 
+      if (dbSatflow) {
+        const sfRows = dbSatflow.prepare("SELECT * FROM satflow_cache WHERE bitmapId != ''").all();
+        for (const row of sfRows) {
+          insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
+            row.ownerAddress, row.extraData, row.extraData2, row.timestamp, insertionOrder++, 'satflow');
+          total++;
+        }
+        console.error('[UNIFIED] Satflow: ' + sfRows.length + ' listings');
+      }
+
       try {
         const path = require('path');
         const Database = require('better-sqlite3');
@@ -1651,6 +1846,15 @@ async function pollUnified() {
         insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
           row.ownerAddress, row.extraData, row.extraData2, row.timestamp, insertionOrder++, 'unisat');
         total++;
+      }
+
+      if (dbSatflow) {
+        const sfNew = dbSatflow.prepare("SELECT * FROM satflow_cache WHERE bitmapId != ''").all();
+        for (const row of sfNew) {
+          insertStmt.run(row.bitmapNumber, row.bitmapId, row.listedPrice, row.listedAt,
+            row.ownerAddress, row.extraData, row.extraData2, row.timestamp, insertionOrder++, 'satflow');
+          total++;
+        }
       }
 
       try {
@@ -1692,6 +1896,14 @@ async function pollUnified() {
           const placeholders = uniIds.map(() => '?').join(',');
           const deletedUNI = dbUnified.prepare("DELETE FROM unified_listings WHERE source='unisat' AND bitmapId NOT IN (" + placeholders + ")").run(...uniIds);
           console.error('[UNIFIED] Cleaned stale UNI: ' + deletedUNI.changes);
+        }
+        if (dbSatflow) {
+          const sfIds = dbSatflow.prepare("SELECT bitmapId FROM satflow_cache WHERE bitmapId != ''").all().map(r => r.bitmapId);
+          if (sfIds.length > 0) {
+            const placeholders = sfIds.map(() => '?').join(',');
+            const deletedSF = dbUnified.prepare("DELETE FROM unified_listings WHERE source='satflow' AND bitmapId NOT IN (" + placeholders + ")").run(...sfIds);
+            console.error('[UNIFIED] Cleaned stale SF: ' + deletedSF.changes);
+          }
         }
         try {
           const dbLocal2 = new Database(path.join(__dirname, '..', 'bitmapcore-server', 'data', 'bitmapcorp.db'), { readonly: true });
@@ -2071,6 +2283,96 @@ app.get('/api/v1/unisat/cache/count', (req, res) => {
   }
 });
 
+// ===== ENDPOINTS DE CACHE SATFLOW =====
+
+app.get('/api/v1/satflow/cache/listings', (req, res) => {
+  if (!dbSatflow) return sendSuccess(res, []);
+  try {
+    const sortBy = req.query.sort || 'listedAtDesc';
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 100;
+    let orderBy;
+    if (sortBy === 'priceDesc') {
+      orderBy = 'sc.listedPrice DESC, sc.listedAt DESC';
+    } else if (sortBy === 'priceAsc') {
+      orderBy = 'sc.listedPrice ASC, sc.listedAt DESC';
+    } else {
+      orderBy = 'sc.listedAt DESC, sc.insertionOrder DESC';
+    }
+
+    const mainDbPath = path.join(__dirname, 'data/bitmapcorp_database.db');
+    try { dbSatflow.prepare('ATTACH DATABASE ? AS maindb').run(mainDbPath); } catch (e) { /* already attached */ }
+
+    let rows;
+    if (tableExists('blocks')) {
+      rows = dbSatflow.prepare(`
+        SELECT sc.*, b.hash, b.etiquetas, b.totalTransacciones, b.totalBtc
+        FROM satflow_cache sc
+        LEFT JOIN maindb.blocks b ON sc.bitmapNumber = b.bloque
+        WHERE sc.bitmapId != ''
+        ORDER BY ${orderBy}
+        LIMIT ? OFFSET ?
+      `).all(limit, offset);
+    } else {
+      rows = dbSatflow.prepare("SELECT * FROM satflow_cache WHERE bitmapId != '' ORDER BY " + orderBy.replace(/sc\./g, '') + " LIMIT ? OFFSET ?").all(limit, offset);
+    }
+
+    sendSuccess(res, rows);
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/satflow/cache/stats', (req, res) => {
+  if (!dbSatflow) return sendSuccess(res, { floorPrice: 0, totalListed: 0 });
+  try {
+    const floor = (dbSatflow.prepare("SELECT value FROM satflow_stats WHERE key='floor_price'").get() || {}).value || 0;
+    const listed = (dbSatflow.prepare("SELECT value FROM satflow_stats WHERE key='total_listed'").get() || {}).value || 0;
+    sendSuccess(res, { floorPrice: floor, totalListed: listed });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/satflow/cache/last-update', (req, res) => {
+  if (!dbSatflow) return sendSuccess(res, { lastUpdate: 0 });
+  try {
+    const row = dbSatflow.prepare("SELECT value FROM satflow_stats WHERE key='last_poll_time'").get();
+    sendSuccess(res, { lastUpdate: row ? row.value : 0 });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/satflow/cache/count', (req, res) => {
+  if (!dbSatflow) return sendSuccess(res, { count: 0 });
+  try {
+    const row = dbSatflow.prepare("SELECT COUNT(*) as c FROM satflow_cache WHERE bitmapId != ''").get();
+    sendSuccess(res, { count: row ? row.c : 0 });
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
+app.get('/api/v1/proxy/satflow/listings', proxyLimiter, async (req, res) => {
+  try {
+    const API_KEY = process.env.SATFLOW_API_KEY;
+    if (!API_KEY) return sendSuccess(res, []);
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 60;
+    const page = Math.floor(offset / limit) + 1;
+    const response = await axios.get('https://api.satflow.com/v1/activity/listings', {
+      params: { collectionSlug: 'bitmap', active: true, page, pageSize: limit, sortBy: 'createdAt', sortDirection: 'desc' },
+      headers: { 'accept': 'application/json', 'x-api-key': API_KEY },
+      timeout: 15000
+    });
+    const items = response.data?.data?.items || [];
+    sendSuccess(res, items);
+  } catch (err) {
+    sendError(res, err.message);
+  }
+});
+
 // ===== SELECTOR SCREEN =====
 app.get('/api/v1/selector/previews', (req, res) => {
   if (!db) return sendSuccess(res, []);
@@ -2136,19 +2438,22 @@ app.get('/api/v1/health', (req, res) => {
     database: db ? 'connected' : 'not connected',
     ordinalswalletCache: dbOw ? 'connected' : 'not connected',
     unisatCache: dbUnisat ? 'connected' : 'not connected',
+    satflowCache: dbSatflow ? 'connected' : 'not connected',
     unifiedCache: dbUnified ? 'connected' : 'not connected',
     tables: getTableNames(),
     owPollingActive: owPollingActive,
     owLastPollTime: owLastPollTime,
     uniPollingActive: uniPollingActive,
     uniLastPollTime: uniLastPollTime,
+    sfPollingActive: sfPollingActive,
+    sfLastPollTime: sfLastPollTime,
     livePollingActive: livePollingActive,
     liveLastPollTime: liveLastPollTime
   });
 });
 
 // ===== BLOCK IMAGES =====
-app.get('/api/v1/block-image/:blockNumber', (req, res) => {
+app.get('/api/v1/block-image/:blockNumber', async (req, res) => {
   try {
     const blockNumber = parseInt(req.params.blockNumber);
     const size = parseInt(req.query.size) || 80;
@@ -2166,37 +2471,82 @@ app.get('/api/v1/block-image/:blockNumber', (req, res) => {
 
     if (!dbImages) return res.status(503).send('DB not ready');
 
-    const row = dbImages.prepare(
+    // Helper para enviar imagen
+    const sendImage = (imgData) => {
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=3600');
+      return res.send(imgData);
+    };
+
+    // 1. Buscar exacto (block_number + size + options_hash)
+    let row = dbImages.prepare(
       'SELECT image_data FROM block_images WHERE block_number=? AND size=? AND options_hash=?'
     ).get(blockNumber, size, optsHash);
 
-    if (row) {
-      res.set('Content-Type', 'image/png');
-      res.set('Cache-Control', 'public, max-age=3600');
-      return res.send(row.image_data);
+    if (row) return sendImage(row.image_data);
+
+    // 2. Fallback hash: mismo size, hash más reciente (ignora options_hash)
+    row = dbImages.prepare(
+      'SELECT image_data FROM block_images WHERE block_number=? AND size=? ORDER BY created_at DESC LIMIT 1'
+    ).get(blockNumber, size);
+    if (row) return sendImage(row.image_data);
+
+    // 3. Fallback size: buscar el size más grande disponible y redimensionar
+    const available = dbImages.prepare(
+      'SELECT size, image_data FROM block_images WHERE block_number=? ORDER BY size DESC'
+    ).all(blockNumber);
+
+    if (available.length > 0) {
+      const largest = available[0]; // size más grande (ej. 240)
+      const { createCanvas, Image } = require('canvas');
+      
+      try {
+        // Decodificar la imagen PNG original
+        const decodedImg = new Image();
+        decodedImg.src = Buffer.from(largest.image_data);
+        
+        // Esperar a que se decodifique
+        await new Promise((resolve, reject) => {
+          decodedImg.onload = resolve;
+          decodedImg.onerror = reject;
+        });
+
+        // Redimensionar
+        const outCanvas = createCanvas(size, size);
+        const outCtx = outCanvas.getContext('2d');
+        outCtx.drawImage(decodedImg, 0, 0, size, size);
+        const png = outCanvas.toBuffer('image/png');
+        
+        // Cachear el size pedido con su options_hash
+        dbImages.prepare('INSERT OR REPLACE INTO block_images VALUES (?,?,?,?,CURRENT_TIMESTAMP)')
+          .run(blockNumber, size, optsHash, png);
+        
+        return sendImage(png);
+      } catch (e) {
+        console.error('Resize error:', e);
+      }
     }
 
-    // Generate on the fly if not cached
+    // 4. Último recurso: placeholder simple (no 500)
     const { createCanvas } = require('canvas');
-    const MondrianGenerator = require('./utils-mondrian');
     const canvas = createCanvas(size, size);
-    MondrianGenerator.generate(canvas, blockNumber, {
-      totalTransactions: tx,
-      hash: hash,
-      etiquetas: etiquetas,
-      isGrid: grid,
-      isPunk: punk
-    }, size);
-
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, size, size);
     const png = canvas.toBuffer('image/png');
-    dbImages.prepare('INSERT OR REPLACE INTO block_images VALUES (?,?,?,?,CURRENT_TIMESTAMP)')
-        .run(blockNumber, size, optsHash, png);
+    return sendImage(png);
 
+  } catch(err) {
+    console.error('block-image error:', err);
+    const { createCanvas } = require('canvas');
+    const canvas = createCanvas(size, size);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, size, size);
+    const png = canvas.toBuffer('image/png');
     res.set('Content-Type', 'image/png');
     res.set('Cache-Control', 'public, max-age=3600');
     res.send(png);
-  } catch(err) {
-    res.status(500).send('Internal error');
   }
 });
 
@@ -2268,4 +2618,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('BitmapCore Web running on port ' + PORT);
   console.log('Database tables:', getTableNames().join(', ') || 'none');
   console.log('Ordinalswallet cache:', dbOw ? 'connected' : 'not connected');
+  console.log('Unisat cache:', dbUnisat ? 'connected' : 'not connected');
+  console.log('Satflow cache:', dbSatflow ? 'connected' : 'not connected');
 });
