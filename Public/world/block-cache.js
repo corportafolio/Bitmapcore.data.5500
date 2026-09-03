@@ -549,7 +549,6 @@ var Atlas2Cache = (function() {
   function processQueue() {
     while (fetchQueue.length > 0 && activeFetches < MAX_CONCURRENT) {
       var task = fetchQueue.shift();
-      activeFetches++;
       fetchTile(task.tileId, task.callback);
     }
   }
