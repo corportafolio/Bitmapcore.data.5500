@@ -672,11 +672,11 @@ var WorldBlocks = (function() {
     }
   }
 
-  function getOrCreateAtlas2Mesh(tileId) {
+  function getOrCreateAtlas2Mesh(tileId, maxCount) {
     if (atlas2Meshes[tileId]) return atlas2Meshes[tileId];
     var geo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
     var mat = createAtlasMaterial();
-    var mesh = new THREE.InstancedMesh(geo, mat, 1000);
+    var mesh = new THREE.InstancedMesh(geo, mat, Math.max(maxCount || 1000, 1000));
     mesh.frustumCulled = false;
     mesh.count = 0;
     mesh.userData = { tileId: tileId, isAtlas2: true };
@@ -721,8 +721,9 @@ var WorldBlocks = (function() {
       for (var k in blocks) count++;
       if (count === 0) continue;
 
-      var mesh = getOrCreateAtlas2Mesh(a2Tile);
+      var mesh = getOrCreateAtlas2Mesh(a2Tile, count);
       mesh.count = count;
+      console.log('🗺️ [A2DEBUG] rebuildAtlas2Mesh: a2Tile=' + a2Tile + ', count=' + count);
 
       var dummy = new THREE.Object3D();
       var uvData = new Float32Array(count * 4);
