@@ -505,19 +505,39 @@ var Atlas2Cache = (function() {
     return loadAllKeysPromise;
   }
 
+  var preloadRunning = false;
+  var preloadCallbacks = [];
+
   function preloadAll(callback) {
+    if (callback) preloadCallbacks.push(callback);
+    if (preloadRunning) { console.log('🗺️ Atlas2Cache.preloadAll: already running, queued callback'); return; }
+    preloadRunning = true;
+
     loadAllKeys().then(function() {
       var pending = [];
       for (var i = 0; i < TOTAL_TILES; i++) {
         if (!cachedKeys[i]) pending.push(i);
       }
-      if (pending.length === 0) { if (callback) callback(true); return; }
+      if (pending.length === 0) {
+        preloadRunning = false;
+        var cbs = preloadCallbacks.splice(0);
+        for (var j = 0; j < cbs.length; j++) cbs[j](true);
+        return;
+      }
       console.log('🗺️ Atlas2Cache: Preloading', pending.length, 'tiles');
       var done = 0;
-      var i = 0;
+      var idx = 0;
       function next() {
-        if (i >= pending.length) { if (done + 0 >= pending.length && callback) callback(true); return; }
-        var tileId = pending[i++];
+        if (idx >= pending.length) {
+          if (done >= pending.length) {
+            console.log('🗺️ Atlas2Cache: Preload DONE, fetched', done, 'tiles');
+            preloadRunning = false;
+            var cbs = preloadCallbacks.splice(0);
+            for (var j = 0; j < cbs.length; j++) cbs[j](true);
+          }
+          return;
+        }
+        var tileId = pending[idx++];
         fetchTile(tileId, function(blob) {
           done++;
           setTimeout(next, 0);
