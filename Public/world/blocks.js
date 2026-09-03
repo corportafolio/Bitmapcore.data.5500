@@ -631,15 +631,19 @@ var WorldBlocks = (function() {
 
   function loadAtlas2Texture(tileId, mesh) {
     if (atlas2Textures[tileId]) {
+      console.log('🗺️ [A2DEBUG] loadAtlas2Texture: tileId=' + tileId + ' CACHED, applying to mesh');
       if (mesh.material.map !== atlas2Textures[tileId]) {
         mesh.material.map = atlas2Textures[tileId];
         mesh.material.needsUpdate = true;
       }
+      if (mesh) mesh.visible = true;
       return;
     }
     if (typeof Atlas2Cache !== 'undefined' && Atlas2Cache.ensureAtlas2) {
+      console.log('🗺️ [A2DEBUG] loadAtlas2Texture: tileId=' + tileId + ' calling ensureAtlas2...');
       Atlas2Cache.ensureAtlas2(tileId, function(blob) {
-        if (!blob) return;
+        if (!blob) { console.log('🗺️ [A2DEBUG] loadAtlas2Texture: tileId=' + tileId + ' BLOB IS NULL!'); if (mesh) mesh.visible = true; return; }
+        console.log('🗺️ [A2DEBUG] loadAtlas2Texture: tileId=' + tileId + ' blobSize=' + blob.size + ' bytes');
         var url = URL.createObjectURL(blob);
         var img = new Image();
         img.onload = function() {
@@ -648,14 +652,23 @@ var WorldBlocks = (function() {
           tex.minFilter = THREE.NearestFilter;
           tex.needsUpdate = true;
           atlas2Textures[tileId] = tex;
+          console.log('🗺️ [A2DEBUG] loadAtlas2Texture: tileId=' + tileId + ' texture CREATED, imgW=' + img.width + ' imgH=' + img.height);
           if (mesh) {
             mesh.material.map = tex;
             mesh.material.needsUpdate = true;
+            mesh.visible = true;
+            console.log('🗺️ [A2DEBUG] loadAtlas2Texture: tileId=' + tileId + ' material.map ASSIGNED, needsUpdate=true, mesh VISIBLE');
           }
+          URL.revokeObjectURL(url);
+        };
+        img.onerror = function() {
+          console.log('🗺️ [A2DEBUG] loadAtlas2Texture: tileId=' + tileId + ' IMAGE LOAD FAILED!');
           URL.revokeObjectURL(url);
         };
         img.src = url;
       });
+    } else {
+      console.log('🗺️ [A2DEBUG] loadAtlas2Texture: tileId=' + tileId + ' Atlas2Cache.ensureAtlas2 NOT AVAILABLE');
     }
   }
 
@@ -674,6 +687,7 @@ var WorldBlocks = (function() {
   }
 
   function rebuildAtlas2Mesh() {
+    var oldCount = Object.keys(atlas2Meshes).length;
     for (var tid in atlas2Meshes) {
       var m = atlas2Meshes[tid];
       if (m && m.parent) m.parent.remove(m);
@@ -681,15 +695,24 @@ var WorldBlocks = (function() {
       if (m && m.material) m.material.dispose();
     }
     atlas2Meshes = {};
+    console.log('🗺️ [A2DEBUG] rebuildAtlas2Mesh: destroyed ' + oldCount + ' old meshes, shownBlocks=' + Object.keys(shownBlocks).length);
 
     var blocksByA2Tile = {};
+    var shownBlockCount = 0;
     for (var blockNum in shownBlocks) {
       var bn = parseInt(blockNum);
       if (bn === 0) continue;
+      shownBlockCount++;
       var a2Tile = WorldGrid.getAtlas2Tile(bn);
+      if (a2Tile === undefined || a2Tile === null || a2Tile < 0 || a2Tile > 35) {
+        console.log('🗺️ [A2DEBUG] INVALID a2Tile=' + a2Tile + ' for block=' + bn);
+        continue;
+      }
       if (!blocksByA2Tile[a2Tile]) blocksByA2Tile[a2Tile] = {};
       blocksByA2Tile[a2Tile][bn] = true;
     }
+    var a2TileKeys = Object.keys(blocksByA2Tile);
+    console.log('🗺️ [A2DEBUG] rebuildAtlas2Mesh: nonZeroBlocks=' + shownBlockCount + ', atlas2TileGroups=' + a2TileKeys.length + ', tiles=' + a2TileKeys.join(','));
 
     for (var a2TileStr in blocksByA2Tile) {
       var a2Tile = parseInt(a2TileStr);
@@ -733,11 +756,12 @@ var WorldBlocks = (function() {
   }
 
   function showAtlas2LOD() {
-    if (currentLOD === 'atlas2') return;
+    if (currentLOD === 'atlas2') { console.log('🗺️ [A2DEBUG] showAtlas2LOD: SKIP (already atlas2)'); return; }
     currentLOD = 'atlas2';
+    console.log('🗺️ [A2DEBUG] showAtlas2LOD: SWITCHING to atlas2');
     for (var tid in tileInstanced) { if (tileInstanced[tid]) tileInstanced[tid].visible = false; }
     rebuildAtlas2Mesh();
-    for (var tid in atlas2Meshes) { if (atlas2Meshes[tid]) atlas2Meshes[tid].visible = true; }
+    console.log('🗺️ [A2DEBUG] showAtlas2LOD: created ' + Object.keys(atlas2Meshes).length + ' atlas2 meshes (waiting for textures)');
   }
 
   function hideAtlas2LOD() {
@@ -937,8 +961,10 @@ var WorldBlocks = (function() {
     var nearDir = new THREE.Vector3(camX, camY, camZ).normalize();
 
     var visible = calculateVisibleBlocks(nearDir, distance);
+    console.log('🗺️ [A2DEBUG] updateVisible: dist=' + distance.toFixed(1) + ', visibleBlocks=' + visible.length + ', shownBlocksBefore=' + Object.keys(shownBlocks).length);
 
     applyVisible(visible);
+    console.log('🗺️ [A2DEBUG] applyVisible done, shownBlocksAfter=' + Object.keys(shownBlocks).length);
 
     var cfg = window.WorldConfig || {};
     var DIST_ATLAS2_MIN = cfg.DIST_ATLAS2_MIN || 200;

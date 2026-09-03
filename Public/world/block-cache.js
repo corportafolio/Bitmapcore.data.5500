@@ -510,15 +510,18 @@ var Atlas2Cache = (function() {
 
   function preloadAll(callback) {
     if (callback) preloadCallbacks.push(callback);
-    if (preloadRunning) { console.log('🗺️ Atlas2Cache.preloadAll: already running, queued callback'); return; }
+    if (preloadRunning) { console.log('🗺️ [A2DEBUG] Atlas2Cache.preloadAll: already running, queued callback'); return; }
     preloadRunning = true;
+    console.log('🗺️ [A2DEBUG] Atlas2Cache.preloadAll: START');
 
     loadAllKeys().then(function() {
       var pending = [];
       for (var i = 0; i < TOTAL_TILES; i++) {
         if (!cachedKeys[i]) pending.push(i);
       }
+      console.log('🗺️ [A2DEBUG] Atlas2Cache.preloadAll: loadAllKeys done, cachedKeys count=' + Object.keys(cachedKeys).length + ', pending=' + pending.length);
       if (pending.length === 0) {
+        console.log('🗺️ [A2DEBUG] Atlas2Cache.preloadAll: ALL CACHED, firing callback');
         preloadRunning = false;
         var cbs = preloadCallbacks.splice(0);
         for (var j = 0; j < cbs.length; j++) cbs[j](true);
@@ -548,19 +551,22 @@ var Atlas2Cache = (function() {
   }
 
   function fetchTile(tileId, callback) {
-    if (activeFetches >= MAX_CONCURRENT) { fetchQueue.push({ tileId: tileId, callback: callback }); return; }
+    if (activeFetches >= MAX_CONCURRENT) { console.log('🗺️ [A2DEBUG] fetchTile: tileId=' + tileId + ' QUEUED (activeFetches=' + activeFetches + ')'); fetchQueue.push({ tileId: tileId, callback: callback }); return; }
     activeFetches++;
     var url = '/api/v1/world/atlas2/' + tileId;
+    console.log('🗺️ [A2DEBUG] fetchTile: tileId=' + tileId + ' FETCHING from ' + url + ' (activeFetches=' + activeFetches + ')');
     fetch(url).then(function(r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.blob();
     }).then(function(blob) {
       activeFetches--;
+      console.log('🗺️ [A2DEBUG] fetchTile: tileId=' + tileId + ' RECEIVED ' + blob.size + ' bytes');
       saveBlob(tileId, blob).catch(function() {});
       if (callback) callback(blob);
       processQueue();
-    }).catch(function() {
+    }).catch(function(err) {
       activeFetches--;
+      console.log('🗺️ [A2DEBUG] fetchTile: tileId=' + tileId + ' FETCH ERROR: ' + (err.message || err));
       if (callback) callback(null);
       processQueue();
     });
@@ -575,13 +581,16 @@ var Atlas2Cache = (function() {
 
   function ensureAtlas2(tileId, callback) {
     loadAllKeys().then(function() {
+      console.log('🗺️ [A2DEBUG] ensureAtlas2: tileId=' + tileId + ', cachedKeys[tileId]=' + !!cachedKeys[tileId]);
       if (cachedKeys[tileId]) {
         getBlob(tileId).then(function(blob) {
+          console.log('🗺️ [A2DEBUG] ensureAtlas2: tileId=' + tileId + ', getBlob returned=' + (blob ? blob.size + ' bytes' : 'NULL'));
           if (blob) callback(blob);
-          else { delete cachedKeys[tileId]; fetchTile(tileId, callback); }
-        });
+          else { delete cachedKeys[tileId]; console.log('🗺️ [A2DEBUG] ensureAtlas2: tileId=' + tileId + ' blob null, fetching from server'); fetchTile(tileId, callback); }
+        }).catch(function(err) { console.log('🗺️ [A2DEBUG] ensureAtlas2: tileId=' + tileId + ' getBlob ERROR: ' + err.message); fetchTile(tileId, callback); });
         return;
       }
+      console.log('🗺️ [A2DEBUG] ensureAtlas2: tileId=' + tileId + ' not cached, fetching from server');
       fetchTile(tileId, callback);
     });
   }
