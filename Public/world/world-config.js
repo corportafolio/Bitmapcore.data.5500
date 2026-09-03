@@ -8,15 +8,15 @@
     ZOOM_ATLAS_MAX: 2.9,
     ZOOM_BLOCK_MODE: 3.0,
 
-    // Distancias de cámara (aprox. correlacionadas con los zooms)
-    DIST_ATLAS2_MIN: 200,  // distancia para activar atlas2 (vista lejana)
-    DIST_ATLAS_MIN: 120,   // distancia aproximada para activar atlas 2.7-2.9
-    DIST_BLOCK_MODE: 105,  // distancia aproximada para activar modo bloque (3.0)
+    // Distancias de cámara (escala del indicador de proximidad 200 → 100)
+    DIST_ATLAS2_MIN: 111,  // >111: atlas2 (vista lejana, hasta 200)
+    DIST_ATLAS_MIN: 110,   // 104-110: atlas1 (tiles gz)
+    DIST_BLOCK_MODE: 103,  // <=103: imágenes individuales de bloques
 
     // Avatar scale thresholds
     AVATAR_SCALE_NEAR: 2,  // scale cuando distance < 110
-    AVATAR_SCALE_MAX: 3,   // scale cuando distance < 105
-    AVATAR_ENTER_DIST: 110,
+    AVATAR_SCALE_MAX: 3,   // scale cuando distance <= 103
+    AVATAR_ENTER_DIST: 104,
     AVATAR_EXIT_DIST: 140,
 
     // Streets visibility (hysteresis)

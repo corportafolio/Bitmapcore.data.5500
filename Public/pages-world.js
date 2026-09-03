@@ -9,10 +9,31 @@ var PagesWorld = (function() {
     var compassRef = React.useRef(null);
     var infoRef = React.useRef(null);
     var blockInfoRef = React.useRef(null);
+    var proximityRef = React.useRef(null);
     var zoomIndicatorRef = React.useRef(null);
     var cameraArrowsRef = React.useRef(null);
     var dpadRef = React.useRef(null);
     var lastMode = 'camera';
+
+    function proxSpan(v, on) {
+      return on
+        ? '<span style="color:#FE3E00;font-weight:bold">' + v + '</span>'
+        : '<span style="color:#666">' + v + '</span>';
+    }
+
+    function renderProximity(distance) {
+      if (!proximityRef.current) return;
+      var d = distance;
+      var a2 = d > 111;
+      var a1 = d > 103 && d <= 111;
+      var bl = d <= 103;
+      var zone = a2 ? 'ATLAS2 (111-200)' : (a1 ? 'ATLAS1 (104-110)' : 'BLOQUES (<=103)');
+      proximityRef.current.innerHTML =
+        '<div>' + proxSpan(200, a2) + ' → ' + proxSpan(111, a2) + ' → ' +
+        proxSpan(110, a1) + ' → ' + proxSpan(104, a1) + ' → ' +
+        proxSpan(103, bl) + ' → ' + proxSpan(100, bl) + '</div>' +
+        '<div style="color:#FE3E00">' + zone + ' · dist ' + Math.round(d) + '</div>';
+    }
 
     var onControlsChange = React.useCallback(function(theta, phi, distance) {
       if (compassRef.current) {
@@ -22,6 +43,7 @@ var PagesWorld = (function() {
         var zoomLevel = (300 / distance).toFixed(1);
         zoomIndicatorRef.current.textContent = 'Zoom: ' + zoomLevel + 'x';
       }
+      renderProximity(distance);
 
       var isAvatarMode = distance < AVATAR_MODE_DIST;
       var currentMode = isAvatarMode ? 'avatar' : 'camera';
@@ -248,7 +270,11 @@ var PagesWorld = (function() {
         React.createElement('div', {
           ref: blockInfoRef,
           style: { color: '#B0B0B0', fontSize: '10px', fontFamily: 'monospace', marginTop: '8px', lineHeight: '1.6' }
-        }, 'Bloque #0 | 0 tx | 0.0°N, 0.0°E')
+        }, 'Bloque #0 | 0 tx | 0.0°N, 0.0°E'),
+        React.createElement('div', {
+          ref: proximityRef,
+          style: { color: '#B0B0B0', fontSize: '10px', fontFamily: 'monospace', marginTop: '4px', lineHeight: '1.6', whiteSpace: 'nowrap' }
+        }, '200 → 111 → 110 → 104 → 103 → 100')
       ),
       React.createElement('div', {
         style: {

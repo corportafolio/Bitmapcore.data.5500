@@ -968,9 +968,9 @@ var WorldBlocks = (function() {
     console.log('🗺️ [A2DEBUG] applyVisible done, shownBlocksAfter=' + Object.keys(shownBlocks).length);
 
     var cfg = window.WorldConfig || {};
-    var DIST_ATLAS2_MIN = cfg.DIST_ATLAS2_MIN || 200;
-    var distAtlasMin = cfg.DIST_ATLAS_MIN || 120;
-    var distBlockMode = cfg.DIST_BLOCK_MODE || 105;
+    var DIST_ATLAS2_MIN = cfg.DIST_ATLAS2_MIN || 111;
+    var distAtlasMin = cfg.DIST_ATLAS_MIN || 110;
+    var distBlockMode = cfg.DIST_BLOCK_MODE || 103;
 
     if (distance > DIST_ATLAS2_MIN) {
       showAtlas2LOD();
@@ -978,7 +978,7 @@ var WorldBlocks = (function() {
       hideAtlas2LOD();
     }
 
-    if (distance <= distAtlasMin && distance > 112) {
+    if (distance <= distAtlasMin && distance > distBlockMode) {
       // show atlas planes around central tile
       if (!atlasPlanesShown && visible.length > 0) {
         var centerBlock = visible[0].blockNum;
@@ -1067,6 +1067,9 @@ var WorldBlocks = (function() {
     loadTimer = setTimeout(function() {
       var state = WorldControls.getState();
       updateVisible(theta, phi, state.distance);
+      if (typeof AtlasCache !== 'undefined' && AtlasCache.updateRegionFromCamera) {
+        AtlasCache.updateRegionFromCamera();
+      }
     }, LOAD_DEBOUNCE);
   }
 

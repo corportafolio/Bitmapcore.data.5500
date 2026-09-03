@@ -185,7 +185,7 @@ var BlockCache = (function() {
 
 var AtlasCache = (function() {
   var DB_NAME = 'BitmapCoreAtlasCache';
-  var DB_VERSION = 2;
+  var DB_VERSION = 3;
   var STORE_NAME = 'atlas';
   var db = null;
 var inFlight = {};
@@ -204,6 +204,11 @@ var MAX_CONCURRENT_FETCHES = 6;
       request.onsuccess = function() { db = request.result; resolve(db); };
       request.onupgradeneeded = function(e) {
         var database = e.target.result;
+        if (e.oldVersion < 3) {
+          if (database.objectStoreNames.contains(STORE_NAME)) {
+            database.deleteObjectStore(STORE_NAME);
+          }
+        }
         if (!database.objectStoreNames.contains(STORE_NAME)) {
           database.createObjectStore(STORE_NAME, { keyPath: 'gz' });
         }
@@ -291,62 +296,101 @@ var MAX_CONCURRENT_FETCHES = 6;
   var ATLAS_TOTAL = 956;
   var ATLAS_CONCURRENT = 50;
   var preloadRunning = false;
+  var preloadToken = 0;
+  var preloadRadius = 2;
+  var lastRegionCenter = null;
+
+  function tileFromCam() {
+    var camRow = 0, camCol = 6;
+    try {
+      if (typeof WorldControls !== 'undefined' && WorldControls.getState) {
+        var st = WorldControls.getState();
+        var t = st.theta, p = st.phi;
+        var gx = Math.round((t / (Math.PI * 2)) * 1000) % 1000;
+        camCol = Math.floor(gx / 40);
+        if (p >= 0) camRow = Math.floor((p / (Math.PI / 2)) * 499 / 25);
+        else camRow = 20 + Math.floor(((-p / (Math.PI / 2)) * 455) / 25);
+        camRow = Math.max(0, Math.min(38, camRow));
+        camCol = Math.max(0, Math.min(24, camCol));
+      }
+    } catch (e) {}
+    return { row: camRow, col: camCol };
+  }
+
+  function regionPending(center, radius) {
+    var pending = [];
+    for (var dr = -radius; dr <= radius; dr++) {
+      for (var dc = -radius; dc <= radius; dc++) {
+        var r = center.row + dr;
+        var c = center.col + dc;
+        if (r < 0 || r > 38 || c < 0 || c > 24) continue;
+        var gz = r * 25 + c;
+        if (gz < 0 || gz > 955) continue;
+        if (!hasAtlas(gz)) pending.push(gz);
+      }
+    }
+    pending.sort(function(a, b) {
+      var ra = Math.floor(a / 25), ca = a % 25;
+      var rb = Math.floor(b / 25), cb = b % 25;
+      var da = Math.abs(ra - center.row) + Math.abs(ca - center.col);
+      var db = Math.abs(rb - center.row) + Math.abs(cb - center.col);
+      return da - db;
+    });
+    return pending;
+  }
+
+  function cancelPreload() {
+    preloadToken++;
+    preloadRunning = false;
+  }
 
   function preloadAll(callback) {
     if (preloadRunning) return;
     preloadRunning = true;
-    var done = 0;
-    var errors = 0;
+    var token = ++preloadToken;
 
     loadAllKeys().then(function() {
-      var pending = [];
-      for (var gz = 0; gz < ATLAS_TOTAL; gz++) {
-        if (!hasAtlas(gz)) pending.push(gz);
-      }
+      if (token !== preloadToken) { preloadRunning = false; if (callback) callback(true); return; }
+      var center = tileFromCam();
+      lastRegionCenter = center;
+      var pending = regionPending(center, preloadRadius);
       if (pending.length === 0) {
         preloadRunning = false;
         if (callback) callback(true);
         return;
       }
 
-      // Ordenar por cercanía al centro de vista actual de la cámara
-      var camRow = 0, camCol = 6;
-      try {
-        if (typeof WorldControls !== 'undefined' && WorldControls.getState) {
-          var st = WorldControls.getState();
-          var t = st.theta, p = st.phi;
-          var gx = Math.round((t / (Math.PI * 2)) * 1000) % 1000;
-          camCol = Math.floor(gx / 40);
-          if (p >= 0) camRow = Math.floor((p / (Math.PI / 2)) * 499 / 25);
-          else camRow = 20 + Math.floor(((-p / (Math.PI / 2)) * 455) / 25);
-          camRow = Math.max(0, Math.min(38, camRow));
-        }
-      } catch (e) {}
-      pending.sort(function(a, b) {
-        var ra = Math.floor(a / 25), ca = a % 25;
-        var rb = Math.floor(b / 25), cb = b % 25;
-        var da = Math.abs(ra - camRow) + Math.abs(ca - camCol);
-        var db = Math.abs(rb - camRow) + Math.abs(cb - camCol);
-        return da - db;
-      });
-
       var i = 0;
       function next() {
+        if (token !== preloadToken) {
+          preloadRunning = false;
+          if (callback) callback(true);
+          return;
+        }
         if (i >= pending.length) {
-          if (done + errors >= pending.length) {
-            preloadRunning = false;
-            if (callback) callback(true);
-          }
+          preloadRunning = false;
+          if (callback) callback(true);
           return;
         }
         var gz = pending[i++];
-        fetchAtlas(gz, function(blob) {
-          if (blob) done++; else errors++;
-          next();
-        });
+        fetchAtlas(gz, function() { next(); }, false);
       }
       for (var c = 0; c < ATLAS_CONCURRENT && c < pending.length; c++) next();
     });
+  }
+
+  function updateRegionFromCamera() {
+    if (!preloadRunning) {
+      preloadAll();
+      return;
+    }
+    var center = tileFromCam();
+    if (!lastRegionCenter) { preloadAll(); return; }
+    var moved = Math.abs(center.row - lastRegionCenter.row) + Math.abs(center.col - lastRegionCenter.col);
+    if (moved >= 2) {
+      cancelPreload();
+      preloadAll();
+    }
   }
 
   function ensureAtlas(gz, callback) {
@@ -361,13 +405,13 @@ var MAX_CONCURRENT_FETCHES = 6;
           } else {
             console.warn('🗺️ AtlasCache.ensureAtlas: gz', gz, 'blob NOT FOUND in IndexedDB, fetching');
             delete cachedKeys[gz];
-            fetchAtlas(gz, callback);
+            fetchAtlas(gz, callback, true);
           }
         });
         return;
       }
       console.log('🗺️ AtlasCache.ensureAtlas: gz', gz, 'NOT in cachedKeys, fetching from API');
-      fetchAtlas(gz, callback);
+      fetchAtlas(gz, callback, true);
     });
   }
 
@@ -379,10 +423,13 @@ var MAX_CONCURRENT_FETCHES = 6;
     }
   }
 
-  function fetchAtlas(gz, callback) {
+  function fetchAtlas(gz, callback, urgent) {
     if (activeFetches < MAX_CONCURRENT_FETCHES) {
       activeFetches++;
       doFetch(gz, callback);
+    } else if (urgent) {
+      fetchQueue.unshift({ gz: gz, callback: callback });
+      processFetchQueue();
     } else {
       fetchQueue.push({ gz: gz, callback: callback });
       processFetchQueue();
@@ -427,13 +474,15 @@ var MAX_CONCURRENT_FETCHES = 6;
     getAtlasBlob: getAtlasBlob,
     saveAtlasBlob: saveAtlasBlob,
     loadAllKeys: loadAllKeys,
-    preloadAll: preloadAll
+    preloadAll: preloadAll,
+    cancelPreload: cancelPreload,
+    updateRegionFromCamera: updateRegionFromCamera
   };
 })();
 
 var Atlas2Cache = (function() {
   var DB_NAME = 'BitmapCoreAtlas2Cache';
-  var DB_VERSION = 1;
+  var DB_VERSION = 2;
   var STORE_NAME = 'atlas2';
   var db = null;
   var cachedKeys = {};
@@ -452,6 +501,11 @@ var Atlas2Cache = (function() {
       request.onsuccess = function() { db = request.result; resolve(db); };
       request.onupgradeneeded = function(e) {
         var database = e.target.result;
+        if (e.oldVersion < 2) {
+          if (database.objectStoreNames.contains(STORE_NAME)) {
+            database.deleteObjectStore(STORE_NAME);
+          }
+        }
         if (!database.objectStoreNames.contains(STORE_NAME)) {
           database.createObjectStore(STORE_NAME, { keyPath: 'tileId' });
         }
