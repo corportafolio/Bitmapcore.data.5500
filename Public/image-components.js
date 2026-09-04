@@ -212,7 +212,7 @@ function WalletResultCard(props) {
           )
         ),
         React.createElement('div', { className:'flex-1 min-w-0' },
-          React.createElement('div', { className:'font-mono text-sm text-white truncate' }, shortAddr(address)),
+          React.createElement('div', { className:'font-mono text-sm text-white truncate' }, shortAddr),
           React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, I18n.t('home.wallet'))
         )
       ),
