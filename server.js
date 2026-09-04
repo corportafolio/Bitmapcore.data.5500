@@ -918,14 +918,14 @@ app.get('/api/v1/wallet/:address/summary', async (req, res) => {
     // Count inscriptions from unified cache (local marketplace)
     let unifiedInscriptions = 0;
     if (dbUnified) {
-      const row = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_cache WHERE ownerAddress = ?").get(address);
+      const row = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_listings WHERE ownerAddress = ?").get(address);
       unifiedInscriptions = row?.c || 0;
     }
 
     // Count bitmaps from unified cache (where bitmapId != '')
     let bitmapsCount = 0;
     if (dbUnified) {
-      const row = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_cache WHERE ownerAddress = ? AND bitmapId != '' AND bitmapId IS NOT NULL").get(address);
+      const row = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_listings WHERE ownerAddress = ? AND bitmapId != '' AND bitmapId IS NOT NULL").get(address);
       bitmapsCount = row?.c || 0;
     }
 
@@ -974,10 +974,10 @@ app.get('/api/v1/wallet/:address/summary', async (req, res) => {
 
     // Unified (local) collection
     if (dbUnified) {
-      const unCount = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_cache WHERE ownerAddress = ?").get(address);
+      const unCount = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_listings WHERE ownerAddress = ?").get(address);
       if (unCount && unCount.c > 0) {
-        const floor = (dbUnified.prepare("SELECT MIN(listedPrice) as f FROM unified_cache WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.f || 0;
-        const totalValue = (dbUnified.prepare("SELECT SUM(listedPrice) as v FROM unified_cache WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.v || 0;
+        const floor = (dbUnified.prepare("SELECT MIN(listedPrice) as f FROM unified_listings WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.f || 0;
+        const totalValue = (dbUnified.prepare("SELECT SUM(listedPrice) as v FROM unified_listings WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.v || 0;
         collections.push({
           name: 'BitmapCore (Local)',
           count: unCount.c,
@@ -992,7 +992,7 @@ app.get('/api/v1/wallet/:address/summary', async (req, res) => {
     if (dbUnified) {
       const exp = dbUnified.prepare(`
         SELECT bitmapNumber, listedPrice, hash, etiquetas
-        FROM unified_cache
+        FROM unified_listings
         WHERE ownerAddress = ? AND listedPrice > 0 AND bitmapId != ''
         ORDER BY listedPrice DESC
         LIMIT 1
