@@ -92,6 +92,7 @@ var BitmapConstants = {
     { path: '/tags/:tagName', name: 'tag-table' },
     { path: '/wallet', name: 'wallet' },
     { path: '/wallet/dashboard', name: 'wallet-dashboard' },
+    { path: '/wallet/:address', name: 'wallet-detail' },
     { path: '/mis-activos', name: 'mis-activos' },
     { path: '/wallet/transaction/:id', name: 'transaction' },
     { path: '/mondrian/:id', name: 'mondrian' },

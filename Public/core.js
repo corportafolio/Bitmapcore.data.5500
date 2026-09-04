@@ -100,6 +100,7 @@
       React.createElement(Route, { path:'/wallet/dashboard', element:wrapper(safe(WalletDashboardPage)) }),
       React.createElement(Route, { path:'/mis-activos', element:wrapper(safe(MisActivosPage)) }),
       React.createElement(Route, { path:'/mis-activos/detalle/:collectionName', element:wrapper(safe(DetallePage)) }),
+      React.createElement(Route, { path:'/wallet/:address', element:wrapper(safe(WalletDetailPage)) }),
       React.createElement(Route, { path:'/wallet/transaction/:id', element:wrapper(safe(TransactionPage)) }),
       React.createElement(Route, { path:'/mondrian/:id', element:wrapper(safe(MondrianPreviewPage)) }),
       React.createElement(Route, { path:'/search', element:wrapper(safe(BlockSearchPage)) }),

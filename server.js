@@ -881,6 +881,151 @@ app.get('/api/v1/bitmasowner/:address', (req, res) => {
   }
 });
 
+app.get('/api/v1/wallet/:address/summary', async (req, res) => {
+  if (!db) return sendSuccess(res, { address: req.params.address, inscriptionsCount: 0, bitmapsCount: 0, btcBalance: 0, totalPortfolioValue: '0 BTC', collections: [] });
+  try {
+    const address = req.params.address;
+    
+    // Validate address format
+    if (!/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/.test(address)) {
+      return sendError(res, 'Invalid address format', 400);
+    }
+
+    // Get BTC balance
+    let btcBalance = 0;
+    try {
+      const balanceRes = await fetch(`http://127.0.0.1:3000/api/v1/wallet/${address}/balance`);
+      if (balanceRes.ok) {
+        const balData = await balanceRes.json();
+        btcBalance = balData.data?.balance || 0;
+      }
+    } catch (e) {}
+
+    // Count inscriptions from ordinalswallet cache
+    let owInscriptions = 0;
+    if (dbOw) {
+      const row = dbOw.prepare("SELECT COUNT(*) as c FROM ordinalswallet_cache WHERE ownerAddress = ?").get(address);
+      owInscriptions = row?.c || 0;
+    }
+
+    // Count inscriptions from unisat cache
+    let unisatInscriptions = 0;
+    if (dbUnisat) {
+      const row = dbUnisat.prepare("SELECT COUNT(*) as c FROM unisat_cache WHERE ownerAddress = ?").get(address);
+      unisatInscriptions = row?.c || 0;
+    }
+
+    // Count inscriptions from unified cache (local marketplace)
+    let unifiedInscriptions = 0;
+    if (dbUnified) {
+      const row = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_cache WHERE ownerAddress = ?").get(address);
+      unifiedInscriptions = row?.c || 0;
+    }
+
+    // Count bitmaps from unified cache (where bitmapId != '')
+    let bitmapsCount = 0;
+    if (dbUnified) {
+      const row = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_cache WHERE ownerAddress = ? AND bitmapId != '' AND bitmapId IS NOT NULL").get(address);
+      bitmapsCount = row?.c || 0;
+    }
+
+    // Also check bitmasowner if implemented
+    let bitmasownerCount = 0;
+    if (db) {
+      try {
+        const row = db.prepare("SELECT COUNT(*) as c FROM bitmasowner WHERE address = ?").get(address);
+        bitmasownerCount = row?.c || 0;
+      } catch (e) {}
+    }
+    bitmapsCount += bitmasownerCount;
+
+    // Get collections summary from caches
+    const collections = [];
+
+    // Ordinalswallet collection
+    if (dbOw) {
+      const owCount = dbOw.prepare("SELECT COUNT(*) as c FROM ordinalswallet_cache WHERE ownerAddress = ?").get(address);
+      if (owCount && owCount.c > 0) {
+        const floor = (dbOw.prepare("SELECT MIN(listedPrice) as f FROM ordinalswallet_cache WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.f || 0;
+        const totalValue = (dbOw.prepare("SELECT SUM(listedPrice) as v FROM ordinalswallet_cache WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.v || 0;
+        collections.push({
+          name: 'Ordinalswallet',
+          count: owCount.c,
+          floorPrice: floor,
+          totalValue: totalValue
+        });
+      }
+    }
+
+    // Unisat collection
+    if (dbUnisat) {
+      const usCount = dbUnisat.prepare("SELECT COUNT(*) as c FROM unisat_cache WHERE ownerAddress = ?").get(address);
+      if (usCount && usCount.c > 0) {
+        const floor = (dbUnisat.prepare("SELECT MIN(listedPrice) as f FROM unisat_cache WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.f || 0;
+        const totalValue = (dbUnisat.prepare("SELECT SUM(listedPrice) as v FROM unisat_cache WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.v || 0;
+        collections.push({
+          name: 'Unisat',
+          count: usCount.c,
+          floorPrice: floor,
+          totalValue: totalValue
+        });
+      }
+    }
+
+    // Unified (local) collection
+    if (dbUnified) {
+      const unCount = dbUnified.prepare("SELECT COUNT(*) as c FROM unified_cache WHERE ownerAddress = ?").get(address);
+      if (unCount && unCount.c > 0) {
+        const floor = (dbUnified.prepare("SELECT MIN(listedPrice) as f FROM unified_cache WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.f || 0;
+        const totalValue = (dbUnified.prepare("SELECT SUM(listedPrice) as v FROM unified_cache WHERE ownerAddress = ? AND listedPrice > 0").get(address))?.v || 0;
+        collections.push({
+          name: 'BitmapCore (Local)',
+          count: unCount.c,
+          floorPrice: floor,
+          totalValue: totalValue
+        });
+      }
+    }
+
+    // Find most expensive bitmap
+    let mostExpensive = null;
+    if (dbUnified) {
+      const exp = dbUnified.prepare(`
+        SELECT bitmapNumber, listedPrice, hash, etiquetas
+        FROM unified_cache
+        WHERE ownerAddress = ? AND listedPrice > 0 AND bitmapId != ''
+        ORDER BY listedPrice DESC
+        LIMIT 1
+      `).get(address);
+      if (exp) {
+        mostExpensive = {
+          blockNumber: exp.bitmapNumber,
+          price: exp.listedPrice,
+          tags: exp.etiquetas || ''
+        };
+      }
+    }
+
+    // Calculate total portfolio value
+    let totalPortfolioValue = 0;
+    collections.forEach(c => { totalPortfolioValue += c.totalValue || 0; });
+
+sendSuccess(res, {
+              address,
+              inscriptionsCount: owInscriptions + unisatInscriptions + unifiedInscriptions,
+              bitmapsCount,
+              btcBalance,
+              totalPortfolioValue: (totalPortfolioValue / 100000000).toFixed(8) + ' BTC',
+              mostExpensiveBitmap: mostExpensive,
+              collections
+            });
+
+  } catch (err) {
+    console.error('Wallet summary error:', err);
+    sendError(res, err.message);
+  }
+});
+
 // ===== PSBT =====
 app.post('/api/v1/transaction/psbt', (req, res) => {
   if (!db) return sendError(res, 'No database', 500);

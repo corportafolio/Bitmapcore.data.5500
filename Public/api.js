@@ -31,7 +31,8 @@ var ProxyRoutes = {
 var WalletApi = {
   connect: function(address) { return ApiClient.post('/api/v1/wallet/connect', { address: address }, true); },
   getBalance: function(address) { return ApiClient.get('/api/v1/wallet/' + address + '/balance', true); },
-  getUTXOs: function(address) { return ApiClient.get('/api/v1/wallet/' + address + '/utxos', true); }
+  getUTXOs: function(address) { return ApiClient.get('/api/v1/wallet/' + address + '/utxos', true); },
+  getSummary: function(address) { return ApiClient.get('/api/v1/wallet/' + address + '/summary', true); }
 };
 
 var BlockchainApi = {

@@ -1559,3 +1559,166 @@ function PSBTPage(props) {
     toast ? React.createElement(Toast, { message:toast, type:'info', onDone:function() { setToast(''); } }) : null
   );
 }
+
+function WalletDetailPage(props) {
+  var navigate = props.navigate;
+  var routeParams = ReactRouterDOM.useParams();
+  var address = routeParams.address;
+  var _a = React.useState(null);
+  var data = _a[0];
+  var setData = _a[1];
+  var _b = React.useState(true);
+  var isLoading = _b[0];
+  var setIsLoading = _b[1];
+  var _c = React.useState(null);
+  var error = _c[0];
+  var setError = _c[1];
+
+  React.useEffect(function() {
+    var cancelled = false;
+    async function loadWallet() {
+      setIsLoading(true);
+      try {
+        var res = await WalletApi.getSummary(address);
+        if (!cancelled && res && res.data) {
+          setData(res.data);
+        } else if (!cancelled) {
+          setError('No se pudo cargar la wallet');
+        }
+      } catch (e) {
+        if (!cancelled) setError(e.message || 'Error cargando wallet');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    loadWallet();
+    return function() { cancelled = true; };
+  }, [address]);
+
+  if (!address) {
+    return React.createElement('div', { className:'p-4 lg:p-6' },
+      React.createElement('div', { className:'max-w-md mx-auto text-center py-12' },
+        React.createElement('p', { className:'font-acme text-bitmap-muted' }, 'No address provided'),
+        React.createElement('button', {
+          onClick:function() { navigate(-1); },
+          className:'mt-4 px-4 py-2 bg-bitmap-orange text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-orange/80'
+        }, I18n.t('app.back'))
+      )
+    );
+  }
+
+  if (isLoading) {
+    return React.createElement('div', { className:'p-4 lg:p-6' },
+      React.createElement('div', { className:'max-w-4xl mx-auto' },
+        React.createElement('div', { className:'text-center py-12' },
+          React.createElement('div', { className:'animate-spin rounded-full h-8 w-8 border-2 border-bitmap-orange border-t-transparent mx-auto' }),
+          React.createElement('p', { className:'mt-4 font-acme text-bitmap-muted' }, I18n.t('app.loading'))
+        )
+      )
+    );
+  }
+
+  var d = data || {};
+  var inscriptionsCount = d.inscriptionsCount || 0;
+  var bitmapsCount = d.bitmapsCount || 0;
+  var btcBalance = d.btcBalance || 0;
+  var totalPortfolioValue = d.totalPortfolioValue || '0 BTC';
+  var mostExpensive = d.mostExpensiveBitmap;
+  var collections = d.collections || [];
+
+  function shortAddr(addr) {
+    if (!addr) return '';
+    return addr.slice(0, 6) + '...' + addr.slice(-4);
+  }
+
+  function formatBtcSmall(sats) {
+    if (!sats) return '0';
+    return (sats / 100000000).toFixed(8);
+  }
+
+  return React.createElement('div', { className:'p-4 lg:p-6' },
+    React.createElement('div', { className:'max-w-4xl mx-auto space-y-4' },
+      React.createElement('div', { className:'flex items-center justify-between' },
+        React.createElement('button', {
+          onClick:function() { navigate(-1); },
+          className:'font-alfaslab text-bitmap-orange text-sm hover:text-bitmap-orange-light transition-colors'
+        }, I18n.t('app.back')),
+        React.createElement('div', { className:'flex items-center gap-2' },
+          React.createElement('span', { className:'font-mono text-sm text-white truncate max-w-[200px]' }, address),
+          React.createElement('button', {
+            onClick:function() { navigate('/wallet'); },
+            className:'ml-2 px-3 py-1.5 bg-bitmap-surface border border-bitmap-border text-white font-alfaslab text-sm rounded-lg hover:bg-bitmap-orange transition-colors'
+          }, I18n.t('wallet.connect'))
+        )
+      ),
+      React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-4' },
+        React.createElement('div', { className:'flex items-center justify-between mb-4' },
+          React.createElement('div', { className:'flex items-center gap-2' },
+            React.createElement('div', { className:'w-10 h-10 rounded-full bg-bitmap-orange/20 flex items-center justify-center flex-shrink-0' },
+              React.createElement('svg', { className:'w-6 h-6 text-bitmap-orange', fill:'currentColor', viewBox:'0 0 24 24' },
+                React.createElement('path', { d:'M21 12V7H5v14h14v-7M21 12l-6 6M21 12l-6-6' })
+              )
+            ),
+            React.createElement('div', null,
+              React.createElement('div', { className:'font-mono text-sm text-white truncate' }, address.slice(0, 6) + '...' + address.slice(-4)),
+              React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, I18n.t('home.wallet'))
+            )
+          ),
+          React.createElement('div', { className:'flex items-center gap-2 text-right' },
+            React.createElement('div', { className:'font-acme text-sm text-bitmap-orange-light font-bold' }, (btcBalance / 100000000).toFixed(8) + ' BTC'),
+            React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, I18n.t('wallet.balance'))
+          )
+        ),
+        React.createElement('div', { className:'grid grid-cols-3 gap-3 mb-4' },
+          React.createElement('div', { className:'bg-bitmap-black/50 rounded-lg p-3 text-center' },
+            React.createElement('div', { className:'font-acme text-lg text-bitmap-orange font-bold' }, inscriptionsCount),
+            React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, I18n.t('home.inscriptions'))
+          ),
+          React.createElement('div', { className:'bg-bitmap-black/50 rounded-lg p-3 text-center' },
+            React.createElement('div', { className:'font-acme text-lg text-bitmap-orange font-bold' }, bitmapsCount),
+            React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, I18n.t('home.bitmaps'))
+          ),
+          React.createElement('div', { className:'bg-bitmap-black/50 rounded-lg p-3 text-center' },
+            React.createElement('div', { className:'font-acme text-lg text-bitmap-orange-light font-bold' }, (btcBalance / 100000000).toFixed(8) + ' BTC'),
+            React.createElement('div', { className:'font-acme text-xs text-bitmap-muted' }, I18n.t('wallet.balance'))
+          )
+        ),
+        React.createElement('div', { className:'bg-bitmap-black/30 rounded-lg p-3 mb-4' },
+          React.createElement('div', { className:'font-acme text-sm text-bitmap-orange-light flex justify-between' },
+            React.createElement('span', null, I18n.t('home.portfolioValue')),
+            React.createElement('span', { className:'font-bold' }, totalPortfolioValue || '0 BTC')
+          )
+        ),
+        React.createElement('div', { className:'mb-4' },
+          React.createElement('h3', { className:'font-alfaslab text-sm text-bitmap-orange mb-2' }, I18n.t('home.mostExpensive')),
+          mostExpensive ? React.createElement('div', { className:'flex items-center gap-3 bg-bitmap-black/30 rounded-lg p-3' },
+            React.createElement('img', {
+              src:'/api/v1/block-image/' + mostExpensive.blockNumber + '?v=5&size=80&etiquetas=' + encodeURIComponent(mostExpensive.tags || '') + '&tx=1&hash=&grid=false&punk=false',
+              className:'w-16 h-16 rounded object-cover flex-shrink-0'
+            }),
+            React.createElement('div', { className:'flex-1 min-w-0' },
+              React.createElement('div', { className:'font-mono text-sm text-white truncate' }, mostExpensive.blockNumber + '.bitmap'),
+              React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light' }, (mostExpensive.price / 100000000).toFixed(8) + ' BTC')
+            )
+          ) : React.createElement('p', { className:'font-acme text-bitmap-muted text-center py-4' }, I18n.t('home.noBitmaps'))
+        ),
+        React.createElement('div', { className:'mb-4' },
+          React.createElement('h3', { className:'font-alfaslab text-sm text-bitmap-orange mb-2' }, I18n.t('home.collections')),
+          React.createElement('div', { className:'flex flex-wrap gap-2' },
+            (collections || []).map(function(c) {
+              return React.createElement('div', {
+                key: c.name,
+                className:'bg-bitmap-black/30 rounded-lg p-3 flex-1 min-w-[140px]'
+              },
+                React.createElement('div', { className:'font-acme text-xs text-bitmap-muted mb-1' }, c.name),
+                React.createElement('div', { className:'font-acme text-sm text-bitmap-orange font-bold' }, c.count + ' ' + I18n.t('home.bitmaps')),
+                React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light' }, (c.floorPrice / 100000000).toFixed(8) + ' BTC floor'),
+                React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light' }, (c.totalValue / 100000000).toFixed(8) + ' BTC total')
+              );
+            })
+          )
+        )
+      )
+    )
+  );
+}

@@ -45,35 +45,53 @@ function HomePage(props) {
     return function() { clearInterval(interval); };
   }, []);
 
+  var WALLET_ADDRESS_REGEX = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/;
+
   var commitSearch = function(query) {
     if (!query.trim()) return;
+    var trimmedQuery = query.trim();
     setSearchQuery('');
     setIsSearching(true);
     var results = [];
-    var num = parseInt(query);
-    if (!isNaN(num)) {
-      BlockViewModel.getBlock(num).then(function(block) {
-        setIsSearching(false);
-        if (!block) {
-          setNoBlockMessage(I18n.t('home.blockNotFound') + num + I18n.t('home.blockNotFoundSuffix'));
-          if (noBlockTimer) clearTimeout(noBlockTimer);
-          noBlockTimer = setTimeout(function() { setNoBlockMessage(''); }, 10000);
-          return;
-        }
-        var etiquetas = block.etiquetas || '';
-        var hash = block.hash || '';
-        var totalTransactions = block.totalTransacciones || 0;
-        var newResult = {
-          type:'block', id:num, label:num + '.bitmap',
-          etiquetas:etiquetas, hash:hash, totalTransactions:totalTransactions
-        };
-        setPinnedResults(function(prev) {
-          var exists = prev.some(function(r) { return r.type === newResult.type && r.id === newResult.id; });
-          if (exists) return prev;
-          return [newResult].concat(prev).slice(0, 5);
+    var num = parseInt(trimmedQuery);
+
+    // Check if query is a wallet address
+    if (WALLET_ADDRESS_REGEX.test(trimmedQuery)) {
+      // Fetch wallet summary
+      if (typeof WalletApi !== 'undefined' && WalletApi.getSummary) {
+        WalletApi.getSummary(trimmedQuery).then(function(res) {
+          if (res && res.data) {
+            var walletData = res.data;
+            var walletResult = {
+              type: 'wallet',
+              id: trimmedQuery,
+              label: trimmedQuery,
+              address: trimmedQuery,
+              inscriptionsCount: walletData.inscriptionsCount || 0,
+              bitmapsCount: walletData.bitmapsCount || 0,
+              btcBalance: walletData.btcBalance || 0,
+              totalPortfolioValue: walletData.totalPortfolioValue || '0 BTC',
+              mostExpensiveBitmap: walletData.mostExpensiveBitmap,
+              collections: walletData.collections || []
+            };
+            setPinnedResults(function(prev) {
+              var exists = prev.some(function(r) { return r.type === 'wallet' && r.id === trimmedQuery; });
+              if (exists) return prev;
+              return [walletResult].concat(prev).slice(0, 5);
+            });
+          }
+          setIsSearching(false);
+        }).catch(function() {
+          setIsSearching(false);
         });
-      });
-    } else {
+      } else {
+        setIsSearching(false);
+      }
+      return;
+    }
+
+    var num = parseInt(trimmedQuery);
+    if (!isNaN(num)) {
       results.push({ type:'tag', id:query, label:query });
       var tagBlocks = TagClassifier.getBlocksByTag(query, 3);
       for (var i = 0; i < tagBlocks.length; i++) {
@@ -136,6 +154,7 @@ function HomePage(props) {
 
   var handleResultClick = function(result) {
     if (result.type === 'block') navigate('/blocks/' + result.id);
+    else if (result.type === 'wallet') navigate('/wallet/' + result.id);
     else navigate('/tags/' + result.id);
   };
 
