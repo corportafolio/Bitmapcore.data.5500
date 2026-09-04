@@ -57,36 +57,36 @@ function HomePage(props) {
 
     // Check if query is a wallet address
     if (WALLET_ADDRESS_REGEX.test(trimmedQuery)) {
-      // Fetch wallet summary
-      if (typeof WalletApi !== 'undefined' && WalletApi.getSummary) {
-        WalletApi.getSummary(trimmedQuery).then(function(res) {
-          if (res && res.data) {
-            var walletData = res.data;
-            var walletResult = {
-              type: 'wallet',
-              id: trimmedQuery,
-              label: trimmedQuery,
-              address: trimmedQuery,
-              inscriptionsCount: walletData.inscriptionsCount || 0,
-              bitmapsCount: walletData.bitmapsCount || 0,
-              btcBalance: walletData.btcBalance || 0,
-              totalPortfolioValue: walletData.totalPortfolioValue || '0 BTC',
-              mostExpensiveBitmap: walletData.mostExpensiveBitmap,
-              collections: walletData.collections || []
-            };
-            setPinnedResults(function(prev) {
-              var exists = prev.some(function(r) { return r.type === 'wallet' && r.id === trimmedQuery; });
-              if (exists) return prev;
-              return [walletResult].concat(prev).slice(0, 5);
-            });
+      AssetApi.getUserAssets(trimmedQuery).then(function(res) {
+        if (res && res.success && res.data) {
+          var collections = res.data.collections || [];
+          var total = res.data.total || 0;
+          var bitmapsCount = 0;
+          for (var ci = 0; ci < collections.length; ci++) {
+            if (collections[ci].name === 'Bitmaps') {
+              bitmapsCount = collections[ci].count || 0;
+              break;
+            }
           }
-          setIsSearching(false);
-        }).catch(function() {
-          setIsSearching(false);
-        });
-      } else {
+          var walletResult = {
+            type: 'wallet',
+            id: trimmedQuery,
+            label: trimmedQuery,
+            address: trimmedQuery,
+            inscriptionsCount: total,
+            bitmapsCount: bitmapsCount,
+            collections: collections
+          };
+          setPinnedResults(function(prev) {
+            var exists = prev.some(function(r) { return r.type === 'wallet' && r.id === trimmedQuery; });
+            if (exists) return prev;
+            return [walletResult].concat(prev).slice(0, 5);
+          });
+        }
         setIsSearching(false);
-      }
+      }).catch(function() {
+        setIsSearching(false);
+      });
       return;
     }
 

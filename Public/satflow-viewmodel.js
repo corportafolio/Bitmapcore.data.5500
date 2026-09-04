@@ -115,9 +115,9 @@ var SatflowViewModel = {
         self._emit('loading');
       })
       .catch(function() {
-        UnisatViewModel._isLoading = false;
-        UnisatViewModel._isLoadingMore = false;
-        UnisatViewModel._emit('loading');
+        SatflowViewModel._isLoading = false;
+        SatflowViewModel._isLoadingMore = false;
+        SatflowViewModel._emit('loading');
       });
   },
 
