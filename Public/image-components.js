@@ -147,6 +147,7 @@ function ResultCard(props) {
   var price = props.price;
   var onClick = props.onClick;
   var onRemove = props.onRemove;
+  var bitmapsCount = props.bitmapsCount || 0;
   var etiquetas = props.etiquetas || '';
   var hash = props.hash || '';
   var totalTransactions = props.totalTransactions || 0;
@@ -179,7 +180,10 @@ function ResultCard(props) {
         className:'w-full h-full object-cover',
         loading:'lazy'
       }) :
-      React.createElement('div', { className:'w-full h-full flex items-center justify-center text-3xl' }, '\uD83C\uDFF7\uFE0F')
+      React.createElement('div', { className:'w-full h-full flex flex-col items-center justify-center' },
+        React.createElement('div', { className:'text-2xl font-alfaslab text-bitmap-orange font-bold' }, bitmapsCount),
+        React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' }, I18n.t('home.bitmaps'))
+      )
     ),
     price ? React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light mt-1' }, BitmapUtils.formatBtc(price) + ' BTC') : null
   );

@@ -208,6 +208,7 @@ function HomePage(props) {
               id: result.id,
               label: result.label,
               price: result.price,
+              bitmapsCount: result.bitmapsCount || 0,
               etiquetas: result.etiquetas || '',
               hash: result.hash || '',
               totalTransactions: result.totalTransactions || 0,
