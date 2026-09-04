@@ -991,7 +991,7 @@ app.get('/api/v1/wallet/:address/summary', async (req, res) => {
     let mostExpensive = null;
     if (dbUnified) {
       const exp = dbUnified.prepare(`
-        SELECT bitmapNumber, listedPrice, hash, etiquetas
+        SELECT bitmapNumber, listedPrice, extraData
         FROM unified_listings
         WHERE ownerAddress = ? AND listedPrice > 0 AND bitmapId != ''
         ORDER BY listedPrice DESC
@@ -1001,7 +1001,7 @@ app.get('/api/v1/wallet/:address/summary', async (req, res) => {
         mostExpensive = {
           blockNumber: exp.bitmapNumber,
           price: exp.listedPrice,
-          tags: exp.etiquetas || ''
+          tags: ''
         };
       }
     }
