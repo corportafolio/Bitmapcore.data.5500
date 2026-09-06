@@ -291,7 +291,7 @@ function LocalPage(props) {
     setListItems(updated);
   };
 
-  var handleListFromDropdown = async function() {
+  var handleListFromDropdown = function() {
     var selected = listItems.filter(function(it) { return it.isSelected && it.priceSatoshis > 0; });
     if (selected.length === 0) return;
 
@@ -300,27 +300,10 @@ function LocalPage(props) {
 
     setShowListDropdown(false);
 
-    var signedPsbtHexs = null;
-    var listingActivated = false;
-
-    try {
-      setListingStatus({ toast:I18n.t('toast.preparingListings') });
-      var pubKey = wallet.publicKey;
-      if (!pubKey) {
-        setListingStatus({ toast:I18n.t('toast.gettingPublicKey') });
-        try {
-          pubKey = await StoreApp.getPublicKeyFresh();
-        } catch(pke) {
-          setListingStatus({ toast:I18n.t('toast.publicKeyError') });
-          return;
-        }
-      }
-      if (!pubKey) {
-        setListingStatus({ toast:I18n.t('toast.publicKeyReconnect') });
-        return;
-      }
-
-      var batchItems = selected.map(function(item) {
+    MarketplaceLister.list({
+      selected: selected,
+      listApi: { create: MarketplaceApi.batchList, sign: MarketplaceApi.batchSign },
+      toBatchItem: function(item, wallet, pubKey) {
         var isPriceUpdate = item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice;
         return {
           inscriptionId: item.id,
@@ -338,80 +321,27 @@ function LocalPage(props) {
           inscriptionHeight: 0,
           isPriceUpdate: isPriceUpdate
         };
-      });
-
-      setListingStatus({ toast:I18n.t('toast.creatingListings') });
-      var createRes = await MarketplaceApi.batchList(batchItems);
-      var createJson = await createRes;
-
-      if (createJson.success && createJson.data) {
-        var psbtToSigns = createJson.data.psbtToSigns || [];
-        var psbtHexArray = psbtToSigns.map(function(p) { return p.unsignedPsbtHex; });
-        var combinedPsbtB64 = createJson.data.psbtToSign || null;
-
-        if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
-          try {
-            setListingStatus({ toast:I18n.t('toast.signingXverse') });
-            signedPsbtHexs = [];
-            for (var xi = 0; xi < psbtToSigns.length; xi++) {
-              setListingStatus({ toast:I18n.t('toast.signingListingXverse') + ' ' + (xi + 1) + ' ' + I18n.t('toast.of') + ' ' + psbtToSigns.length + ' ' + I18n.t('toast.inXverse') });
-              var singleSigned = await StoreApp._xverseSignPsbt(psbtToSigns[xi].unsignedPsbtHex, wallet.address, [0]);
-              signedPsbtHexs.push(singleSigned);
-            }
-          } catch(xe) {
-            setListingStatus({ toast:I18n.t('toast.xverseSignFailed') });
-          }
-        } else if (window.unisat && window.unisat.signPsbt) {
-          try {
-            setListingStatus({ toast:I18n.t('toast.signingUnisat') });
-            signedPsbtHexs = [];
-            for (var ui = 0; ui < psbtHexArray.length; ui++) {
-              setListingStatus({ toast:I18n.t('toast.signingListingUnisat') + ' ' + (ui + 1) + ' ' + I18n.t('toast.of') + ' ' + psbtHexArray.length + ' ' + I18n.t('toast.inUnisat') });
-              var singleSigned = await window.unisat.signPsbt(psbtHexArray[ui], {
-                autoFinalized: false,
-                toSignInputs: [{ index: 0, address: wallet.address, sighashTypes: [0x83], useTweakedSigner: true }]
-              });
-              signedPsbtHexs.push(singleSigned);
-            }
-          } catch(ue) {
-            setListingStatus({ toast:I18n.t('toast.unisatSignFailed') });
-          }
-        } else {
-          setListingStatus({ toast:I18n.t('toast.walletNotAvailable') });
-        }
-
-        if (signedPsbtHexs && signedPsbtHexs.length > 0) {
-          var listingIds = createJson.data.listingIds || [];
-          if (listingIds.length > 0) {
-            setListingStatus({ toast:I18n.t('toast.activatingListings') });
-            await MarketplaceApi.batchSign(listingIds, signedPsbtHexs, pubKey);
-            listingActivated = true;
-          }
-          setSuccessItems(selected);
-          setShowSuccessMenu(true);
-        } else {
-          setListingStatus({ toast:I18n.t('toast.signCanceled') });
-        }
-      } else {
-        setListingStatus({ toast:I18n.t('toast.createListingsError') });
       }
-    } catch(e) {
-      setListingStatus({ toast:'Error: ' + e.message });
-    } finally {
-      await fetchListings();
-      fetch('/api/v1/internal/refresh-local', { method: 'POST' }).then(function() {
-        if (typeof UnifiedViewModel !== 'undefined') {
-          UnifiedViewModel.loadFromCacheOnly();
+    }, {
+      status: function(msg) { setListingStatus({ toast: msg }); },
+      onError: function(msg) { setListingStatus({ toast: msg }); },
+      onActivated: function(activated) {
+        setSuccessItems(activated);
+        setShowSuccessMenu(true);
+      },
+      onComplete: function(activated) {
+        fetchListings();
+        fetch('/api/v1/internal/refresh-local', { method: 'POST' }).then(function() {
+          if (typeof UnifiedViewModel !== 'undefined') {
+            UnifiedViewModel.loadFromCacheOnly();
+          }
+        }).catch(function() {});
+        if (activated) {
+          setSuccessToast({ message: selected.length + ' ' + I18n.t('toast.listedSuccess'), type: 'success' });
+          setTimeout(function() { setSuccessToast(null); }, 20000);
         }
-      }).catch(function() {});
-      if (listingActivated) {
-        setSuccessToast({ message: selected.length + ' ' + I18n.t('toast.listedSuccess'), type: 'success' });
-        setTimeout(function() { setSuccessToast(null); }, 20000);
-      } else if (signedPsbtHexs) {
-        setSuccessToast({ message: I18n.t('toast.listingFailed'), type: 'error' });
-        setTimeout(function() { setSuccessToast(null); }, 20000);
       }
-    }
+    });
   };
 
   React.useEffect(function() {
@@ -463,224 +393,50 @@ function LocalPage(props) {
     setBuyResult(null);
     setBuySuccessData(null);
 
-    var buyResult = null;
-    var idempotencyKey = 'batch_buy_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
-    var bitmapIds = selected.map(function(item) { return item.bitmapId || item.id; });
+    var ids = selected.map(function(item) { return item.bitmapId || item.id; });
     var feeRate = getFeeRateSats();
 
-    try {
-      setBuyStatus({ message: 'Creando PSBT batch para ' + selected.length + ' bitmaps...', type: 'loading' });
-
-      if (!wallet.publicKey) {
-        try {
-          wallet.publicKey = await StoreApp.getPublicKeyFresh();
-          if (wallet.publicKey) {
-            var storedWallet = localStorage.getItem(StoreApp.WALLET_STORAGE_KEY);
-            if (storedWallet) {
-              var sw = JSON.parse(storedWallet);
-              sw.publicKey = wallet.publicKey;
-              localStorage.setItem(StoreApp.WALLET_STORAGE_KEY, JSON.stringify(sw));
-            }
-          }
-        } catch(pkErr) { /* continue without publicKey */ }
+    MarketplaceBuyer.buy({
+      selected: selected,
+      idFromItem: function(item) { return item.bitmapId || item.id; },
+      buyIdsKey: 'bitmapIds',
+      assetLabel: 'bitmap',
+      nameFromItem: function(item) { return (item.bitmapNumber || '?') + '.bitmap'; },
+      transport: {
+        batchBuy: function(payload) {
+          return fetch('/api/v1/transaction/batch-buy', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+          }).then(function(r) { return r.json(); });
+        },
+        batchBroadcast: function(payload) {
+          return fetch('/api/v1/transaction/batch-broadcast', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+          }).then(function(r) { return r.text(); });
+        }
       }
-
-      if (!wallet.publicKey) {
+    }, {
+      feeRate: feeRate, btcPrice: btcPrice, idempotencyPrefix: 'batch_buy'
+    }, {
+      status: function(s) { setBuyStatus({ message: s.message, type: s.type }); },
+      onBatchBuy: function(buyJson) {
+        if (window.bcAnalytics) window.bcAnalytics.track('buy_api_response', { success: !!buyJson.success, itemCount: selected.length });
+      },
+      onResult: function(result) {
+        if (window.bcAnalytics && result.type === 'success') {
+          window.bcAnalytics.track('buy_completed', { successCount: result.items.length, errorCount: result.errors.length, totalPaid: result.totalPaid });
+        }
+        if (result.type === 'success' && ids.length > 0) {
+          var soldSet = {};
+          ids.forEach(function(id) { soldSet[id] = true; });
+          setListings(listings.filter(function(l) { return !soldSet[l.bitmapId || l.id]; }));
+        }
+        setBuySuccessData(result);
+        setSelectedBuyItems([]);
         setShowBuyMenu(false);
-        setBuyStatus(null);
-        setSuccessToast({ message: I18n.t('toast.publicKeyReconnectSettings'), type: 'error' });
-        setTimeout(function() { setSuccessToast(null); }, 20000);
-        return;
+        fetchListings();
+        fetch('/api/v1/internal/refresh-local', { method: 'POST' }).catch(function() {});
       }
-
-      if (!wallet.paymentPublicKey) {
-        try {
-          if (wallet.walletType === 'unisat') {
-            wallet.paymentPublicKey = wallet.publicKey;
-          } else if (wallet.walletType === 'xverse') {
-            var xProvider = StoreApp._getXverseProvider();
-            if (xProvider) {
-              var payResp = await xProvider.request('wallet_connect', {
-                addresses: ['payment'],
-                message: I18n.t('toast.needsPaymentKey'),
-                network: 'Mainnet'
-              });
-              var payAddrs = [];
-              if (payResp && payResp.addresses) payAddrs = payResp.addresses;
-              else if (payResp && payResp.result && payResp.result.addresses) payAddrs = payResp.result.addresses;
-              for (var pi = 0; pi < payAddrs.length; pi++) {
-                if (payAddrs[pi].purpose === 'payment' && payAddrs[pi].publicKey) {
-                  wallet.paymentPublicKey = payAddrs[pi].publicKey;
-                  break;
-                }
-              }
-            }
-          }
-          if (wallet.paymentPublicKey) {
-            var storedWallet = localStorage.getItem(StoreApp.WALLET_STORAGE_KEY);
-            if (storedWallet) {
-              var sw = JSON.parse(storedWallet);
-              sw.paymentPublicKey = wallet.paymentPublicKey;
-              localStorage.setItem(StoreApp.WALLET_STORAGE_KEY, JSON.stringify(sw));
-            }
-          }
-        } catch(pkErr) { /* continue without paymentPublicKey */ }
-      }
-
-      var bodyPayload = {
-          bitmapIds: bitmapIds,
-          buyerAddress: wallet.address,
-          buyerPaymentAddress: wallet.paymentAddress || wallet.address,
-          buyerPaymentPublicKey: wallet.paymentPublicKey || wallet.publicKey,
-          idempotencyKey: idempotencyKey,
-          buyerPublicKey: wallet.publicKey,
-          feeRate: feeRate
-        };
-
-      var buyRes = await fetch('/api/v1/transaction/batch-buy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyPayload)
-      });
-      var buyJson = await buyRes.json();
-      if (window.bcAnalytics) window.bcAnalytics.track('buy_api_response', { success: buyJson.success, itemCount: selected.length });
-
-      if (!buyJson.success || !buyJson.data || !buyJson.data.psbt) {
-        var errMsg = buyJson.error && buyJson.error.message ? buyJson.error.message : (buyJson.error || I18n.t('toast.createPsbtError'));
-        if (typeof errMsg === 'string' && errMsg.indexOf('Saldo disponible insuficiente') !== -1) {
-          throw new Error(I18n.t('toast.insufficientFunds'));
-        }
-        throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
-      }
-
-      var psbtToSign = buyJson.data.psbt;
-      var transactionId = buyJson.data.transactionId;
-      var items = buyJson.data.items;
-      var buyerInputCount = buyJson.data.buyerInputCount || 0;
-      var serverMarketplaceFee = buyJson.data.marketplaceFee || 0;
-      var signedPsbt = null;
-
-      setBuyStatus({ message: I18n.t('toast.signingPsbt'), type: 'loading' });
-
-      if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
-        try {
-          var buyerInputIndices = [];
-          for (var bi = items.length; bi < items.length + buyerInputCount; bi++) {
-            buyerInputIndices.push(bi);
-          }
-          signedPsbt = await StoreApp._xverseSignPsbt(psbtToSign, wallet.paymentAddress || wallet.address, buyerInputIndices);
-        } catch(xe) {
-          throw new Error(I18n.t('toast.xverseSignCanceled'));
-        }
-      } else if (window.unisat && window.unisat.signPsbt) {
-        try {
-          var toSignInputs = [];
-          for (var t = items.length; t < items.length + buyerInputCount; t++) {
-            toSignInputs.push({ index: t, address: wallet.address });
-          }
-          var psbtHex = psbtToSign;
-          if (psbtToSign && !/^[0-9a-fA-F]+$/.test(psbtToSign)) {
-            psbtHex = Uint8Array.from(atob(psbtToSign), function(c) { return c.charCodeAt(0); }).reduce(function(h, b) { return h + b.toString(16).padStart(2, '0'); }, '');
-          }
-          signedPsbt = await window.unisat.signPsbt(psbtHex, { toSignInputs: toSignInputs });
-        } catch(ue) {
-          throw new Error(I18n.t('toast.unisatSignCanceled'));
-        }
-      } else {
-        throw new Error(I18n.t('toast.walletNotAvailable'));
-      }
-
-      if (!signedPsbt) {
-        throw new Error(I18n.t('toast.signCanceledShort'));
-      }
-
-      setBuyStatus({ message: I18n.t('toast.dontClose'), type: 'loading' });
-
-      var broadcastRes = await fetch('/api/v1/transaction/batch-broadcast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          signedPsbt: signedPsbt,
-          transactionId: transactionId
-        })
-      });
-      var broadcastText = await broadcastRes.text();
-      var broadcastJson;
-      try {
-        broadcastJson = JSON.parse(broadcastText);
-      } catch(parseErr) {
-        if (broadcastRes.ok) {
-          broadcastJson = { success: true, data: { txid: 'unknown_' + transactionId } };
-        } else {
-          throw new Error(I18n.t('toast.serverError') + ' (' + broadcastRes.status + '): ' + broadcastText.substring(0, 200));
-        }
-      }
-
-      if (!broadcastJson.success || !broadcastJson.data) {
-        var bErrMsg = broadcastJson.error && broadcastJson.error.message ? broadcastJson.error.message : (broadcastJson.error || I18n.t('toast.transmitError'));
-        throw new Error(typeof bErrMsg === 'string' ? bErrMsg : JSON.stringify(bErrMsg));
-      }
-
-      var txid = broadcastJson.data.txid || ('unknown_' + transactionId);
-
-      var totalPaid = items.reduce(function(sum, item) { return sum + item.price; }, 0);
-      var totalFees = serverMarketplaceFee > 0 ? serverMarketplaceFee : Math.max(546 * items.length, Math.floor(totalPaid * 0.02));
-      var successItems = items.map(function(item) {
-        return { name: item.name || 'Bitmap comprado', status: 'success', txid: txid, price: item.price, fee: Math.round(totalFees / items.length) };
-      });
-      var errorItems = [];
-
-      var networkFees = [{ txid: txid, fee: 0 }];
-
-      var totalNetworkFee = networkFees.reduce(function(sum, nf) { return sum + nf.fee; }, 0);
-
-      buyResult = {
-        type: 'success',
-        items: successItems,
-        errors: errorItems,
-        totalPaid: totalPaid,
-        totalFees: totalFees,
-        networkFees: networkFees,
-        totalNetworkFee: totalNetworkFee,
-        btcPrice: btcPrice
-      };
-
-      setBuyStatus({ message: 'Compra batch exitosa: ' + successItems.length + ' bitmaps', type: 'done' });
-      if (window.bcAnalytics) window.bcAnalytics.track('buy_completed', { successCount: successItems.length, errorCount: errorItems.length, totalPaid: totalPaid });
-
-    } catch(e) {
-      var errorItems = selected.map(function(item) {
-        return { name: (item.bitmapNumber || '?') + '.bitmap', status: 'error', reason: e.message };
-      });
-      var totalPaid = 0;
-      var totalFees = 0;
-
-      buyResult = {
-        type: 'error',
-        items: [],
-        errors: errorItems,
-        totalPaid: totalPaid,
-        totalFees: totalFees,
-        networkFees: [],
-        totalNetworkFee: 0,
-        btcPrice: btcPrice
-      };
-
-      setBuyStatus({ message: 'Error: ' + e.message, type: 'error' });
-    } finally {
-      if (buyResult && buyResult.type === 'success' && bitmapIds && bitmapIds.length > 0) {
-        var soldSet = {};
-        bitmapIds.forEach(function(id) { soldSet[id] = true; });
-        setListings(listings.filter(function(l) {
-          return !soldSet[l.bitmapId || l.id];
-        }));
-      }
-      setBuySuccessData(buyResult);
-      setSelectedBuyItems([]);
-      setShowBuyMenu(false);
-      fetchListings();
-      fetch('/api/v1/internal/refresh-local', { method: 'POST' }).catch(function() {});
-    }
+    });
   };
 
   var handleSort = function(sort) {
