@@ -88,7 +88,7 @@ function HeaderBar(props) {
         )
       ) : null
     ),
-    !showBackButton ? React.createElement('div', { className:'flex-1 flex justify-center' },
+    React.createElement('div', { className:'flex-1 flex justify-center' },
       React.createElement('div', { className:'relative' },
         React.createElement('button', {
           onClick: function(e) { e.stopPropagation(); setShowMarketplaceDropdown(!showMarketplaceDropdown); },
@@ -112,10 +112,15 @@ function HeaderBar(props) {
           },
             React.createElement('img', { src:'LogoBittick.png', style:{ width:'20px', height:'20px', borderRadius:'4px', objectFit:'contain' } }),
             'Bittick Agents'
-          )
+          ),
+          React.createElement('button', {
+            onClick: function() { navigate('/add-collection'); setShowMarketplaceDropdown(false); },
+            className:'block mx-3 my-2 px-3 py-1.5 text-center font-jakarta text-xs font-bold rounded-lg transition-all hover:scale-[0.97]',
+            style: { background:'linear-gradient(135deg, #FE3E00 0%, #CC3200 100%)', color:'#000000', textShadow:'none' }
+          }, '\uFF0B Añadir Colección')
         ) : null
       )
-    ) : null,
+    ),
     React.createElement('div', { className:'flex items-center gap-2 flex-shrink-0' },
       !showBackButton ? React.createElement('a', {
         href:'https://x.com/BitmapCorp',
@@ -383,9 +388,7 @@ function FloatingMarketplaceMenu(props) {
     { id:'discounts', label: I18n.t('floatMenu.discounts'), path:'/discounts', icon:'discount.svg', isImage:true },
     { id:'unified', label: I18n.t('nav.unified'), path:'/unified', icon:'layers.svg', isImage:true },
     { id:'tags', label: I18n.t('floatMenu.listedTags'), path:'/listed-tags', icon:'\uD83C\uDFF7\uFE0F', isImage:false },
-    { id:'sales', label: I18n.t('floatMenu.sales'), path:'/sales', icon:'\uD83D\uDCB0', isImage:false },
-    { id:'collections', label:'Colecciones', path:'/collections', icon:'\uD83D\uDCDA', isImage:false },
-    { id:'add-collection', label:'+ Añadir Colección', path:'/add-collection', icon:'\uFF0B', isImage:false }
+    { id:'sales', label: I18n.t('floatMenu.sales'), path:'/sales', icon:'\uD83D\uDCB0', isImage:false }
   ];
 
   return React.createElement('div', { className:'fm-container' },

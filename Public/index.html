@@ -8,7 +8,30 @@
   <meta name="theme-color" content="#080008">
   <script>
     (function() {
-      var CUR = '109';
+      if (!sessionStorage.getItem('pwa_fixed_v117')) {
+        sessionStorage.setItem('pwa_fixed_v117', '1');
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(r) { r.unregister(); });
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(keys) {
+            keys.forEach(function(k) { caches.delete(k); });
+          });
+        }
+        fetch('/version.txt', {cache: 'reload'}).then(function() {
+          window.location.href = window.location.pathname + '?v=' + Date.now() + window.location.hash;
+        }).catch(function() {
+          window.location.reload(true);
+        });
+        return;
+      }
+    })();
+  </script>
+  <script>
+    (function() {
+      var CUR = '117';
       var reloading = false;
       var doReload = function() {
         if (reloading) return;
@@ -17,10 +40,8 @@
           var base = window.location.href.split('#')[0].split('?')[0];
           var hash = window.location.hash || '';
           var url = base + '?v=' + Date.now() + hash;
-          console.log('[AutoReload] Reloading →', url);
           window.location.href = url;
         } catch (e) {
-          console.log('[AutoReload] href failed, using reload()', e);
           window.location.reload();
         }
       };
