@@ -37,7 +37,8 @@
         collapsed: collapsed,
         onToggleCollapse: handleToggleCollapse,
         navigate: navigate,
-        onInfoClick: function() { setShowTagInfo(!showTagInfo); }
+        onInfoClick: function() { setShowTagInfo(!showTagInfo); },
+        title: ''
       }),
       React.createElement('div', { className:'flex flex-1 overflow-hidden' },
         React.createElement(Sidebar, {
@@ -94,6 +95,7 @@
       React.createElement(Route, { path:'/tag-tables/:tagName', element:wrapper(safe(TagTableScreen)) }),
       React.createElement(Route, { path:'/listed-tags', element:wrapper(safe(ListedTagsPage)) }),
       React.createElement(Route, { path:'/listed-tags/:tagName', element:wrapper(safe(ListedTagDetailPage)) }),
+      React.createElement(Route, { path:'/bittick-agents', element:wrapper(safe(BittickAgentsPage)) }),
       React.createElement(Route, { path:'/sales', element:wrapper(safe(VentasPage)) }),
       React.createElement(Route, { path:'/blocks/:id', element:wrapper(safe(PantallaDeBloqueEspecifico)) }),
       React.createElement(Route, { path:'/wallet', element:wrapper(safe(WalletConnectPage)) }),

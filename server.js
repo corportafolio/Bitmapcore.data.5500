@@ -71,12 +71,14 @@ setInterval(() => {
 
 const publicDir = path.join(__dirname, 'Public');
 app.use(express.static(publicDir, {
+  maxAge: 0,
+  etag: false,
+  lastModified: false,
   setHeaders: function(res, filePath) {
-    if (filePath.endsWith('.js') || filePath.endsWith('.html')) {
-      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.set('Pragma', 'no-cache');
-      res.set('Expires', '0');
-    }
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.set('Surrogate-Control', 'no-store');
   }
 }));
 
@@ -1849,7 +1851,7 @@ async function pollSatflow() {
     } else if (sfScraper) {
       console.error('[SF] Using tRPC backend (no API key)...');
       try {
-        const { stats, sales } = await sfScraper.scrapeSatflowData();
+        const stats = await sfScraper.fetchSatflowStats();
 
         if (stats) {
           dbSatflow.prepare("INSERT OR REPLACE INTO satflow_stats (key, value, updatedAt) VALUES ('floor_price',?,?)").run(stats.floor, now);
@@ -1857,30 +1859,7 @@ async function pollSatflow() {
           dbSatflow.prepare("INSERT OR REPLACE INTO satflow_stats (key, value, updatedAt) VALUES ('top_bid',?,?)").run(stats.topBid, now);
           console.error('[SF] Stats saved: floor=' + stats.floor + ', listed=' + stats.listedCount);
         }
-
-        let salesSaved = 0;
-        for (const sale of sales) {
-          const ask = sale.ask || sale.bid || {};
-          const insId = ask.inscriptionId || '';
-          if (!insId) continue;
-          const ts = sale.timestamp ? new Date(sale.timestamp).getTime() : now;
-          if (isNaN(ts)) ts = now;
-          if (!isFirstSync && ts <= lastTs) continue;
-          const name = ask.collectionItemName || ask.collection_item_name || insId;
-          insertStmt.run(parseBitmapNumber(name), insId, ask.price || sale.price || 0, ts, ask.sellerOrdAddress || ask.bidderAddress || '', name, sale.id || '', now, insertionOrder++);
-          salesSaved++;
-          if (dbSales) {
-            try {
-              dbSales.prepare("INSERT OR IGNORE INTO all_sales (bitmap_name, bitmap_number, inscription_id, price, buyer_address, seller_address, source, txid, sold_at, synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(
-                name, parseBitmapNumber(name), insId, ask.price || sale.price || 0,
-                sale.fillAddress || '', ask.sellerOrdAddress || ask.bidderAddress || '',
-                'satflow', sale.fillTx || '', ts, now
-              );
-            } catch (se) { /* duplicate */ }
-          }
-        }
-        totalSaved = salesSaved;
-        console.error('[SF] Saved ' + salesSaved + ' sales as activity data');
+        console.error('[SF] No API key: NOT inserting any items into satflow_cache (would be fake listings). Stats only.');
       } catch (e) {
         console.error('[SF] Scraper error: ' + e.message);
       }
@@ -2048,6 +2027,9 @@ async function pollUnified() {
             const placeholders = sfIds.map(() => '?').join(',');
             const deletedSF = dbUnified.prepare("DELETE FROM unified_listings WHERE source='satflow' AND bitmapId NOT IN (" + placeholders + ")").run(...sfIds);
             console.error('[UNIFIED] Cleaned stale SF: ' + deletedSF.changes);
+          } else {
+            const deletedSF = dbUnified.prepare("DELETE FROM unified_listings WHERE source='satflow'").run();
+            if (deletedSF.changes > 0) console.error('[UNIFIED] Cleaned all SF (cache empty): ' + deletedSF.changes);
           }
         }
         try {
@@ -2751,6 +2733,116 @@ app.get('/api/v1/world/atlas2/:id', (req, res) => {
     res.send(row.image_data);
   } catch(err) {
     res.status(500).send('Internal error');
+  }
+});
+
+// ===== ORDINAL CONTENT PROXY =====
+let dbOrdinalContent = null;
+try {
+  const dataDirOrdinal = path.join(__dirname, 'data');
+  dbOrdinalContent = new Database(path.join(dataDirOrdinal, 'ordinal_content_cache.db'));
+  dbOrdinalContent.pragma('journal_mode = WAL');
+  dbOrdinalContent.exec(`
+    CREATE TABLE IF NOT EXISTS ordinal_content (
+      inscription_id TEXT PRIMARY KEY,
+      content_type TEXT,
+      content_data BLOB,
+      content_length INTEGER,
+      fetched_at INTEGER
+    )
+  `);
+  console.log('Ordinal content cache: connected');
+} catch (e) {
+  console.error('Ordinal content cache error:', e.message);
+}
+
+const ordinalContentLimiter = {};
+const ORDINAL_MAX = 300;
+const ORDINAL_WINDOW = 60000;
+const ordInFlight = {};
+
+function allowOrdinalFetch(ip) {
+  const now = Date.now();
+  if (!ordinalContentLimiter[ip] || now - ordinalContentLimiter[ip].start > ORDINAL_WINDOW) {
+    ordinalContentLimiter[ip] = { start: now, count: 0 };
+  }
+  ordinalContentLimiter[ip].count++;
+  return ordinalContentLimiter[ip].count <= ORDINAL_MAX;
+}
+
+app.get('/api/v1/ordinal-content/:inscriptionId', async (req, res) => {
+  try {
+    const inscriptionId = req.params.inscriptionId;
+    if (!inscriptionId || !/^[a-fA-F0-9]+i\d+$/.test(inscriptionId)) {
+      return res.status(400).json({ error: 'Invalid inscription ID' });
+    }
+
+    // 1) Serve from cache (never rate-limited)
+    if (dbOrdinalContent) {
+      const cached = dbOrdinalContent.prepare(
+        'SELECT content_type, content_data, content_length FROM ordinal_content WHERE inscription_id = ?'
+      ).get(inscriptionId);
+      if (cached) {
+        res.set('Content-Type', cached.content_type || 'application/octet-stream');
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.set('Content-Length', cached.content_length || cached.content_data.length);
+        return res.send(cached.content_data);
+      }
+    }
+
+    // 2) Cache miss -> only now apply rate limiting on real upstream fetches
+    const ip = req.ip || req.connection.remoteAddress;
+    if (!allowOrdinalFetch(ip)) {
+      return res.status(429).json({ error: 'Too many requests' });
+    }
+
+    // 3) Guard against duplicate concurrent fetches for the same inscription
+    if (ordInFlight[inscriptionId]) {
+      return ordInFlight[inscriptionId].then(function(buffered) {
+        res.set('Content-Type', buffered.type);
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.set('Content-Length', buffered.data.length);
+        res.send(buffered.data);
+      }).catch(function() {
+        res.status(502).json({ error: 'Failed to fetch from ordinals.com' });
+      });
+    }
+
+    const p = axios.get(`https://ordinals.com/content/${inscriptionId}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*' },
+      timeout: 20000,
+      responseType: 'arraybuffer',
+      maxRedirects: 5
+    }).then(function(response) {
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      const contentData = Buffer.from(response.data);
+      const contentLength = contentData.length;
+      if (dbOrdinalContent && contentLength < 5 * 1024 * 1024) {
+        try {
+          dbOrdinalContent.prepare(
+            'INSERT OR REPLACE INTO ordinal_content (inscription_id, content_type, content_data, content_length, fetched_at) VALUES (?, ?, ?, ?, ?)'
+          ).run(inscriptionId, contentType, contentData, contentLength, Date.now());
+        } catch (e) {}
+      }
+      return { type: contentType, data: contentData };
+    });
+    ordInFlight[inscriptionId] = p;
+    p.finally(function() { delete ordInFlight[inscriptionId]; }).catch(function() {});
+
+    try {
+      const buffered = await p;
+      res.set('Content-Type', buffered.type);
+      res.set('Cache-Control', 'public, max-age=86400');
+      res.set('Content-Length', buffered.data.length);
+      res.send(buffered.data);
+    } catch (err) {
+      if (err.response && err.response.status === 404) {
+        return res.status(404).json({ error: 'Inscription not found' });
+      }
+      res.status(502).json({ error: 'Failed to fetch from ordinals.com' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Internal error' });
   }
 });
 

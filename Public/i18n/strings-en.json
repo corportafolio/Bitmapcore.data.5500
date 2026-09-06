@@ -134,7 +134,13 @@
     "sortByDate": "Date",
     "sortByBlock": "Block",
     "asc": "Ascending",
-    "desc": "Descending"
+    "desc": "Descending",
+    "bittickAgentsTitle": "Bittick Agents",
+    "selectAll": "Select all",
+    "sortAZ": "A-Z",
+    "noBittickAgentsInWallet": "No Bittick Agents in wallet",
+    "searchByNameOrInscription": "Search by name or inscription...",
+    "agentsCount": "{count} agents"
   },
   "block": {
     "title": "Block Detail",
@@ -336,7 +342,8 @@
     "dontClose": "IMPORTANT: Do not close this tab until the transaction is complete. Sending to mempool, waiting for confirmation...",
     "serverError": "Server error",
     "transmitError": "Error transmitting batch",
-    "batchSuccess": "Batch purchase successful:"
+    "batchSuccess": "Batch purchase successful:",
+    "noPricedItemsSelected": "This asset is not for sale, choose an asset that is active and listed"
   },
   "tagTable": {
     "title": "Tag Tables",

@@ -120,7 +120,13 @@
     "sortByDate": "日期",
     "sortByBlock": "区块",
     "asc": "升序",
-    "desc": "降序"
+    "desc": "降序",
+    "bittickAgentsTitle": "Bittick Agents",
+    "selectAll": "全选",
+    "sortAZ": "A-Z",
+    "noBittickAgentsInWallet": "钱包中没有Bittick Agents",
+    "searchByNameOrInscription": "按名称或铭文搜索...",
+    "agentsCount": "{count} agents"
   },
   "block": {
     "title": "区块详情",
@@ -322,7 +328,8 @@
     "dontClose": "重要：在交易完成之前请勿关闭此标签页。正在发送至内存池，等待确认...",
     "serverError": "服务器错误",
     "transmitError": "批次传输错误",
-    "batchSuccess": "批量购买成功："
+    "batchSuccess": "批量购买成功：",
+    "noPricedItemsSelected": "此资产未出售，请选择一个活跃且已上架的资产"
   },
   "tagTable": {
     "title": "标签表",

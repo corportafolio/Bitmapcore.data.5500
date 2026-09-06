@@ -5,6 +5,7 @@ var AnalyticsDashboard = (function(){
   var currentTab = 'overview';
   var charts = {};
   var refreshTimer = null;
+  var pagesGrouped = false;
 
   function api(path, params){
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
@@ -155,9 +156,49 @@ var AnalyticsDashboard = (function(){
     return React.createElement('div', null, items, chartContainer, eventBreakdown);
   }
 
+  function normalizePageKey(url){
+    if(!url) return 'otro';
+    var clean = url.replace(/https?:\/\/bitmapcore\.net/g,'');
+    if(clean === '/#/' || clean === '/#') return '#home';
+    if(clean === '/' || clean === '') return 'home';
+    var path = clean.replace(/\/#\//g,'/').split('?')[0].split('#')[0].replace(/^\//,'');
+    if(path === '') return 'home';
+    var seg = path.split('/').filter(function(s){ return s !== ''; })[0] || 'otro';
+    return seg;
+  }
+
   function renderPages(data){
     if(!data.topPages || data.topPages.length === 0)
       return React.createElement('p', {style:{color:'#666'}}, 'Sin datos de paginas aun.');
+    var btnBase = {padding:'6px 14px',borderRadius:'6px',border:'1px solid #2A2A2A',background:'#1a1a1a',color:'#B0B0B0',cursor:'pointer',fontSize:'12px',fontFamily:'Acme,monospace',marginRight:'6px'};
+    var btnActive = Object.assign({}, btnBase, {background:'#FE3E00',color:'#fff',borderColor:'#FE3E00'});
+    var toggle = React.createElement('div', {style:{display:'flex',gap:'6px',marginBottom:'16px',alignItems:'center'}},
+      React.createElement('span', {style:{color:'#666',fontSize:'12px',fontFamily:'Acme'}}, 'Vista:'),
+      React.createElement('button', {style:pagesGrouped?btnBase:btnActive, onClick:function(){ pagesGrouped=false; loadDashboard(); }}, 'Individual'),
+      React.createElement('button', {style:pagesGrouped?btnActive:btnBase, onClick:function(){ pagesGrouped=true; loadDashboard(); }}, 'Agrupado')
+    );
+
+    if(pagesGrouped){
+      var groups = {};
+      data.topPages.forEach(function(p){
+        var key = normalizePageKey(p.page_url);
+        if(!groups[key]) groups[key] = { views:0, totalTime:0, totalScroll:0, scrollCount:0 };
+        groups[key].views += (p.views || 0);
+        groups[key].totalTime += (p.avgTime || 0) * (p.views || 0);
+        if(p.avgScroll){ groups[key].totalScroll += p.avgScroll * (p.views || 0); groups[key].scrollCount += (p.views || 0); }
+      });
+      var grouped = [];
+      for(var k in groups){
+        var g = groups[k];
+        grouped.push({ key:k, views:g.views, avgTime: g.views>0 ? g.totalTime/g.views : 0, avgScroll: g.scrollCount>0 ? g.totalScroll/g.scrollCount : null });
+      }
+      grouped.sort(function(a,b){ return b.views - a.views; });
+      var rows = grouped.map(function(g){
+        return [g.key, fmt(g.views), timeAgo(g.avgTime), g.avgScroll ? Math.round(g.avgScroll)+'%' : '-'];
+      });
+      return React.createElement('div', null, toggle, DataTable(['Pagina','Vistas','Tiempo medio','Scroll %'], rows));
+    }
+
     var headers = ['Pagina','Vistas','Tiempo medio','Scroll %'];
     var rows = data.topPages.map(function(p){
       return [
@@ -167,7 +208,7 @@ var AnalyticsDashboard = (function(){
         p.avgScroll ? Math.round(p.avgScroll)+'%' : '-'
       ];
     });
-    return DataTable(headers, rows);
+    return React.createElement('div', null, toggle, DataTable(headers, rows));
   }
 
   function renderEvents(data){

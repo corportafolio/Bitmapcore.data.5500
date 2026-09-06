@@ -62,9 +62,11 @@ function HomePage(props) {
           var collections = res.data.collections || [];
           var total = res.data.total || 0;
           var bitmapsCount = 0;
+          var bitmapsCol = null;
           for (var ci = 0; ci < collections.length; ci++) {
             if (collections[ci].name === 'Bitmaps') {
               bitmapsCount = collections[ci].count || 0;
+              bitmapsCol = collections[ci];
               break;
             }
           }
@@ -75,13 +77,72 @@ function HomePage(props) {
             address: trimmedQuery,
             inscriptionsCount: total,
             bitmapsCount: bitmapsCount,
-            collections: collections
+            collections: collections,
+            bitmapsValue: 0
           };
           setPinnedResults(function(prev) {
             var exists = prev.some(function(r) { return r.type === 'wallet' && r.id === trimmedQuery; });
             if (exists) return prev;
             return [walletResult].concat(prev).slice(0, 5);
           });
+          if (bitmapsCol && bitmapsCol.items && bitmapsCol.items.length > 0) {
+            var blockNums = [];
+            for (var bj = 0; bj < bitmapsCol.items.length; bj++) {
+              var m = bitmapsCol.items[bj].name.match(/^(\d+)\.bitmap$/);
+              if (m) { var bn = parseInt(m[1], 10); if (blockNums.indexOf(bn) === -1) blockNums.push(bn); }
+            }
+            var bFetches = blockNums.map(function(n) {
+              return fetch('/api/v1/blocks/' + n).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+            });
+            Promise.all([
+              Promise.all(bFetches),
+              fetch('/api/v1/unified/cache/tags').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+              fetch('/api/v1/unified/cache/stats').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
+            ]).then(function(all) {
+              var bResults = all[0], tRes = all[1], sRes = all[2];
+              var bDataMap = {};
+              for (var bk = 0; bk < bResults.length; bk++) {
+                if (bResults[bk] && bResults[bk].success && bResults[bk].data) bDataMap[blockNums[bk]] = bResults[bk].data;
+              }
+              var tagPrices = {};
+              if (tRes && tRes.success && tRes.data) {
+                tRes.data.forEach(function(t) {
+                  if (t && t.tagName) tagPrices[String(t.tagName || '').toLowerCase().replace(/(\d+) txs?$/i, '$1 txs').trim()] = t.floorPrice || 0;
+                });
+              }
+              var uFloor = (sRes && sRes.success && sRes.data && sRes.data.floorPrice) ? parseInt(sRes.data.floorPrice) : null;
+              var totalSats = 0;
+              for (var bi = 0; bi < bitmapsCol.items.length; bi++) {
+                var bm = bitmapsCol.items[bi].name.match(/^(\d+)\.bitmap$/);
+                if (!bm) continue;
+                var blockNum = parseInt(bm[1], 10);
+                var bd = bDataMap[blockNum] || {};
+                var etiquetas = bd.etiquetas || '';
+                var tags = etiquetas.split('|').map(function(t) { return t.trim(); }).filter(function(t) { return t !== ''; });
+                var price = null;
+                if (tags.length === 0) {
+                  price = uFloor;
+                } else {
+                  for (var ti = 0; ti < tags.length; ti++) {
+                    var tagKey = String(tags[ti] || '').toLowerCase().replace(/(\d+) txs?$/i, '$1 txs').trim();
+                    var p = tagPrices[tagKey];
+                    if (p !== undefined && (price === null || p > price)) price = p;
+                  }
+                }
+                if (price !== null) totalSats += price;
+              }
+              if (totalSats > 0) {
+                setPinnedResults(function(prev) {
+                  return prev.map(function(r) {
+                    if (r.type === 'wallet' && r.id === trimmedQuery) {
+                      return { type: r.type, id: r.id, label: r.label, address: r.address, inscriptionsCount: r.inscriptionsCount, bitmapsCount: r.bitmapsCount, collections: r.collections, bitmapsValue: totalSats };
+                    }
+                    return r;
+                  });
+                });
+              }
+            }).catch(function() {});
+          }
         }
         setIsSearching(false);
       }).catch(function() {
@@ -193,7 +254,7 @@ function HomePage(props) {
             onChange:function(e) { setSearchQuery(e.target.value); setNoBlockMessage(''); },
             onKeyDown:handleKeyDown,
             placeholder:I18n.t('home.searchPlaceholder'),
-            className:'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors h-10'
+            className:'flex-1 bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-jakarta text-sm text-bitmap-text placeholder-bitmap-muted focus:outline-none focus:border-bitmap-orange transition-colors h-10'
           })
         ),
         isSearching ? React.createElement('div', { className:'mt-0.5 font-acme text-xs text-bitmap-muted' }, I18n.t('app.loading')) : null,
@@ -209,6 +270,7 @@ function HomePage(props) {
               label: result.label,
               price: result.price,
               bitmapsCount: result.bitmapsCount || 0,
+              bitmapsValue: result.bitmapsValue || 0,
               etiquetas: result.etiquetas || '',
               hash: result.hash || '',
               totalTransactions: result.totalTransactions || 0,

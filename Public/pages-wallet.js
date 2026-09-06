@@ -148,6 +148,133 @@ var ParcelConfirmationCache = {
   }
 };
 
+function OrdinalImageView(props) {
+  var inscriptionId = props.inscriptionId;
+  var contentType = props.contentType || '';
+  var width = props.width || 80;
+  var height = props.height || 80;
+  var showJson = props.showJson !== false;
+  var isImage = contentType && contentType.indexOf('image/') === 0;
+  var isJson = contentType && contentType.indexOf('json') !== -1;
+  var isPlain = !isImage && !isJson;
+
+  var _a = React.useState(null);
+  var jsonContent = _a[0];
+  var setJsonContent = _a[1];
+  var _b = React.useState('');
+  var rawText = _b[0];
+  var setRawText = _b[1];
+  var _c = React.useState(false);
+  var loading = _c[0];
+  var setLoading = _c[1];
+  var _d = React.useState(false);
+  var error = _d[0];
+  var setError = _d[1];
+  var _e = React.useState('text');
+  var kind = _e[0];
+  var setKind = _e[1];
+
+  React.useEffect(function() {
+    if (!inscriptionId) return;
+    var cancelled = false;
+    if (isImage) {
+      setKind('image');
+      setLoading(true);
+      return function() { cancelled = true; };
+    }
+    if ((isJson || isPlain) && showJson) {
+      setLoading(true);
+      var attempt = 0;
+      var doFetch = function() {
+        fetch('/api/v1/ordinal-content/' + inscriptionId)
+          .then(function(r) {
+            if (r.status === 429 && attempt < 3) {
+              attempt++;
+              setTimeout(doFetch, 1500 * attempt);
+              return null;
+            }
+            if (!r.ok) return Promise.reject();
+            return r.text();
+          })
+          .then(function(text) {
+            if (cancelled || text === null) return;
+            var trimmed = text.trim();
+            var data = null;
+            try { data = JSON.parse(trimmed); } catch (e) { data = null; }
+            if (data !== null) {
+              setJsonContent(data);
+              setRawText('');
+              setKind('json');
+            } else {
+              setJsonContent(null);
+              setRawText(trimmed);
+              setKind('text');
+            }
+            setLoading(false);
+            setError(false);
+          })
+          .catch(function() {
+            if (cancelled) return;
+            if (attempt < 2) {
+              attempt++;
+              setTimeout(doFetch, 1200 * attempt);
+            } else {
+              setLoading(false);
+              setError(true);
+            }
+          });
+      };
+      doFetch();
+      return function() { cancelled = true; };
+    }
+  }, [inscriptionId, isImage, isJson, isPlain, showJson]);
+
+  if (error) return null;
+
+  if (kind === 'image') {
+    return React.createElement('img', {
+      src: '/api/v1/ordinal-content/' + inscriptionId,
+      alt: '',
+      loading: 'lazy',
+      className: 'w-full h-full object-cover',
+      style: { width: width, height: height },
+      onError: function(e) {
+        e.target.onerror = null;
+        e.target.src = '/api/v1/parcel-image?v=2';
+      }
+    });
+  }
+
+  if (loading) {
+    return React.createElement('div', {
+      className: 'w-full h-full flex items-center justify-center bg-bitmap-black',
+      style: { width: width, height: height }
+    }, React.createElement('div', {
+      className: 'w-6 h-6 border-2 border-bitmap-orange border-t-transparent rounded-full animate-spin'
+    }));
+  }
+
+  if (kind === 'json' && jsonContent) {
+    var jsonStr = JSON.stringify(jsonContent, null, 0);
+    if (jsonStr.length > 200) jsonStr = jsonStr.slice(0, 200) + '...';
+    return React.createElement('div', {
+      className: 'w-full h-full flex items-center justify-center bg-bitmap-black p-1 overflow-hidden',
+      style: { width: width, height: height, fontSize: '7px', lineHeight: '1.1', textAlign: 'center', wordBreak: 'break-all', fontFamily: 'monospace' }
+    }, jsonStr);
+  }
+
+  if (kind === 'text' && rawText) {
+    var shown = rawText.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (shown.length > 160) shown = shown.slice(0, 160) + '...';
+    return React.createElement('div', {
+      className: 'w-full h-full flex items-center justify-center bg-bitmap-black p-1 overflow-hidden',
+      style: { width: width, height: height, fontSize: '7px', lineHeight: '1.1', textAlign: 'center', wordBreak: 'break-all', fontFamily: 'monospace' }
+    }, shown || '(contenido)');
+  }
+
+  return null;
+}
+
 function MisActivosPage(props) {
   var navigate = props.navigate;
   var wallet = StoreApp.get('wallet');
@@ -172,6 +299,15 @@ function MisActivosPage(props) {
   var _eb = React.useState([]);
   var epicBlocks = _eb[0];
   var setEpicBlocks = _eb[1];
+  var _bp = React.useState(null);
+  var btcPrice = _bp[0];
+  var setBtcPrice = _bp[1];
+
+  React.useEffect(function() {
+    fetch('/api/v1/live/rates').then(function(r) { return r.json(); }).then(function(d) {
+      if (d && d.data && d.data.btcPrice !== null) setBtcPrice(d.data.btcPrice);
+    }).catch(function() {});
+  }, []);
 
   React.useEffect(function() {
     fetch('/api/v1/tags/epic').then(function(r) { return r.json(); }).then(function(res) {
@@ -492,8 +628,9 @@ function MisActivosPage(props) {
                       var p = bn !== null ? bitmapMainTagPrice(bn) : null;
                       if (p !== null) totalSats += p;
                     });
-                    return React.createElement('span', { className:'font-acme text-xs text-bitmap-muted', title:'Total value' },
-                      'Total value: ' + BitmapUtils.formatBtcSat(totalSats) + ' BTC'
+                    return React.createElement('span', { className:'font-acme text-xs', title:'Total value' },
+                      React.createElement('span', { className:'text-bitmap-muted' }, 'Total value: ' + BitmapUtils.formatBtcSat(totalSats) + ' BTC'),
+                      btcPrice ? React.createElement('span', { className:'text-white ml-1' }, '\u2248 USD $' + ((totalSats / 100000000) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 0 })) : null
                     );
                   })()
                 : React.createElement('span', { className:'font-acme text-xs text-bitmap-muted' }, 'Ver todos \u2192')
@@ -519,10 +656,31 @@ function MisActivosPage(props) {
                 }
                 return 0;
               }).map(function(item, idx) {
+                var isRuneCol = col.name === 'Runes';
+                if (isRuneCol) {
+                  if (idx !== 0) return null;
+                  return React.createElement('div', { key:idx, className:'flex-shrink-0 w-72 max-w-[80vw]' },
+                    React.createElement('div', { className:'bg-bitmap-black rounded-lg p-2 w-full' },
+                      col.items.map(function(r, ri) {
+                        var sym = r.runeSymbol || '';
+                        var bal = r.runeBalance || '';
+                        var nm = r.runeName || r.tick || r.name || '';
+                        return React.createElement('div', { key:ri, className:'flex items-center justify-between gap-2 font-mono text-[9px] py-0.5 border-b border-bitmap-border last:border-0' },
+                          React.createElement('span', { className:'text-bitmap-orange-light truncate' }, sym + ' ' + nm),
+                          React.createElement('span', { className:'text-white font-bold whitespace-nowrap' }, bal)
+                        );
+                      })
+                    )
+                  );
+                }
                 var blockNum = extractBlockNumber(item.name);
                 var displayNum = item.inscriptionNumber || item.inscription_number;
                 var isParcel = col.name === 'Parcelas';
                 var isBitmap = col.name === 'Bitmaps';
+                var isOther = !isParcel && !isBitmap;
+                var contentType = item.contentType || '';
+                var isImage = isOther && contentType && contentType.indexOf('image/') === 0;
+                var isJson = isOther && contentType && contentType.indexOf('json') !== -1;
                 var confs = isParcel ? (parcelPreviewConfs[item.id] || null) : null;
                 var pc1 = confs ? confs[0] : null;
                 var pc2 = confs ? confs[1] : null;
@@ -594,7 +752,6 @@ function MisActivosPage(props) {
                 ) : null);
                 return React.createElement('div', { key:idx, className:'flex-shrink-0 flex flex-col items-center min-w-0 ' + (isBitmap ? 'gap-[2px]' : 'gap-1') },
                   confLines,
-                  conf2Lines,
                   isBitmap ? React.createElement('div', { className:'w-full text-center whitespace-nowrap overflow-hidden', style:{ maxWidth:'80px' } },
                     React.createElement('span', { className:'font-mono text-white leading-[1.1]', title: item.name, style:{ fontSize: bitmapNumFontSize(item.name || ('#' + displayNum)) } },
                       item.name ? item.name : '#' + displayNum
@@ -616,8 +773,19 @@ function MisActivosPage(props) {
                           alt:'',
                           className:'w-full h-full object-cover',
                           onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=5&size=80'; }
-                        }) : (blockNum ? React.createElement(MondrianCanvas, { blockNumber:blockNum, transactions:[], size:iconSize }) : null))
+                        }) : (isOther && item.id
+                          ? React.createElement(OrdinalImageView, {
+                              inscriptionId: item.id,
+                              contentType: contentType,
+                              width: 80,
+                              height: 80,
+                              showJson: true
+                            })
+                          : (blockNum ? React.createElement(MondrianCanvas, { blockNumber:blockNum, transactions:[], size:iconSize }) : null)))
                   ),
+                  (isBitmap || isParcel || isOther) && item.inscriptionNumber ? React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted text-center w-full mt-0.5', style:{ maxWidth: '80px' } },
+                    '#' + item.inscriptionNumber
+                  ) : null,
                   isParcel ? (function() {
                     var pbn = extractBlockNumber(item.name);
                     var pbd = pbn !== null ? (bitmapBlockData[pbn] || {}) : {};
@@ -1264,7 +1432,7 @@ function DetallePage(props) {
                 React.createElement('div', { className:'font-mono text-[11px] text-white truncate' },
                   item.name || '#' + item.inscriptionNumber
                 ),
-                React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' },
+                React.createElement('div', { className:'font-acme text-[11px] text-bitmap-muted' },
                   item.inscriptionNumber ? '#' + item.inscriptionNumber : ''
                 )
               )
@@ -1301,9 +1469,9 @@ function DetallePage(props) {
             React.createElement('div', { className:'font-mono text-[11px] text-white truncate' },
               item.name || '#' + item.inscriptionNumber
             ),
-            React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' },
-              item.inscriptionNumber ? '#' + item.inscriptionNumber : ''
-            ),
+                React.createElement('div', { className:'font-acme text-[11px] text-bitmap-muted' },
+                  item.inscriptionNumber ? '#' + item.inscriptionNumber : ''
+                ),
             item.isSelected ? React.createElement('div', { className:'mt-2 relative z-20' },
               React.createElement('input', {
                 type:'text',
@@ -1319,6 +1487,22 @@ function DetallePage(props) {
             ) : null
           );
         })
+      ) :
+
+      (collectionName === 'Runes') ?
+      React.createElement('div', { className:'bg-bitmap-surface border border-bitmap-border rounded-xl p-4' },
+        React.createElement('h3', { className:'font-alfaslab text-white mb-3' }, 'Runes (' + (col ? col.items.length : 0) + ')'),
+        React.createElement('div', { className:'space-y-1 max-h-80 overflow-y-auto' },
+          (col ? col.items : []).map(function(r, ri) {
+            var sym = r.runeSymbol || '';
+            var bal = r.runeBalance || '';
+            var nm = r.runeName || r.tick || r.name || '';
+            return React.createElement('div', { key:ri, className:'flex items-center justify-between gap-3 font-mono text-xs py-1.5 border-b border-bitmap-border last:border-0' },
+              React.createElement('span', { className:'text-bitmap-orange-light truncate' }, sym + ' ' + nm),
+              React.createElement('span', { className:'text-white font-bold whitespace-nowrap' }, bal)
+            );
+          })
+        )
       ) :
 
       React.createElement('div', { className:'grid grid-cols-2 sm:grid-cols-4 gap-3' },
@@ -1343,6 +1527,9 @@ function DetallePage(props) {
           var tx2 = confs ? confs[1] : null;
           var inscriptionIdShort = item.id ? item.id.slice(0, 16) + '...' : '';
           var isParcelItem = item.isParcel || collectionName === 'Parcelas';
+          var isBitmapItem = !isParcelItem && collectionName === 'Bitmaps';
+          var isOther = !isParcelItem && !isBitmapItem;
+          var contentType = item.contentType || '';
             var imgSrc = isParcelItem
               ? '/api/v1/parcel-image?v=2'
               : '/api/v1/block-image/' + blockNum + '?v=5&size=150&etiquetas=' + encodeURIComponent(etiquetas) + '&tx=' + tx + '&hash=' + encodeURIComponent(hash) + '&grid=' + isPerfect + '&punk=' + isPunk;
@@ -1403,12 +1590,25 @@ function DetallePage(props) {
                 ) : null)
               ) : null,
               React.createElement('div', { className:'w-full aspect-square mb-2 rounded-lg overflow-hidden bg-bitmap-black' },
-                blockNum ? React.createElement('img', {
-                  src: imgSrc,
+                isParcelItem ? React.createElement('img', {
+                  src: '/api/v1/parcel-image?v=2',
                   alt:'',
                   className:'w-full h-full object-cover',
-                  onError: function(e) { e.target.src = isParcelItem ? '/api/v1/parcel-image?v=2' : '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
-                }) : null
+                  onError: function(e) { e.target.src = '/api/v1/parcel-image?v=2'; }
+                }) : (isOther && item.id
+                  ? React.createElement(OrdinalImageView, {
+                      inscriptionId: item.id,
+                      contentType: contentType,
+                      width: 150,
+                      height: 150,
+                      showJson: true
+                    })
+                  : (blockNum ? React.createElement('img', {
+                      src: imgSrc,
+                      alt:'',
+                      className:'w-full h-full object-cover',
+                      onError: function(e) { e.target.src = isParcelItem ? '/api/v1/parcel-image?v=2' : '/api/v1/block-image/' + blockNum + '?v=5&size=150'; }
+                    }) : null))
               ),
               isParcelItem ? (function() {
                 var pts = getParcelTags(item.name, blockDataMap[blockNum] || {}, epicBlocks);
@@ -1421,7 +1621,7 @@ function DetallePage(props) {
               React.createElement('div', { className:'font-mono text-[11px] text-white truncate text-center w-full' },
                 item.name || '#' + item.inscriptionNumber
               ),
-              React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted text-center' },
+              React.createElement('div', { className:'font-acme text-[11px] text-bitmap-muted text-center' },
                 item.inscriptionNumber ? '#' + item.inscriptionNumber : ''
               ),
               isParcelItem && inscriptionIdShort ? React.createElement('div', {
@@ -1582,6 +1782,9 @@ function WalletDetailPage(props) {
   var _eb = React.useState([]);
   var epicBlocks = _eb[0];
   var setEpicBlocks = _eb[1];
+  var _bp2 = React.useState(null);
+  var btcPrice2 = _bp2[0];
+  var setBtcPrice2 = _bp2[1];
   var _f = React.useState({});
   var bitmapTagPrices = _f[0];
   var setBitmapTagPrices = _f[1];
@@ -1591,6 +1794,12 @@ function WalletDetailPage(props) {
   var _h = React.useState(null);
   var unifiedFloorPrice = _h[0];
   var setUnifiedFloorPrice = _h[1];
+
+  React.useEffect(function() {
+    fetch('/api/v1/live/rates').then(function(r) { return r.json(); }).then(function(d) {
+      if (d && d.data && d.data.btcPrice !== null) setBtcPrice2(d.data.btcPrice);
+    }).catch(function() {});
+  }, []);
 
   React.useEffect(function() {
     fetch('/api/v1/tags/epic').then(function(r) { return r.json(); }).then(function(res) {
@@ -1909,8 +2118,9 @@ function WalletDetailPage(props) {
                       var p = bn !== null ? bitmapMainTagPrice(bn) : null;
                       if (p !== null) totalSats += p;
                     });
-                    return React.createElement('span', { className:'font-acme text-xs text-bitmap-muted', title:'Total value' },
-                      'Total value: ' + BitmapUtils.formatBtcSat(totalSats) + ' BTC'
+                    return React.createElement('span', { className:'font-acme text-xs', title:'Total value' },
+                      React.createElement('span', { className:'text-bitmap-muted' }, 'Total value: ' + BitmapUtils.formatBtcSat(totalSats) + ' BTC'),
+                      btcPrice2 ? React.createElement('span', { className:'text-white ml-1' }, '\u2248 USD $' + ((totalSats / 100000000) * btcPrice2).toLocaleString(undefined, { maximumFractionDigits: 0 })) : null
                     );
                   })()
                 : null
@@ -1936,10 +2146,31 @@ function WalletDetailPage(props) {
                 }
                 return 0;
               }).map(function(item, idx) {
+                var isRuneCol = col.name === 'Runes';
+                if (isRuneCol) {
+                  if (idx !== 0) return null;
+                  return React.createElement('div', { key:idx, className:'flex-shrink-0 w-72 max-w-[80vw]' },
+                    React.createElement('div', { className:'bg-bitmap-black rounded-lg p-2 w-full' },
+                      col.items.map(function(r, ri) {
+                        var sym = r.runeSymbol || '';
+                        var bal = r.runeBalance || '';
+                        var nm = r.runeName || r.tick || r.name || '';
+                        return React.createElement('div', { key:ri, className:'flex items-center justify-between gap-2 font-mono text-[9px] py-0.5 border-b border-bitmap-border last:border-0' },
+                          React.createElement('span', { className:'text-bitmap-orange-light truncate' }, sym + ' ' + nm),
+                          React.createElement('span', { className:'text-white font-bold whitespace-nowrap' }, bal)
+                        );
+                      })
+                    )
+                  );
+                }
                 var blockNum = extractBlockNumber(item.name);
                 var displayNum = item.inscriptionNumber || item.inscription_number;
                 var isParcel = col.name === 'Parcelas';
                 var isBitmap = col.name === 'Bitmaps';
+                var isOther = !isParcel && !isBitmap;
+                var contentType = item.contentType || '';
+                var isImage = isOther && contentType && contentType.indexOf('image/') === 0;
+                var isJson = isOther && contentType && contentType.indexOf('json') !== -1;
                 var confs = isParcel ? (parcelPreviewConfs[item.id] || null) : null;
                 var pc1 = confs ? confs[0] : null;
                 var pc2 = confs ? confs[1] : null;
@@ -2007,7 +2238,6 @@ function WalletDetailPage(props) {
                 ) : null);
                 return React.createElement('div', { key:idx, className:'flex-shrink-0 flex flex-col items-center min-w-0 ' + (isBitmap ? 'gap-[2px]' : 'gap-1') },
                   confLines,
-                  conf2Lines,
                   isBitmap ? React.createElement('div', { className:'w-full text-center whitespace-nowrap overflow-hidden', style:{ maxWidth:'80px' } },
                     React.createElement('span', { className:'font-mono text-white leading-[1.1]', title: item.name, style:{ fontSize: bitmapNumFontSize(item.name || ('#' + displayNum)) } },
                       item.name ? item.name : '#' + displayNum
@@ -2029,8 +2259,19 @@ function WalletDetailPage(props) {
                           alt:'',
                           className:'w-full h-full object-cover',
                           onError: function(e) { e.target.src = '/api/v1/block-image/' + blockNum + '?v=5&size=80'; }
-                        }) : (blockNum ? React.createElement(MondrianCanvas, { blockNumber:blockNum, transactions:[], size:iconSize }) : null))
+                        }) : (isOther && item.id
+                          ? React.createElement(OrdinalImageView, {
+                              inscriptionId: item.id,
+                              contentType: contentType,
+                              width: 80,
+                              height: 80,
+                              showJson: true
+                            })
+                          : (blockNum ? React.createElement(MondrianCanvas, { blockNumber:blockNum, transactions:[], size:iconSize }) : null)))
                   ),
+                  (isBitmap || isParcel || isOther) && item.inscriptionNumber ? React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted text-center w-full mt-0.5', style:{ maxWidth: '80px' } },
+                    '#' + item.inscriptionNumber
+                  ) : null,
                   isParcel ? (function() {
                     var pbn = extractBlockNumber(item.name);
                     var pbd = pbn !== null ? (bitmapBlockData[pbn] || {}) : {};

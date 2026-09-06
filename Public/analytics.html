@@ -120,6 +120,7 @@
 
     var countriesChartType = 'doughnut';
     var countMode = 'all';
+    var pagesGrouped = false;
 
     function render(){
       var html = '';
@@ -365,12 +366,52 @@
       return html;
     }
 
+    function normalizePageKey(url){
+      if(!url) return 'otro';
+      var clean = url.replace(/https?:\/\/bitmapcore\.net/g,'');
+      if(clean === '/#/' || clean === '/#') return '#home';
+      if(clean === '/' || clean === '') return 'home';
+      var path = clean.replace(/\/#\//g,'/').split('?')[0].split('#')[0].replace(/^\//,'');
+      if(path === '') return 'home';
+      var seg = path.split('/').filter(function(s){ return s !== ''; })[0] || 'otro';
+      return seg;
+    }
+
     function renderPages(data){
       if(!data.topPages || data.topPages.length === 0) return '<p style="color:#666">Sin datos de paginas aun.</p>';
+      var btnStyle = 'padding:6px 14px;border-radius:6px;border:1px solid #2A2A2A;background:#1a1a1a;color:#B0B0B0;cursor:pointer;font-size:12px;font-family:Acme,monospace;transition:all 0.2s';
+      var btnActive = btnStyle.replace('background:#1a1a1a','background:#FE3E00').replace('color:#B0B0B0','color:#fff').replace('border:1px solid #2A2A2A','border:1px solid #FE3E00');
+      var toggleHtml = '<div style="display:flex;gap:6px;margin-bottom:16px;align-items:center">'
+        + '<span style="color:#666;font-size:12px;font-family:Acme">Vista:</span>'
+        + '<button style="'+(pagesGrouped?btnStyle:btnActive)+'" onclick="setPagesMode(\'individual\')">Individual</button>'
+        + '<button style="'+(pagesGrouped?btnActive:btnStyle)+'" onclick="setPagesMode(\'grouped\')">Agrupado</button>'
+        + '</div>';
+
+      if(pagesGrouped){
+        var groups = {};
+        data.topPages.forEach(function(p){
+          var key = normalizePageKey(p.page_url);
+          if(!groups[key]) groups[key] = { views:0, totalTime:0, totalScroll:0, scrollCount:0 };
+          groups[key].views += (p.views || 0);
+          groups[key].totalTime += (p.avgTime || 0) * (p.views || 0);
+          if(p.avgScroll){ groups[key].totalScroll += p.avgScroll * (p.views || 0); groups[key].scrollCount += (p.views || 0); }
+        });
+        var grouped = [];
+        for(var k in groups){
+          var g = groups[k];
+          grouped.push({ key:k, views:g.views, avgTime: g.views>0 ? g.totalTime/g.views : 0, avgScroll: g.scrollCount>0 ? g.totalScroll/g.scrollCount : null });
+        }
+        grouped.sort(function(a,b){ return b.views - a.views; });
+        var rows = grouped.map(function(g){
+          return [g.key, fmt(g.views), timeAgo(g.avgTime), g.avgScroll ? Math.round(g.avgScroll)+'%' : '-'];
+        });
+        return toggleHtml + dataTable(['Pagina','Vistas','Tiempo medio','Scroll %'], rows);
+      }
+
       var rows = data.topPages.map(function(p){
         return [(p.page_url||'-').replace('https://bitmapcore.net','').slice(0,60), fmt(p.views), timeAgo(p.avgTime), p.avgScroll ? Math.round(p.avgScroll)+'%' : '-'];
       });
-      return dataTable(['Pagina','Vistas','Tiempo medio','Scroll %'], rows);
+      return toggleHtml + dataTable(['Pagina','Vistas','Tiempo medio','Scroll %'], rows);
     }
 
     function renderEvents(data){
@@ -481,6 +522,11 @@
 
     window.setCountMode = function(mode){
       countMode = mode;
+      loadDashboard();
+    };
+
+    window.setPagesMode = function(mode){
+      pagesGrouped = (mode === 'grouped');
       loadDashboard();
     };
 

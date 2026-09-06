@@ -120,7 +120,13 @@
     "sortByDate": "日付",
     "sortByBlock": "ブロック",
     "asc": "昇順",
-    "desc": "降順"
+    "desc": "降順",
+    "bittickAgentsTitle": "Bittick Agents",
+    "selectAll": "すべて選択",
+    "sortAZ": "A-Z",
+    "noBittickAgentsInWallet": "ウォレットにBittick Agentsがありません",
+    "searchByNameOrInscription": "名前またはインスクリプションで検索...",
+    "agentsCount": "{count} agents"
   },
   "block": {
     "title": "ブロック詳細",
@@ -322,7 +328,8 @@
     "dontClose": "重要：トランザクションが完了するまでこのタブを閉じないでください。メンプールに送信中、確認を待っています...",
     "serverError": "サーバーエラー",
     "transmitError": "バッチ送信エラー",
-    "batchSuccess": "一括購入が完了しました："
+    "batchSuccess": "一括購入が完了しました：",
+    "noPricedItemsSelected": "このアセットは販売されていません。有効でリストされたアセットを選択してください"
   },
   "tagTable": {
     "title": "タグテーブル",

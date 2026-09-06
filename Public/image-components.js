@@ -148,6 +148,7 @@ function ResultCard(props) {
   var onClick = props.onClick;
   var onRemove = props.onRemove;
   var bitmapsCount = props.bitmapsCount || 0;
+  var bitmapsValue = props.bitmapsValue || 0;
   var etiquetas = props.etiquetas || '';
   var hash = props.hash || '';
   var totalTransactions = props.totalTransactions || 0;
@@ -182,7 +183,8 @@ function ResultCard(props) {
       }) :
       React.createElement('div', { className:'w-full h-full flex flex-col items-center justify-center' },
         React.createElement('div', { className:'text-2xl font-alfaslab text-bitmap-orange font-bold' }, bitmapsCount),
-        React.createElement('div', { className:'font-acme text-[10px] text-bitmap-muted' }, I18n.t('home.bitmaps'))
+        React.createElement('div', { className:'font-acme text-[14px] text-bitmap-muted' }, 'Bitmaps'),
+        bitmapsValue > 0 ? React.createElement('div', { className:'font-acme text-[11px] text-bitmap-orange-light mt-1' }, (bitmapsValue / 100000000).toFixed(6) + ' BTC') : null
       )
     ),
     price ? React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light mt-1' }, BitmapUtils.formatBtc(price) + ' BTC') : null
@@ -203,7 +205,8 @@ function WalletResultCard(props) {
   var shortAddr = address.slice(0, 6) + '...' + address.slice(-4);
 
   var totalValueBtc = 0;
-  collections.forEach(function(c) { totalValueBtc += c.totalValue || 0; });
+  var bitmapsValueBtc = 0;
+  collections.forEach(function(c) { totalValueBtc += c.totalValue || 0; if (c.name === 'Bitmaps') bitmapsValueBtc += c.totalValue || 0; });
 
   return React.createElement('div', {
     className:'bg-bitmap-surface border border-bitmap-orange/50 rounded-xl p-3 hover:border-bitmap-orange transition-all'
@@ -232,7 +235,8 @@ function WalletResultCard(props) {
       ),
       React.createElement('div', { className:'bg-bitmap-black/50 rounded-lg p-2' },
         React.createElement('div', { className:'font-acme text-xs text-bitmap-orange font-bold' }, bitmapsCount),
-        React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' }, I18n.t('home.bitmaps'))
+        React.createElement('div', { className:'font-acme text-[9px] text-bitmap-muted' }, 'Bitmaps'),
+        bitmapsValueBtc > 0 ? React.createElement('div', { className:'font-acme text-[9px] text-bitmap-orange-light mt-1' }, (bitmapsValueBtc / 100000000).toFixed(6) + ' BTC') : null
       ),
       React.createElement('div', { className:'bg-bitmap-black/50 rounded-lg p-2' },
         React.createElement('div', { className:'font-acme text-xs text-bitmap-orange-light font-bold' }, btcBalance ? (btcBalance / 100000000).toFixed(8) + ' BTC' : '0 BTC'),

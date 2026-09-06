@@ -120,7 +120,13 @@
     "sortByDate": "Date",
     "sortByBlock": "Bloc",
     "asc": "Croissant",
-    "desc": "Décroissant"
+    "desc": "Décroissant",
+    "bittickAgentsTitle": "Bittick Agents",
+    "selectAll": "Tout sélectionner",
+    "sortAZ": "A-Z",
+    "noBittickAgentsInWallet": "Pas de Bittick Agents dans le wallet",
+    "searchByNameOrInscription": "Rechercher par nom ou inscription...",
+    "agentsCount": "{count} agents"
   },
   "block": {
     "title": "Détail du Bloc",
@@ -322,7 +328,8 @@
     "dontClose": "IMPORTANT : Ne fermez pas cet onglet tant que la transaction n'est pas terminée. Envoi à la mempool, en attente de confirmation...",
     "serverError": "Erreur serveur",
     "transmitError": "Erreur de transmission du lot",
-    "batchSuccess": "Achat groupé réussi :"
+    "batchSuccess": "Achat groupé réussi :",
+    "noPricedItemsSelected": "Cet actif n'est pas en vente, choisissez un actif actif et listé"
   },
   "tagTable": {
     "title": "Tableaux de Tags",

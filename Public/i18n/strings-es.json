@@ -134,7 +134,13 @@
     "sortByDate": "Fecha",
     "sortByBlock": "Bloque",
     "asc": "Ascendente",
-    "desc": "Descendente"
+    "desc": "Descendente",
+    "bittickAgentsTitle": "Bittick Agents",
+    "selectAll": "Seleccionar todo",
+    "sortAZ": "A-Z",
+    "noBittickAgentsInWallet": "No hay Bittick Agents en la wallet",
+    "searchByNameOrInscription": "Buscar por nombre o inscripción...",
+    "agentsCount": "{count} agents"
   },
   "block": {
     "title": "Detalle de Bloque",
@@ -336,7 +342,8 @@
     "dontClose": "IMPORTANTE: No cierre esta pestaña hasta que se complete la transacción. Enviando a la mempool, esperando confirmación...",
     "serverError": "Error del servidor",
     "transmitError": "Error al transmitir batch",
-    "batchSuccess": "Compra batch exitosa:"
+    "batchSuccess": "Compra batch exitosa:",
+    "noPricedItemsSelected": "Este activo no está a la venta, elija un activo que esté activo y listado"
   },
   "tagTable": {
     "title": "Tablas de Etiquetas",

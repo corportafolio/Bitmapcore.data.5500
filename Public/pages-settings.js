@@ -1,4 +1,5 @@
 function SettingsPage(props) {
+  var langMap = {en:{f:'\uD83C\uDDEC\uD83C\uDDE7',n:'English'},es:{f:'\uD83C\uDDEA\uD83C\uDDF8',n:'Espa\u00F1ol'},fr:{f:'\uD83C\uDDEB\uD83C\uDDF7',n:'Fran\u00E7ais'},ja:{f:'\uD83C\uDDEF\uD83C\uDDF5',n:'\u65E5\u672C\u8A9E'},zh:{f:'\uD83C\uDDE8\uD83C\uDDF3',n:'\u4E2D\u6587'},lo:{f:'\uD83C\uDDF1\uD83C\uDDF6',n:'ລາວ'},nl:{f:'\uD83C\uDDF3\uD83C\uDDF1',n:'Nederlands'},ko:{f:'\uD83C\uDDF0\uD83C\uDDF7',n:'\uD55C\uAD6D\uC5B4'},de:{f:'\uD83C\uDDE9\uD83C\uDDEA',n:'Deutsch'},vi:{f:'\uD83C\uDDFB\uD83C\uDDF3',n:'Ti\u1EBFng Vi\u1EC7t'},id:{f:'\uD83C\uDDEE\uD83C\uDDE9',n:'Bahasa Indonesia'},el:{f:'\uD83C\uDDEC\uD83C\uDDF7',n:'\u0395\u03BB\u03BB\u03B7\u03BD\u03B9\u03BA\u03AC'}};
   var _a = React.useState(I18n.getCurrentLang());
   var language = _a[0];
   var setLanguage = _a[1];
@@ -57,8 +58,8 @@ function SettingsPage(props) {
               'border-bitmap-orange bg-bitmap-orange/10 text-bitmap-orange'
           },
             React.createElement('span', { className: 'flex items-center gap-2' },
-              language === 'en' ? '\uD83C\uDDEC\uD83C\uDDE7' : language === 'es' ? '\uD83C\uDDEA\uD83C\uDDF8' : language === 'fr' ? '\uD83C\uDDEB\uD83C\uDDF7' : language === 'ja' ? '\uD83C\uDDEF\uD83C\uDDF5' : '\uD83C\uDDE8\uD83C\uDDF3',
-              language === 'en' ? 'English' : language === 'es' ? 'Espa\u00F1ol' : language === 'fr' ? 'Fran\u00E7ais' : language === 'ja' ? '\u65E5\u672C\u8A9E' : '\u4E2D\u6587'
+              langMap[language] ? langMap[language].f : '\uD83C\uDDEC\uD83C\uDDE7',
+              langMap[language] ? langMap[language].n : 'English'
             ),
             React.createElement('span', { className: 'text-xs transition-transform' + (langDropdownOpen ? ' rotate-180' : '') }, '\u25BC')
           ),
@@ -66,8 +67,9 @@ function SettingsPage(props) {
             className: 'absolute right-0 top-full mt-1 w-full bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1',
             onClick: function(e) { e.stopPropagation(); }
           },
-            ['en', 'es', 'fr', 'ja', 'zh'].map(function(l) {
+            ['en', 'es', 'fr', 'ja', 'zh', 'lo', 'nl', 'ko', 'de', 'vi', 'id', 'el'].map(function(l) {
               var isSelected = language === l;
+              var li = langMap[l] || {f:'\uD83C\uDDEC\uD83C\uDDE7',n:l};
               return React.createElement('button', {
                 key: l,
                 onClick: function() { handleLanguageSelect(l); },
@@ -75,8 +77,8 @@ function SettingsPage(props) {
                   (isSelected ? 'bg-bitmap-orange/10 text-bitmap-orange' : 'text-bitmap-text hover:bg-bitmap-black/30 hover:text-white')
               },
                 React.createElement('span', { className: 'flex items-center gap-2' },
-                  l === 'en' ? '\uD83C\uDDEC\uD83C\uDDE7' : l === 'es' ? '\uD83C\uDDEA\uD83C\uDDF8' : l === 'fr' ? '\uD83C\uDDEB\uD83C\uDDF7' : l === 'ja' ? '\uD83C\uDDEF\uD83C\uDDF5' : '\uD83C\uDDE8\uD83C\uDDF3',
-                  l === 'en' ? 'English' : l === 'es' ? 'Espa\u00F1ol' : l === 'fr' ? 'Fran\u00E7ais' : l === 'ja' ? '\u65E5\u672C\u8A9E' : '\u4E2D\u6587'
+                  li.f,
+                  li.n
                 ),
                 isSelected ? React.createElement('span', { className: 'ml-auto text-bitmap-orange' }, '\u2713') : null
               );

@@ -10,3 +10,10 @@ data/
 __pycache__/
 *.pyc
 node_modules/
+
+# Backups y temporales (no commitear)
+*.bak
+*.log
+pregenerate-*.log
+*.tmp
+*.swp
