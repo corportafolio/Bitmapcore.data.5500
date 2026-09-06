@@ -1,0 +1,13 @@
+{
+  "name": "BitmapCore - Bitcoin Ordinals Marketplace",
+  "short_name": "BitmapCore",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080008",
+  "theme_color": "#080008",
+  "description": "The Bitmap marketplace on Bitcoin",
+  "icons": [
+    { "src": "/BITMAP.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/BITMAP.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

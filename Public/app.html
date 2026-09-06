@@ -225,6 +225,9 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
     }
+    if (window.location.pathname === '/app.html') {
+      history.replaceState(null, '', '/');
+    }
   </script>
   <div id="root">
     <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#666;font-family:sans-serif;background:#080008">
