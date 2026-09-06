@@ -279,7 +279,10 @@ function BittickAgentsPage(props) {
 
     MarketplaceLister.list({
       selected: selected,
-      listApi: { create: MarketplaceApi.batchList, sign: MarketplaceApi.batchSign },
+      listApi: {
+        create: function(items) { return MarketplaceApi.unifiedList('bittick', items); },
+        sign: function(listingIds, signedPsbtHexs, pubKey) { return MarketplaceApi.unifiedSign('bittick', listingIds, signedPsbtHexs, pubKey); }
+      },
       toBatchItem: function(item, wallet, pubKey) {
         return {
           inscriptionId: item.id,
@@ -338,20 +341,13 @@ function BittickAgentsPage(props) {
     MarketplaceBuyer.buy({
       selected: selectedBuy,
       idFromItem: function(item) { return item.listingId || item.id; },
-      buyIdsKey: 'listingIds',
+      buyIdsKey: 'ids',
+      collection: 'bittick',
       assetLabel: 'agente',
       nameFromItem: function(item) { return item.name || ('Agent #' + (item.inscriptionNumber || '')); },
       transport: {
-        batchBuy: function(payload) {
-          return fetch('/api/v1/transaction/batch-buy', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-          }).then(function(r) { return r.json(); });
-        },
-        batchBroadcast: function(payload) {
-          return fetch('/api/v1/transaction/batch-broadcast', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-          }).then(function(r) { return r.text(); });
-        }
+        batchBuy: MarketplaceApi.unifiedBuy,
+        batchBroadcast: MarketplaceApi.unifiedBroadcast
       }
     }, {
       feeRate: feeRate, idempotencyPrefix: 'batch_buy'

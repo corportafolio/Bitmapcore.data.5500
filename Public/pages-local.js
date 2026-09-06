@@ -302,7 +302,10 @@ function LocalPage(props) {
 
     MarketplaceLister.list({
       selected: selected,
-      listApi: { create: MarketplaceApi.batchList, sign: MarketplaceApi.batchSign },
+      listApi: {
+        create: function(items) { return MarketplaceApi.unifiedList('bitmaps', items); },
+        sign: function(listingIds, signedPsbtHexs, pubKey) { return MarketplaceApi.unifiedSign('bitmaps', listingIds, signedPsbtHexs, pubKey); }
+      },
       toBatchItem: function(item, wallet, pubKey) {
         var isPriceUpdate = item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice;
         return {
@@ -399,20 +402,13 @@ function LocalPage(props) {
     MarketplaceBuyer.buy({
       selected: selected,
       idFromItem: function(item) { return item.bitmapId || item.id; },
-      buyIdsKey: 'bitmapIds',
+      buyIdsKey: 'ids',
+      collection: 'bitmaps',
       assetLabel: 'bitmap',
       nameFromItem: function(item) { return (item.bitmapNumber || '?') + '.bitmap'; },
       transport: {
-        batchBuy: function(payload) {
-          return fetch('/api/v1/transaction/batch-buy', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-          }).then(function(r) { return r.json(); });
-        },
-        batchBroadcast: function(payload) {
-          return fetch('/api/v1/transaction/batch-broadcast', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-          }).then(function(r) { return r.text(); });
-        }
+        batchBuy: MarketplaceApi.unifiedBuy,
+        batchBroadcast: MarketplaceApi.unifiedBroadcast
       }
     }, {
       feeRate: feeRate, btcPrice: btcPrice, idempotencyPrefix: 'batch_buy'

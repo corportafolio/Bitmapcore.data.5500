@@ -183,6 +183,7 @@ var MarketplaceBuyer = (function() {
       // 3) Payload (variables buyer* del doc 10).
       var payload = {};
       payload[cfg.buyIdsKey] = ids;
+      if (cfg.collection) payload.collection = cfg.collection;            // ENDPOINT UNIFICADO (doc 10 §3.0)
       payload.buyerAddress = wallet.address;                                // ACTIVOS (ordinals): recibe los activos
       payload.buyerPaymentAddress = wallet.paymentAddress || wallet.address; // PAGO/saldo: paga
       payload.buyerPaymentPublicKey = wallet.paymentPublicKey || wallet.publicKey;

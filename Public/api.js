@@ -119,6 +119,36 @@ var MarketplaceApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ listingIds: listingIds, signedPsbtHexs: signedPsbtHexs, sellerOrdinalPublicKey: sellerOrdinalPublicKey })
     }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  // ==== ENDPOINT UNIFICADO (doc 07 §5.1): POST /api/v1/listings/batch ====
+  unifiedList: function(collection, items) {
+    return fetch('/api/v1/listings/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collection: collection, items: items })
+    }).then(function(r) { return r.json(); });
+  },
+  unifiedSign: function(collection, listingIds, signedPsbtHexs, sellerOrdinalPublicKey) {
+    return fetch('/api/v1/listings/batch/sign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collection: collection, listingIds: listingIds, signedPsbtHexs: signedPsbtHexs, sellerOrdinalPublicKey: sellerOrdinalPublicKey })
+    }).then(function(r) { return r.json(); });
+  },
+  // Compra unificada (doc 10 §3.0): body = { collection, ...rest } -> *-unified
+  unifiedBuy: function(payload) {
+    return fetch('/api/v1/transaction/batch-buy-unified', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.json(); });
+  },
+  unifiedBroadcast: function(payload) {
+    return fetch('/api/v1/transaction/batch-broadcast-unified', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.text(); });
   }
 };
 
