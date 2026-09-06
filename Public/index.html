@@ -8,54 +8,41 @@
   <meta name="theme-color" content="#080008">
   <script>
     (function() {
-      if (!sessionStorage.getItem('pwa_fixed_v117')) {
-        sessionStorage.setItem('pwa_fixed_v117', '1');
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            regs.forEach(function(r) { r.unregister(); });
-          });
-        }
-        if ('caches' in window) {
-          caches.keys().then(function(keys) {
-            keys.forEach(function(k) { caches.delete(k); });
-          });
-        }
-        fetch('/version.txt', {cache: 'reload'}).then(function() {
-          window.location.href = window.location.pathname + '?v=' + Date.now() + window.location.hash;
-        }).catch(function() {
-          window.location.reload(true);
-        });
-        return;
+      if (sessionStorage.getItem('sw_killed')) return;
+      sessionStorage.setItem('sw_killed', '1');
+      var done = function() { window.location.reload(); };
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          return Promise.all(regs.map(function(r) { return r.unregister(); }));
+        }).then(function() {
+          if ('caches' in window) {
+            return caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+            });
+          }
+        }).then(done).catch(done);
+      } else {
+        done();
       }
     })();
   </script>
   <script>
     (function() {
-      var CUR = '117';
+      var CUR = '118';
       var reloading = false;
       var doReload = function() {
         if (reloading) return;
         reloading = true;
-        try {
-          var base = window.location.href.split('#')[0].split('?')[0];
-          var hash = window.location.hash || '';
-          var url = base + '?v=' + Date.now() + hash;
-          window.location.href = url;
-        } catch (e) {
-          window.location.reload();
-        }
+        sessionStorage.setItem('sw_killed', '1');
+        window.location.reload();
       };
       var check = function() {
         try {
           fetch('/version.txt?t=' + Date.now()).then(function(r) { return r.text(); }).then(function(t) {
             var s = (t || '').trim();
-            console.log('[AutoReload] version.txt =', s, '| CUR =', CUR);
-            if (s && s !== CUR) {
-              console.log('[AutoReload] NEW VERSION DETECTED:', s, '→ reloading...');
-              doReload();
-            }
-          }).catch(function(err) { console.log('[AutoReload] fetch error:', err); });
-        } catch (e) { console.log('[AutoReload] error:', e); }
+            if (s && s !== CUR) { doReload(); }
+          }).catch(function() {});
+        } catch (e) {}
       };
       check();
       setInterval(check, 10000);
