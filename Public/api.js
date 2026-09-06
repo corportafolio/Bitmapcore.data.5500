@@ -68,6 +68,46 @@ var AssetApi = {
     var q = '/api/v1/assets/parcels/confirmations?address=' + encodeURIComponent(walletAddress) + '&parcels=' + encodeURIComponent(parcelIds.join(',')) + '&t=' + Date.now();
     return fetch(q)
       .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  },
+  // ===== Colecciones (registro + consulta) =====
+  getCollections: function() {
+    return fetch('/api/v1/assets/collections')
+      .then(function(r) { return r.json(); });
+  },
+  getCollection: function(slug) {
+    return fetch('/api/v1/assets/collections/' + encodeURIComponent(slug))
+      .then(function(r) { return r.json(); });
+  },
+  // Registro de colección con subida de archivos (multipart):
+  //   metaFile, inscriptionsFile (File), imageFile (File PNG <=512), xAccount, discord
+  registerCollection: function(opts) {
+    var fd = new FormData();
+    if (opts.metaFile) fd.append('meta', opts.metaFile, 'meta.json');
+    if (opts.inscriptionsFile) fd.append('inscriptions', opts.inscriptionsFile, 'inscriptions.json');
+    if (opts.imageFile) fd.append('image', opts.imageFile, opts.imageFile.name || 'image.png');
+    if (opts.xAccount) fd.append('x_account', opts.xAccount);
+    if (opts.discord) fd.append('discord', opts.discord);
+    return fetch('/api/v1/assets/collections/register', {
+      method: 'POST',
+      body: fd
+    }).then(function(r) {
+      return r.json().then(function(j) {
+        if (!r.ok) {
+          var msg = j && j.error && (j.error.message || j.error) ? j.error.message : ('HTTP ' + r.status);
+          throw new Error(typeof msg === 'string' ? msg : 'HTTP ' + r.status);
+        }
+        return j;
+      });
+    });
+  },
+  // Fetch de un archivo de colección como File para edición (opcional)
+  readAsText: function(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() { resolve(reader.result); };
+      reader.onerror = function() { reject(new Error('No se pudo leer el archivo')); };
+      reader.readAsText(file);
+    });
   }
 };
 

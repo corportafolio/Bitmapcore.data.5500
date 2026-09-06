@@ -383,7 +383,9 @@ function FloatingMarketplaceMenu(props) {
     { id:'discounts', label: I18n.t('floatMenu.discounts'), path:'/discounts', icon:'discount.svg', isImage:true },
     { id:'unified', label: I18n.t('nav.unified'), path:'/unified', icon:'layers.svg', isImage:true },
     { id:'tags', label: I18n.t('floatMenu.listedTags'), path:'/listed-tags', icon:'\uD83C\uDFF7\uFE0F', isImage:false },
-    { id:'sales', label: I18n.t('floatMenu.sales'), path:'/sales', icon:'\uD83D\uDCB0', isImage:false }
+    { id:'sales', label: I18n.t('floatMenu.sales'), path:'/sales', icon:'\uD83D\uDCB0', isImage:false },
+    { id:'collections', label:'Colecciones', path:'/collections', icon:'\uD83D\uDCDA', isImage:false },
+    { id:'add-collection', label:'+ Añadir Colección', path:'/add-collection', icon:'\uFF0B', isImage:false }
   ];
 
   return React.createElement('div', { className:'fm-container' },
