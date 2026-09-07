@@ -459,10 +459,17 @@
   "addCollection": {
     "title": "+ コレクションを追加",
     "subtitle": "BitmapCoreにコレクションを登録する",
+    "file": {
+      "select": "ファイルを選択"
+    },
     "image": {
       "label": "コレクション画像",
       "hint": "必須 · PNG形式 · 最大512×512px",
-      "placeholder": "PNG\n最大512px"
+      "placeholder": "PNG\n最大512px",
+      "errorRequired": "コレクション画像は必須です",
+      "errorPng": "画像はPNG形式である必要があります",
+      "errorSize": "画像は最大{max}x{max}pxである必要があります（{w}x{h}を受信）",
+      "errorRead": "画像を読み取れませんでした"
     },
     "meta": {
       "label": "meta.json ファイル",
@@ -498,7 +505,8 @@
     "status": {
       "validating": "ファイルを検証中...",
       "sending": "コレクションを送信中...（数秒かかる場合があります）",
-      "success": "コレクションが登録されました！10分以内にコレクションがBitmapCoreでリストおよび取引可能になります。",
+      "successTitle": "コレクションが追加されました！",
+      "success": "コレクションが追加されました。数分後にアセットの取引が可能になります。",
       "error": "コレクションの登録エラー"
     }
   }

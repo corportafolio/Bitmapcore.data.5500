@@ -459,10 +459,17 @@
   "addCollection": {
     "title": "+ 添加合集",
     "subtitle": "在BitmapCore上注册您的Ordinals合集",
+    "file": {
+      "select": "选择文件"
+    },
     "image": {
       "label": "合集图片",
       "hint": "必填 · PNG格式 · 最大512×512px",
-      "placeholder": "PNG\n最大512px"
+      "placeholder": "PNG\n最大512px",
+      "errorRequired": "合集图片是必填的",
+      "errorPng": "图片必须是PNG格式",
+      "errorSize": "图片最大{max}x{max}px（收到{w}x{h}）",
+      "errorRead": "无法读取图片"
     },
     "meta": {
       "label": "meta.json 文件",
@@ -498,7 +505,8 @@
     "status": {
       "validating": "验证文件中...",
       "sending": "提交合集中...（可能需要几秒钟）",
-      "success": "合集已注册！10分钟内您的合集将在BitmapCore上可供列表和交易。",
+      "successTitle": "合集已添加！",
+      "success": "合集已添加。几分钟后将可用于交易资产。",
       "error": "注册合集时出错"
     }
   }

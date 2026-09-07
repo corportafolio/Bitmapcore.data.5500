@@ -473,10 +473,17 @@
   "addCollection": {
     "title": "+ Tambah Koleksi",
     "subtitle": "Daftarkan koleksi Ordinals Anda di BitmapCore",
+    "file": {
+      "select": "Pilih file"
+    },
     "image": {
       "label": "Gambar Koleksi",
       "hint": "Wajib · format PNG · maks 512×512px",
-      "placeholder": "PNG\nmaks 512px"
+      "placeholder": "PNG\nmaks 512px",
+      "errorRequired": "Gambar koleksi wajib diisi",
+      "errorPng": "Gambar harus berformat PNG",
+      "errorSize": "Gambar harus maks {max}x{max}px (diterima {w}x{h})",
+      "errorRead": "Tidak dapat membaca gambar"
     },
     "meta": {
       "label": "File meta.json",
@@ -512,7 +519,8 @@
     "status": {
       "validating": "Memvalidasi file...",
       "sending": "Mengirim koleksi... (mungkin memakan beberapa detik)",
-      "success": "Koleksi terdaftar! Dalam 10 menit koleksi Anda akan siap untuk didaftarkan dan diperdagangkan di BitmapCore.",
+      "successTitle": "Koleksi ditambahkan!",
+      "success": "Koleksi ditambahkan. Dalam beberapa menit, koleksi akan tersedia untuk perdagangan aset.",
       "error": "Gagal mendaftarkan koleksi"
     }
   }

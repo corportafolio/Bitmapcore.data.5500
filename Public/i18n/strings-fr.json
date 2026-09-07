@@ -459,10 +459,17 @@
   "addCollection": {
     "title": "+ Ajouter une Collection",
     "subtitle": "Listez votre collection Ordinals sur BitmapCore",
+    "file": {
+      "select": "Sélectionner un fichier"
+    },
     "image": {
       "label": "Image de la collection",
       "hint": "Obligatoire · format PNG · max 512×512px",
-      "placeholder": "PNG\nmax 512px"
+      "placeholder": "PNG\nmax 512px",
+      "errorRequired": "L'image de la collection est obligatoire",
+      "errorPng": "L'image doit être au format PNG",
+      "errorSize": "L'image doit faire max {max}x{max}px (reçue {w}x{h})",
+      "errorRead": "Impossible de lire l'image"
     },
     "meta": {
       "label": "Fichier meta.json",
@@ -498,7 +505,8 @@
     "status": {
       "validating": "Validation des fichiers...",
       "sending": "Envoi de la collection... (peut prendre quelques secondes)",
-      "success": "Collection enregistrée ! Dans 10 minutes, votre collection sera prête pour être listée et échangée sur BitmapCore.",
+      "successTitle": "Collection ajoutée !",
+      "success": "Collection ajoutée. Dans quelques minutes, elle sera disponible pour le commerce d'actifs.",
       "error": "Erreur lors de l'enregistrement de la collection"
     }
   }

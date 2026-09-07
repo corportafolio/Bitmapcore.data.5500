@@ -473,10 +473,17 @@
   "addCollection": {
     "title": "+ Collectie Toevoegen",
     "subtitle": "Registreer je Ordinals collectie op BitmapCore",
+    "file": {
+      "select": "Bestand selecteren"
+    },
     "image": {
       "label": "Collectie Afbeelding",
       "hint": "Verplicht · PNG-formaat · max 512×512px",
-      "placeholder": "PNG\nmax 512px"
+      "placeholder": "PNG\nmax 512px",
+      "errorRequired": "Collectie afbeelding is verplicht",
+      "errorPng": "Afbeelding moet PNG-formaat zijn",
+      "errorSize": "Afbeelding moet max {max}x{max}px zijn (ontvangen {w}x{h})",
+      "errorRead": "Kon de afbeelding niet lezen"
     },
     "meta": {
       "label": "meta.json Bestand",
@@ -512,7 +519,8 @@
     "status": {
       "validating": "Bestanden valideren...",
       "sending": "Collectie indienen... (kan enkele seconden duren)",
-      "success": "Collectie geregistreerd! Binnen 10 minuten is je collectie gereed voor vermelding en handel op BitmapCore.",
+      "successTitle": "Collectie toegevoegd!",
+      "success": "Collectie toegevoegd. Over enkele minuten is deze beschikbaar voor het verhandelen van activa.",
       "error": "Fout bij het registreren van de collectie"
     }
   }

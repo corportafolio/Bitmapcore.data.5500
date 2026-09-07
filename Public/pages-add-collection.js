@@ -3,6 +3,9 @@ function AddCollectionPage(props) {
   var _meta = React.useState(null);
   var metaText = _meta[0];
   var setMetaText = _meta[1];
+  var _metaName = React.useState('');
+  var metaFileName = _metaName[0];
+  var setMetaFileName = _metaName[1];
   var _err = React.useState({});
   var errors = _err[0];
   var setErrors = _err[1];
@@ -12,9 +15,15 @@ function AddCollectionPage(props) {
   var _imgPrev = React.useState(null);
   var imagePreview = _imgPrev[0];
   var setImagePreview = _imgPrev[1];
+  var _imgName = React.useState('');
+  var imageFileName = _imgName[0];
+  var setImageFileName = _imgName[1];
   var _insc = React.useState(null);
   var inscFile = _insc[0];
   var setInscFile = _insc[1];
+  var _inscName = React.useState('');
+  var inscFileName = _inscName[0];
+  var setInscFileName = _inscName[1];
   var _x = React.useState('');
   var xAccount = _x[0];
   var setXAccount = _x[1];
@@ -30,42 +39,48 @@ function AddCollectionPage(props) {
 
   var validateImage = function(file) {
     return new Promise(function(resolve) {
-      if (!file) { setImageFile(null); setImagePreview(null); return resolve({ ok: false, error: I18n.t('addCollection.status.error') }); }
+      if (!file) { setImageFile(null); setImagePreview(null); setImageFileName(''); return resolve({ ok: false, error: I18n.t('addCollection.image.errorRequired') }); }
       if (file.type !== 'image/png') {
-        setImageFile(null); setImagePreview(null);
-        return resolve({ ok: false, error: I18n.t('addCollection.meta.errorInvalid') });
+        setImageFile(null); setImagePreview(null); setImageFileName('');
+        return resolve({ ok: false, error: I18n.t('addCollection.image.errorPng') });
       }
       var url = URL.createObjectURL(file);
       var img = new Image();
       img.onload = function() {
         URL.revokeObjectURL(url);
         if (img.width > MAX_PNG || img.height > MAX_PNG) {
-          setImageFile(null); setImagePreview(null);
-          return resolve({ ok: false, error: 'Max ' + MAX_PNG + 'x' + MAX_PNG + 'px (' + img.width + 'x' + img.height + ')' });
+          setImageFile(null); setImagePreview(null); setImageFileName('');
+          return resolve({ ok: false, error: I18n.t('addCollection.image.errorSize', { max: MAX_PNG, w: img.width, h: img.height }) });
         }
         setImageFile(file);
         setImagePreview(url);
+        setImageFileName(file.name);
         resolve({ ok: true });
       };
-      img.onerror = function() { URL.revokeObjectURL(url); setImageFile(null); setImagePreview(null); resolve({ ok: false, error: I18n.t('addCollection.status.error') }); };
+      img.onerror = function() { URL.revokeObjectURL(url); setImageFile(null); setImagePreview(null); setImageFileName(''); resolve({ ok: false, error: I18n.t('addCollection.image.errorRead') }); };
       img.src = url;
     });
   };
 
   var onImageChange = function(e) {
-    validateImage(e.target.files && e.target.files[0]);
+    var f = e.target.files && e.target.files[0];
+    if (f) { setImageFileName(f.name); } else { setImageFileName(''); }
+    validateImage(f);
   };
 
   var onMetaChange = function(e) {
     var f = e.target.files && e.target.files[0];
-    if (!f) { setMetaText(null); return; }
+    if (!f) { setMetaText(null); setMetaFileName(''); return; }
+    setMetaFileName(f.name);
     var r = new FileReader();
     r.onload = function() { setMetaText(r.result); };
     r.readAsText(f);
   };
 
   var onInscriptionsChange = function(e) {
-    setInscFile(e.target.files && e.target.files[0]);
+    var f = e.target.files && e.target.files[0];
+    setInscFile(f);
+    setInscFileName(f ? f.name : '');
   };
 
   var parseMeta = function() {
@@ -87,7 +102,7 @@ function AddCollectionPage(props) {
       else if (!metaObj.name) errs.meta = I18n.t('addCollection.meta.errorNoName');
     }
     if (!inscFile) errs.inscriptions = I18n.t('addCollection.inscriptions.errorRequired');
-    if (!imageFile) errs.image = I18n.t('addCollection.status.error');
+    if (!imageFile) errs.image = I18n.t('addCollection.image.errorRequired');
 
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
@@ -159,7 +174,28 @@ function AddCollectionPage(props) {
   };
 
   var inputCls = 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-white focus:outline-none focus:border-bitmap-orange transition-colors';
-  var fileCls = 'w-full text-sm text-bitmap-muted file:mr-3 file:px-3 file:py-1.5 file:rounded file:border-0 file:bg-bitmap-surface file:text-black file:cursor-pointer';
+
+  var fileBtnCls = 'w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-bitmap-border bg-bitmap-surface cursor-pointer hover:bg-bitmap-border transition-colors font-acme text-sm';
+
+  var makeFileInput = function(inputId, accept, onChange, fileName) {
+    return React.createElement('div', { className: 'relative' },
+      React.createElement('input', {
+        type: 'file',
+        accept: accept,
+        onChange: onChange,
+        className: 'absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10',
+        id: inputId
+      }),
+      React.createElement('div', { className: fileBtnCls },
+        React.createElement('svg', { className: 'w-4 h-4 flex-shrink-0', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', style: { color: '#000' } },
+          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12' })
+        ),
+        React.createElement('span', { style: { color: '#000' } },
+          fileName ? fileName : I18n.t('addCollection.file.select')
+        )
+      )
+    );
+  };
 
   return React.createElement('div', { className: 'flex flex-col h-full bg-bitmap-black overflow-y-auto' },
     React.createElement('div', { className: 'bg-bitmap-surface border-b border-bitmap-border px-4 py-3 flex items-center gap-3' },
@@ -180,14 +216,14 @@ function AddCollectionPage(props) {
           lbl(I18n.t('addCollection.image.label'), true),
           React.createElement('div', { className: 'flex items-center gap-3' },
             React.createElement('div', {
-              className: 'w-24 h-24 rounded-lg border border-dashed flex items-center justify-center overflow-hidden',
+              className: 'w-24 h-24 rounded-lg border border-dashed flex items-center justify-center overflow-hidden flex-shrink-0',
               style: imagePreview ? { borderColor: 'transparent' } : { borderColor: '#444', background: '#111' }
             },
               imagePreview ? React.createElement('img', { src: imagePreview, className: 'w-full h-full object-cover' })
                 : React.createElement('span', { className: 'text-[10px] text-bitmap-muted text-center px-1', style:{whiteSpace:'pre'} }, I18n.t('addCollection.image.placeholder'))
             ),
             React.createElement('div', { className: 'flex-1' },
-              React.createElement('input', { type: 'file', accept: 'image/png', onChange: onImageChange, className: fileCls }),
+              makeFileInput('file-input-image', 'image/png', onImageChange, imageFileName),
               React.createElement('div', { className: 'text-[11px] text-bitmap-muted mt-1' }, I18n.t('addCollection.image.hint'))
             )
           ),
@@ -196,14 +232,14 @@ function AddCollectionPage(props) {
 
         React.createElement('div', null,
           lbl(I18n.t('addCollection.meta.label'), true),
-          React.createElement('input', { type: 'file', accept: '.json,application/json', onChange: onMetaChange, className: fileCls }),
+          makeFileInput('file-input-meta', '.json,application/json', onMetaChange, metaFileName),
           React.createElement('div', { className: 'text-[11px] text-bitmap-muted mt-1' }, I18n.t('addCollection.meta.hint')),
           errors.meta ? React.createElement('div', { className: 'text-[11px] mt-1', style: { color: REQUIRED_COLOR } }, errors.meta) : null
         ),
 
         React.createElement('div', null,
           lbl(I18n.t('addCollection.inscriptions.label'), true),
-          React.createElement('input', { type: 'file', accept: '.json,application/json', onChange: onInscriptionsChange, className: fileCls }),
+          makeFileInput('file-input-insc', '.json,application/json', onInscriptionsChange, inscFileName),
           React.createElement('div', { className: 'text-[11px] text-bitmap-muted mt-1' }, I18n.t('addCollection.inscriptions.hint')),
           errors.inscriptions ? React.createElement('div', { className: 'text-[11px] mt-1', style: { color: REQUIRED_COLOR } }, errors.inscriptions) : null
         ),
@@ -255,6 +291,16 @@ function AddCollectionPage(props) {
             ? React.createElement(React.Fragment, null,
                 React.createElement('div', { className: 'inline-block w-4 h-4 border-2 border-bitmap-orange border-t-transparent rounded-full animate-spin align-middle mr-2' }),
                 status.message
+              )
+            : status.type === 'done'
+            ? React.createElement(React.Fragment, null,
+                React.createElement('div', { className: 'flex items-center gap-2 mb-1' },
+                  React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', style: { color: '#00CC00' } },
+                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M5 13l4 4L19 7' })
+                  ),
+                  React.createElement('span', { className: 'font-bold' }, I18n.t('addCollection.status.successTitle'))
+                ),
+                React.createElement('span', null, status.message)
               )
             : status.message
         ) : null

@@ -473,10 +473,17 @@
   "addCollection": {
     "title": "+ Thêm Bộ Sưu Tập",
     "subtitle": "Đăng ký bộ sưu tập Ordinals của bạn trên BitmapCore",
+    "file": {
+      "select": "Chọn tệp"
+    },
     "image": {
       "label": "Hình Ảnh Bộ Sưu Tập",
       "hint": "Bắt buộc · định dạng PNG · tối đa 512×512px",
-      "placeholder": "PNG\ntối đa 512px"
+      "placeholder": "PNG\ntối đa 512px",
+      "errorRequired": "Hình ảnh bộ sưu tập là bắt buộc",
+      "errorPng": "Hình ảnh phải ở định dạng PNG",
+      "errorSize": "Hình ảnh phải tối đa {max}x{max}px (nhận được {w}x{h})",
+      "errorRead": "Không thể đọc hình ảnh"
     },
     "meta": {
       "label": "Tệp meta.json",
@@ -512,7 +519,8 @@
     "status": {
       "validating": "Đang kiểm tra tệp...",
       "sending": "Đang gửi bộ sưu tập... (có thể mất vài giây)",
-      "success": "Bộ sưu tập đã được đăng ký! Trong 10 phút bộ sưu tập của bạn sẽ sẵn sàng để niêm yết và giao dịch trên BitmapCore.",
+      "successTitle": "Đã thêm bộ sưu tập!",
+      "success": "Đã thêm bộ sưu tập. Trong vài phút, nó sẽ sẵn sàng để giao dịch tài sản.",
       "error": "Lỗi đăng ký bộ sưu tập"
     }
   }

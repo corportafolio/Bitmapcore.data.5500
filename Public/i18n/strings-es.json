@@ -473,10 +473,17 @@
   "addCollection": {
     "title": "+ Añadir Colección",
     "subtitle": "Lista tu colección Ordinals en BitmapCore",
+    "file": {
+      "select": "Seleccionar archivo"
+    },
     "image": {
       "label": "Imagen de la colección",
       "hint": "Obligatoria · formato PNG · máximo 512×512px",
-      "placeholder": "PNG\nmáx 512px"
+      "placeholder": "PNG\nmáx 512px",
+      "errorRequired": "La imagen de la colección es obligatoria",
+      "errorPng": "La imagen debe ser PNG",
+      "errorSize": "La imagen debe ser máximo {max}x{max}px (recibida {w}x{h})",
+      "errorRead": "No se pudo leer la imagen"
     },
     "meta": {
       "label": "Archivo meta.json",
@@ -512,7 +519,8 @@
     "status": {
       "validating": "Validando archivos...",
       "sending": "Enviando colección... (esto puede tardar unos segundos)",
-      "success": "¡Colección registrada! En 10 minutos tu colección estará lista para ser listada y comerciada en BitmapCore.",
+      "successTitle": "¡Colección agregada!",
+      "success": "Colección agregada. En unos minutos estará disponible para comerciar activos.",
       "error": "Error al registrar la colección"
     }
   }

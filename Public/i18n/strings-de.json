@@ -458,10 +458,17 @@
   "addCollection": {
     "title": "+ Sammlung Hinzufügen",
     "subtitle": "Registriere deine Ordinals-Sammlung auf BitmapCore",
+    "file": {
+      "select": "Datei auswählen"
+    },
     "image": {
       "label": "Sammlungsbild",
       "hint": "Erforderlich · PNG-Format · max. 512×512px",
-      "placeholder": "PNG\nmax. 512px"
+      "placeholder": "PNG\nmax. 512px",
+      "errorRequired": "Sammlungsbild ist erforderlich",
+      "errorPng": "Bild muss im PNG-Format sein",
+      "errorSize": "Bild muss max. {max}x{max}px sein (empfangen {w}x{h})",
+      "errorRead": "Bild konnte nicht gelesen werden"
     },
     "meta": {
       "label": "meta.json Datei",
@@ -497,7 +504,8 @@
     "status": {
       "validating": "Dateien werden validiert...",
       "sending": "Sammlung wird eingereicht... (kann einige Sekunden dauern)",
-      "success": "Sammlung registriert! In 10 Minuten ist deine Sammlung zum Auflisten und Handeln auf BitmapCore bereit.",
+      "successTitle": "Sammlung hinzugefügt!",
+      "success": "Sammlung hinzugefügt. In wenigen Minuten steht sie zum Handel mit Vermögenswerten zur Verfügung.",
       "error": "Fehler bei der Registrierung der Sammlung"
     }
   }
