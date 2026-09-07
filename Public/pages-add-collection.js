@@ -47,9 +47,9 @@ function AddCollectionPage(props) {
       var url = URL.createObjectURL(file);
       var img = new Image();
       img.onload = function() {
-        URL.revokeObjectURL(url);
         if (img.width > MAX_PNG || img.height > MAX_PNG) {
           setImageFile(null); setImagePreview(null); setImageFileName('');
+          URL.revokeObjectURL(url);
           return resolve({ ok: false, error: I18n.t('addCollection.image.errorSize', { max: MAX_PNG, w: img.width, h: img.height }) });
         }
         setImageFile(file);
@@ -175,7 +175,7 @@ function AddCollectionPage(props) {
 
   var inputCls = 'w-full bg-bitmap-black border border-bitmap-border rounded-lg px-3 py-2 font-acme text-sm text-white focus:outline-none focus:border-bitmap-orange transition-colors';
 
-  var fileBtnCls = 'w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-bitmap-border bg-bitmap-surface cursor-pointer hover:bg-bitmap-border transition-colors font-acme text-sm';
+  var fileBtnCls = 'w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-bitmap-border bg-white cursor-pointer hover:bg-gray-100 transition-colors font-acme text-sm';
 
   var makeFileInput = function(inputId, accept, onChange, fileName) {
     return React.createElement('div', { className: 'relative' },
