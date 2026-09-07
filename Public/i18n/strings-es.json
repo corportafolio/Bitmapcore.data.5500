@@ -469,5 +469,51 @@
     "agoMin": "hace {n} min",
     "agoHours": "hace {n}h",
     "agoDays": "hace {n}d"
+  },
+  "addCollection": {
+    "title": "+ Añadir Colección",
+    "subtitle": "Lista tu colección Ordinals en BitmapCore",
+    "image": {
+      "label": "Imagen de la colección",
+      "hint": "Obligatoria · formato PNG · máximo 512×512px",
+      "placeholder": "PNG\nmáx 512px"
+    },
+    "meta": {
+      "label": "Archivo meta.json",
+      "hint": "Obligatorio · de aquí salen el título, slug y la descripción",
+      "errorRequired": "El archivo meta.json es obligatorio",
+      "errorInvalid": "meta.json no es un JSON válido",
+      "errorNoName": "meta.json debe contener un campo \"name\""
+    },
+    "inscriptions": {
+      "label": "Archivo inscriptions.json",
+      "hint": "Obligatorio · lista de inscripciones de la colección",
+      "errorRequired": "El archivo inscriptions.json es obligatorio",
+      "errorInvalid": "inscriptions.json no es un JSON válido",
+      "errorEmpty": "inscriptions.json debe contener al menos un item"
+    },
+    "preview": {
+      "label": "Vista previa desde meta.json",
+      "noName": "(sin nombre en meta.json)"
+    },
+    "xAccount": {
+      "label": "Cuenta de X (Twitter)",
+      "placeholder": "https://x.com/tucoleccion"
+    },
+    "discord": {
+      "label": "Servidor de Discord",
+      "placeholder": "https://discord.gg/tucoleccion"
+    },
+    "submit": {
+      "label": "Enviar Colección",
+      "loading": "Enviando...",
+      "requiredHint": "* campos obligatorios"
+    },
+    "status": {
+      "validating": "Validando archivos...",
+      "sending": "Enviando colección... (esto puede tardar unos segundos)",
+      "success": "¡Colección registrada! En 10 minutos tu colección estará lista para ser listada y comerciada en BitmapCore.",
+      "error": "Error al registrar la colección"
+    }
   }
 }

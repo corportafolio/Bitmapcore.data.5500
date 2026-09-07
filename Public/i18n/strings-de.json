@@ -454,5 +454,51 @@
     "agoMin": "vor {n} Min.",
     "agoHours": "vor {n} Std.",
     "agoDays": "vor {n} Tagen"
+  },
+  "addCollection": {
+    "title": "+ Sammlung Hinzufügen",
+    "subtitle": "Registriere deine Ordinals-Sammlung auf BitmapCore",
+    "image": {
+      "label": "Sammlungsbild",
+      "hint": "Erforderlich · PNG-Format · max. 512×512px",
+      "placeholder": "PNG\nmax. 512px"
+    },
+    "meta": {
+      "label": "meta.json Datei",
+      "hint": "Erforderlich · enthält Titel, Slug und Beschreibung",
+      "errorRequired": "meta.json Datei ist erforderlich",
+      "errorInvalid": "meta.json ist kein gültiges JSON",
+      "errorNoName": "meta.json muss ein \"name\" Feld enthalten"
+    },
+    "inscriptions": {
+      "label": "inscriptions.json Datei",
+      "hint": "Erforderlich · Liste der Sammlungsinschriften",
+      "errorRequired": "inscriptions.json Datei ist erforderlich",
+      "errorInvalid": "inscriptions.json ist kein gültiges JSON",
+      "errorEmpty": "inscriptions.json muss mindestens einen Eintrag enthalten"
+    },
+    "preview": {
+      "label": "Vorschau aus meta.json",
+      "noName": "(kein Name in meta.json)"
+    },
+    "xAccount": {
+      "label": "X (Twitter) Konto",
+      "placeholder": "https://x.com/deinesammlung"
+    },
+    "discord": {
+      "label": "Discord Server",
+      "placeholder": "https://discord.gg/deinesammlung"
+    },
+    "submit": {
+      "label": "Sammlung Einreichen",
+      "loading": "Einreichen...",
+      "requiredHint": "* Pflichtfelder"
+    },
+    "status": {
+      "validating": "Dateien werden validiert...",
+      "sending": "Sammlung wird eingereicht... (kann einige Sekunden dauern)",
+      "success": "Sammlung registriert! In 10 Minuten ist deine Sammlung zum Auflisten und Handeln auf BitmapCore bereit.",
+      "error": "Fehler bei der Registrierung der Sammlung"
+    }
   }
 }

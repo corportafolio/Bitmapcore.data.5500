@@ -469,5 +469,51 @@
     "agoMin": "πριν {n} λεπτό",
     "agoHours": "πριν {n}ω",
     "agoDays": "πριν {n}μ"
+  },
+  "addCollection": {
+    "title": "+ Προσθήκη Συλλογής",
+    "subtitle": "Καταχωρήστε τη συλλογή Ordinals σας στο BitmapCore",
+    "image": {
+      "label": "Εικόνα Συλλογής",
+      "hint": "Υποχρεωτικό · μορφή PNG · μέγ. 512×512px",
+      "placeholder": "PNG\nμέγ. 512px"
+    },
+    "meta": {
+      "label": "Αρχείο meta.json",
+      "hint": "Υποχρεωτικό · παρέχει τίτλο, slug και περιγραφή",
+      "errorRequired": "Το αρχείο meta.json είναι υποχρεωτικό",
+      "errorInvalid": "Το meta.json δεν είναι έγκυρο JSON",
+      "errorNoName": "Το meta.json πρέπει να περιέχει το πεδίο \"name\""
+    },
+    "inscriptions": {
+      "label": "Αρχείο inscriptions.json",
+      "hint": "Υποχρεωτικό · λίστα εγγραφών συλλογής",
+      "errorRequired": "Το αρχείο inscriptions.json είναι υποχρεωτικό",
+      "errorInvalid": "Το inscriptions.json δεν είναι έγκυρο JSON",
+      "errorEmpty": "Το inscriptions.json πρέπει να περιέχει τουλάχιστον ένα στοιχείο"
+    },
+    "preview": {
+      "label": "Προεπισκόπηση από meta.json",
+      "noName": "(δεν υπάρχει όνομα στο meta.json)"
+    },
+    "xAccount": {
+      "label": "Λογαριασμός X (Twitter)",
+      "placeholder": "https://x.com/sullogisashmas"
+    },
+    "discord": {
+      "label": "Διακομιστής Discord",
+      "placeholder": "https://discord.gg/sullogisashmas"
+    },
+    "submit": {
+      "label": "Υποβολή Συλλογής",
+      "loading": "Υποβολή...",
+      "requiredHint": "* υποχρεωτικά πεδία"
+    },
+    "status": {
+      "validating": "Έλεγχος αρχείων...",
+      "sending": "Υποβολή συλλογής... (μπορεί να διαρκέσει μερικά δευτερόλεπτα)",
+      "success": "Η συλλογή καταχωρήθηκε! Σε 10 λεπτά η συλλογή σας θα είναι έτοιμη για καταχώρηση και συναλλαγή στο BitmapCore.",
+      "error": "Σφάλμα καταχώρησης συλλογής"
+    }
   }
 }

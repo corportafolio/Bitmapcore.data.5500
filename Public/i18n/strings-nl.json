@@ -469,5 +469,51 @@
     "agoMin": "{n} min geleden",
     "agoHours": "{n}u geleden",
     "agoDays": "{n}d geleden"
+  },
+  "addCollection": {
+    "title": "+ Collectie Toevoegen",
+    "subtitle": "Registreer je Ordinals collectie op BitmapCore",
+    "image": {
+      "label": "Collectie Afbeelding",
+      "hint": "Verplicht · PNG-formaat · max 512×512px",
+      "placeholder": "PNG\nmax 512px"
+    },
+    "meta": {
+      "label": "meta.json Bestand",
+      "hint": "Verplicht · bevat titel, slug en beschrijving",
+      "errorRequired": "meta.json bestand is verplicht",
+      "errorInvalid": "meta.json is geen geldige JSON",
+      "errorNoName": "meta.json moet een \"name\" veld bevatten"
+    },
+    "inscriptions": {
+      "label": "inscriptions.json Bestand",
+      "hint": "Verplicht · lijst van collectie-inscripties",
+      "errorRequired": "inscriptions.json bestand is verplicht",
+      "errorInvalid": "inscriptions.json is geen geldige JSON",
+      "errorEmpty": "inscriptions.json moet minstens één item bevatten"
+    },
+    "preview": {
+      "label": "Voorbeeld uit meta.json",
+      "noName": "(geen naam in meta.json)"
+    },
+    "xAccount": {
+      "label": "X (Twitter) Account",
+      "placeholder": "https://x.com/jouwcollectie"
+    },
+    "discord": {
+      "label": "Discord Server",
+      "placeholder": "https://discord.gg/jouwcollectie"
+    },
+    "submit": {
+      "label": "Collectie Indienen",
+      "loading": "Indienen...",
+      "requiredHint": "* verplichte velden"
+    },
+    "status": {
+      "validating": "Bestanden valideren...",
+      "sending": "Collectie indienen... (kan enkele seconden duren)",
+      "success": "Collectie geregistreerd! Binnen 10 minuten is je collectie gereed voor vermelding en handel op BitmapCore.",
+      "error": "Fout bij het registreren van de collectie"
+    }
   }
 }

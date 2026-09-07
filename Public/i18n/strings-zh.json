@@ -455,5 +455,51 @@
     "agoMin": "{n} 分钟前",
     "agoHours": "{n} 小时前",
     "agoDays": "{n} 天前"
+  },
+  "addCollection": {
+    "title": "+ 添加合集",
+    "subtitle": "在BitmapCore上注册您的Ordinals合集",
+    "image": {
+      "label": "合集图片",
+      "hint": "必填 · PNG格式 · 最大512×512px",
+      "placeholder": "PNG\n最大512px"
+    },
+    "meta": {
+      "label": "meta.json 文件",
+      "hint": "必填 · 提供标题、slug和描述",
+      "errorRequired": "meta.json文件是必填的",
+      "errorInvalid": "meta.json不是有效的JSON",
+      "errorNoName": "meta.json必须包含\"name\"字段"
+    },
+    "inscriptions": {
+      "label": "inscriptions.json 文件",
+      "hint": "必填 · 合集铭文列表",
+      "errorRequired": "inscriptions.json文件是必填的",
+      "errorInvalid": "inscriptions.json不是有效的JSON",
+      "errorEmpty": "inscriptions.json必须包含至少一个项目"
+    },
+    "preview": {
+      "label": "从meta.json预览",
+      "noName": "(meta.json中没有名称)"
+    },
+    "xAccount": {
+      "label": "X（Twitter）账户",
+      "placeholder": "https://x.com/yourcollection"
+    },
+    "discord": {
+      "label": "Discord 服务器",
+      "placeholder": "https://discord.gg/yourcollection"
+    },
+    "submit": {
+      "label": "提交合集",
+      "loading": "提交中...",
+      "requiredHint": "* 必填字段"
+    },
+    "status": {
+      "validating": "验证文件中...",
+      "sending": "提交合集中...（可能需要几秒钟）",
+      "success": "合集已注册！10分钟内您的合集将在BitmapCore上可供列表和交易。",
+      "error": "注册合集时出错"
+    }
   }
 }

@@ -469,5 +469,51 @@
     "agoMin": "{n} min ago",
     "agoHours": "{n}h ago",
     "agoDays": "{n}d ago"
+  },
+  "addCollection": {
+    "title": "+ Add Collection",
+    "subtitle": "List your Ordinals collection on BitmapCore",
+    "image": {
+      "label": "Collection Image",
+      "hint": "Required · PNG format · max 512×512px",
+      "placeholder": "PNG\nmax 512px"
+    },
+    "meta": {
+      "label": "meta.json File",
+      "hint": "Required · provides title, slug and description",
+      "errorRequired": "meta.json file is required",
+      "errorInvalid": "meta.json is not valid JSON",
+      "errorNoName": "meta.json must contain a \"name\" field"
+    },
+    "inscriptions": {
+      "label": "inscriptions.json File",
+      "hint": "Required · list of collection inscriptions",
+      "errorRequired": "inscriptions.json file is required",
+      "errorInvalid": "inscriptions.json is not valid JSON",
+      "errorEmpty": "inscriptions.json must contain at least one item"
+    },
+    "preview": {
+      "label": "Preview from meta.json",
+      "noName": "(no name in meta.json)"
+    },
+    "xAccount": {
+      "label": "X (Twitter) Account",
+      "placeholder": "https://x.com/yourcollection"
+    },
+    "discord": {
+      "label": "Discord Server",
+      "placeholder": "https://discord.gg/yourcollection"
+    },
+    "submit": {
+      "label": "Submit Collection",
+      "loading": "Submitting...",
+      "requiredHint": "* required fields"
+    },
+    "status": {
+      "validating": "Validating files...",
+      "sending": "Submitting collection... (may take a few seconds)",
+      "success": "Collection registered! In 10 minutes your collection will be ready for listing and trading on BitmapCore.",
+      "error": "Error registering collection"
+    }
   }
 }

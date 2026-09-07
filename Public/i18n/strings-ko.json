@@ -454,5 +454,51 @@
     "agoMin": "{n}분 전",
     "agoHours": "{n}시간 전",
     "agoDays": "{n}일 전"
+  },
+  "addCollection": {
+    "title": "+ 컬렉션 추가",
+    "subtitle": "BitmapCore에 Ordinals 컬렉션을 등록하세요",
+    "image": {
+      "label": "컬렉션 이미지",
+      "hint": "필수 · PNG 형식 · 최대 512×512px",
+      "placeholder": "PNG\n최대 512px"
+    },
+    "meta": {
+      "label": "meta.json 파일",
+      "hint": "필수 · 제목, slug, 설명 제공",
+      "errorRequired": "meta.json 파일은 필수입니다",
+      "errorInvalid": "meta.json은 유효한 JSON이 아닙니다",
+      "errorNoName": "meta.json에는 \"name\" 필드가 필요합니다"
+    },
+    "inscriptions": {
+      "label": "inscriptions.json 파일",
+      "hint": "필수 · 컬렉션 인스크립션 목록",
+      "errorRequired": "inscriptions.json 파일은 필수입니다",
+      "errorInvalid": "inscriptions.json은 유효한 JSON이 아닙니다",
+      "errorEmpty": "inscriptions.json에는 최소 하나의 항목이 필요합니다"
+    },
+    "preview": {
+      "label": "meta.json 미리보기",
+      "noName": "(meta.json에 이름 없음)"
+    },
+    "xAccount": {
+      "label": "X (Twitter) 계정",
+      "placeholder": "https://x.com/yourcollection"
+    },
+    "discord": {
+      "label": "Discord 서버",
+      "placeholder": "https://discord.gg/yourcollection"
+    },
+    "submit": {
+      "label": "컬렉션 제출",
+      "loading": "제출 중...",
+      "requiredHint": "* 필수 항목"
+    },
+    "status": {
+      "validating": "파일 검증 중...",
+      "sending": "컬렉션 제출 중... (몇 초가 소요될 수 있습니다)",
+      "success": "컬렉션이 등록되었습니다! 10분 이내에 컬렉션이 BitmapCore에서 리스팅 및 거래 가능합니다.",
+      "error": "컬렉션 등록 오류"
+    }
   }
 }

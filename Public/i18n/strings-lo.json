@@ -469,5 +469,51 @@
     "agoMin": "ກ່ອນ {n} ນາທີ",
     "agoHours": "ກ່ອນ {n} ຊົ່ວໂມງ",
     "agoDays": "ກ່ອນ {n} ມື້"
+  },
+  "addCollection": {
+    "title": "+ ເພີ່ມກັບລວມ",
+    "subtitle": "ລົງທະບຽນກັບລວມ Ordinals ຂອງທ່ານໃນ BitmapCore",
+    "image": {
+      "label": "ຮູບພາບກັບລວມ",
+      "hint": "ບັງຄັບບັດ · ຮູບແບບ PNG · ສູງສຸດ 512×512px",
+      "placeholder": "PNG\nສູງສຸດ 512px"
+    },
+    "meta": {
+      "label": "ໄຟລ໌ meta.json",
+      "hint": "ບັງຄັບບັດ · ມອບໃຫ້ຫົວຂໍ້, slug ແລະ ຄຳອະທິบาย",
+      "errorRequired": "ໄຟລ໌ meta.json ແມ່ນບັງຄັບບັດ",
+      "errorInvalid": "meta.json ບໍ່ແມ່ນ JSON ທີ່ຖືກຕ້ອງ",
+      "errorNoName": "meta.json ຕ້ອງມີຟີລ້ດ \"name\""
+    },
+    "inscriptions": {
+      "label": "ໄຟລ໌ inscriptions.json",
+      "hint": "ບັງຄັບບັດ · ລາຍການການຈາລະຈອນຂອງກັບລວມ",
+      "errorRequired": "ໄຟລ໌ inscriptions.json ແມ່ນບັງຄັບບັດ",
+      "errorInvalid": "inscriptions.json ບໍ່ແມ່ນ JSON ທີ່ຖືກຕ້ອງ",
+      "errorEmpty": "inscriptions.json ຕ້ງມີຢ່າງໜ້ອຍໜຶ່ງລາຍການ"
+    },
+    "preview": {
+      "label": "ເບິ່ງກ່ອນຈາກ meta.json",
+      "noName": "(ບໍ່ມີຊື່ໃນ meta.json)"
+    },
+    "xAccount": {
+      "label": "ບັນຊາ X (Twitter)",
+      "placeholder": "https://x.com/yourcollection"
+    },
+    "discord": {
+      "label": "ເຊີຟເວີ Discord",
+      "placeholder": "https://discord.gg/yourcollection"
+    },
+    "submit": {
+      "label": "ສົ່ງກັບລວມ",
+      "loading": "ກຳລັງສົ່ງ...",
+      "requiredHint": "* ຊ່ອງຂໍ້ບັງຄັບບັດ"
+    },
+    "status": {
+      "validating": "ກຳລັງຢັ້ງຢືນໄຟລ໌...",
+      "sending": "ກຳລັງສົ່ງກັບລວມ... (ອາດໃຊ້ເວລາບໍ່ເທົ່າໃດວິນາທີ)",
+      "success": "ລົງທະບຽນກັບລວມແລ້ວ! ໃນ 10 ນາທີກັບລວມຂອງທ່ານຈະພ້ອມສຳລັບລາຍຊື່ ແລະ ການຊື້ຂາຍໃນ BitmapCore.",
+      "error": "ເກີດຂໍ້ຜິດພາດໃນການລົງທະບຽນກັບລວມ"
+    }
   }
 }

@@ -469,5 +469,51 @@
     "agoMin": "{n} menit yang lalu",
     "agoHours": "{n}j yang lalu",
     "agoDays": "{n}h yang lalu"
+  },
+  "addCollection": {
+    "title": "+ Tambah Koleksi",
+    "subtitle": "Daftarkan koleksi Ordinals Anda di BitmapCore",
+    "image": {
+      "label": "Gambar Koleksi",
+      "hint": "Wajib · format PNG · maks 512×512px",
+      "placeholder": "PNG\nmaks 512px"
+    },
+    "meta": {
+      "label": "File meta.json",
+      "hint": "Wajib · menyediakan judul, slug dan deskripsi",
+      "errorRequired": "File meta.json wajib diisi",
+      "errorInvalid": "meta.json bukan JSON yang valid",
+      "errorNoName": "meta.json harus memiliki kolom \"name\""
+    },
+    "inscriptions": {
+      "label": "File inscriptions.json",
+      "hint": "Wajib · daftar inskripsi koleksi",
+      "errorRequired": "File inscriptions.json wajib diisi",
+      "errorInvalid": "inscriptions.json bukan JSON yang valid",
+      "errorEmpty": "inscriptions.json harus memiliki setidaknya satu item"
+    },
+    "preview": {
+      "label": "Pratinjau dari meta.json",
+      "noName": "(tidak ada nama di meta.json)"
+    },
+    "xAccount": {
+      "label": "Akun X (Twitter)",
+      "placeholder": "https://x.com/koleksikamu"
+    },
+    "discord": {
+      "label": "Server Discord",
+      "placeholder": "https://discord.gg/koleksikamu"
+    },
+    "submit": {
+      "label": "Kirim Koleksi",
+      "loading": "Mengirim...",
+      "requiredHint": "* kolom wajib"
+    },
+    "status": {
+      "validating": "Memvalidasi file...",
+      "sending": "Mengirim koleksi... (mungkin memakan beberapa detik)",
+      "success": "Koleksi terdaftar! Dalam 10 menit koleksi Anda akan siap untuk didaftarkan dan diperdagangkan di BitmapCore.",
+      "error": "Gagal mendaftarkan koleksi"
+    }
   }
 }

@@ -469,5 +469,51 @@
     "agoMin": "{n} phút trước",
     "agoHours": "{n}h trước",
     "agoDays": "{n}d trước"
+  },
+  "addCollection": {
+    "title": "+ Thêm Bộ Sưu Tập",
+    "subtitle": "Đăng ký bộ sưu tập Ordinals của bạn trên BitmapCore",
+    "image": {
+      "label": "Hình Ảnh Bộ Sưu Tập",
+      "hint": "Bắt buộc · định dạng PNG · tối đa 512×512px",
+      "placeholder": "PNG\ntối đa 512px"
+    },
+    "meta": {
+      "label": "Tệp meta.json",
+      "hint": "Bắt buộc · cung cấp tiêu đề, slug và mô tả",
+      "errorRequired": "Tệp meta.json là bắt buộc",
+      "errorInvalid": "meta.json không phải JSON hợp lệ",
+      "errorNoName": "meta.json phải chứa trường \"name\""
+    },
+    "inscriptions": {
+      "label": "Tệp inscriptions.json",
+      "hint": "Bắt buộc · danh sách các dòng chữ bộ sưu tập",
+      "errorRequired": "Tệp inscriptions.json là bắt buộc",
+      "errorInvalid": "inscriptions.json không phải JSON hợp lệ",
+      "errorEmpty": "inscriptions.json phải chứa ít nhất một mục"
+    },
+    "preview": {
+      "label": "Xem trước từ meta.json",
+      "noName": "(không có tên trong meta.json)"
+    },
+    "xAccount": {
+      "label": "Tài Khoản X (Twitter)",
+      "placeholder": "https://x.com/bosuutapcua ban"
+    },
+    "discord": {
+      "label": "Máy Chủ Discord",
+      "placeholder": "https://discord.gg/bosuutapcua ban"
+    },
+    "submit": {
+      "label": "Gửi Bộ Sưu Tập",
+      "loading": "Đang gửi...",
+      "requiredHint": "* trường bắt buộc"
+    },
+    "status": {
+      "validating": "Đang kiểm tra tệp...",
+      "sending": "Đang gửi bộ sưu tập... (có thể mất vài giây)",
+      "success": "Bộ sưu tập đã được đăng ký! Trong 10 phút bộ sưu tập của bạn sẽ sẵn sàng để niêm yết và giao dịch trên BitmapCore.",
+      "error": "Lỗi đăng ký bộ sưu tập"
+    }
   }
 }

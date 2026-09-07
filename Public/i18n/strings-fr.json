@@ -455,5 +455,51 @@
     "agoMin": "il y a {n} min",
     "agoHours": "il y a {n}h",
     "agoDays": "il y a {n}j"
+  },
+  "addCollection": {
+    "title": "+ Ajouter une Collection",
+    "subtitle": "Listez votre collection Ordinals sur BitmapCore",
+    "image": {
+      "label": "Image de la collection",
+      "hint": "Obligatoire · format PNG · max 512×512px",
+      "placeholder": "PNG\nmax 512px"
+    },
+    "meta": {
+      "label": "Fichier meta.json",
+      "hint": "Obligatoire · fournit le titre, le slug et la description",
+      "errorRequired": "Le fichier meta.json est obligatoire",
+      "errorInvalid": "meta.json n'est pas un JSON valide",
+      "errorNoName": "meta.json doit contenir un champ \"name\""
+    },
+    "inscriptions": {
+      "label": "Fichier inscriptions.json",
+      "hint": "Obligatoire · liste des inscriptions de la collection",
+      "errorRequired": "Le fichier inscriptions.json est obligatoire",
+      "errorInvalid": "inscriptions.json n'est pas un JSON valide",
+      "errorEmpty": "inscriptions.json doit contenir au moins un élément"
+    },
+    "preview": {
+      "label": "Aperçu depuis meta.json",
+      "noName": "(pas de nom dans meta.json)"
+    },
+    "xAccount": {
+      "label": "Compte X (Twitter)",
+      "placeholder": "https://x.com/votre collection"
+    },
+    "discord": {
+      "label": "Serveur Discord",
+      "placeholder": "https://discord.gg/votre collection"
+    },
+    "submit": {
+      "label": "Soumettre la Collection",
+      "loading": "Envoi en cours...",
+      "requiredHint": "* champs obligatoires"
+    },
+    "status": {
+      "validating": "Validation des fichiers...",
+      "sending": "Envoi de la collection... (peut prendre quelques secondes)",
+      "success": "Collection enregistrée ! Dans 10 minutes, votre collection sera prête pour être listée et échangée sur BitmapCore.",
+      "error": "Erreur lors de l'enregistrement de la collection"
+    }
   }
 }

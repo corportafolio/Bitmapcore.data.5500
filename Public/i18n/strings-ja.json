@@ -455,5 +455,51 @@
     "agoMin": "{n} 分前",
     "agoHours": "{n} 時間前",
     "agoDays": "{n} 日前"
+  },
+  "addCollection": {
+    "title": "+ コレクションを追加",
+    "subtitle": "BitmapCoreにコレクションを登録する",
+    "image": {
+      "label": "コレクション画像",
+      "hint": "必須 · PNG形式 · 最大512×512px",
+      "placeholder": "PNG\n最大512px"
+    },
+    "meta": {
+      "label": "meta.json ファイル",
+      "hint": "必須 · タイトル、slug、説明の元データ",
+      "errorRequired": "meta.jsonファイルは必須です",
+      "errorInvalid": "meta.jsonは有効なJSONではありません",
+      "errorNoName": "meta.jsonには\"name\"フィールドが必要です"
+    },
+    "inscriptions": {
+      "label": "inscriptions.json ファイル",
+      "hint": "必須 · コレクションのインスクリプション一覧",
+      "errorRequired": "inscriptions.jsonファイルは必須です",
+      "errorInvalid": "inscriptions.jsonは有効なJSONではありません",
+      "errorEmpty": "inscriptions.jsonには少なくとも1つのアイテムが必要です"
+    },
+    "preview": {
+      "label": "meta.json からのプレビュー",
+      "noName": "(meta.jsonに名前がありません)"
+    },
+    "xAccount": {
+      "label": "X（Twitter）アカウント",
+      "placeholder": "https://x.com/yourcollection"
+    },
+    "discord": {
+      "label": "Discord サーバー",
+      "placeholder": "https://discord.gg/yourcollection"
+    },
+    "submit": {
+      "label": "コレクションを送信",
+      "loading": "送信中...",
+      "requiredHint": "* 必須フィールド"
+    },
+    "status": {
+      "validating": "ファイルを検証中...",
+      "sending": "コレクションを送信中...（数秒かかる場合があります）",
+      "success": "コレクションが登録されました！10分以内にコレクションがBitmapCoreでリストおよび取引可能になります。",
+      "error": "コレクションの登録エラー"
+    }
   }
 }
