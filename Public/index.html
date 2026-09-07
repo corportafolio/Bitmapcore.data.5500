@@ -6,53 +6,6 @@
   <title>BitmapCore</title>
   <meta name="description" content="The Bitmap marketplace on Bitcoin">
   <meta name="theme-color" content="#080008">
-  <link rel="manifest" href="/manifest.json">
-  <script>
-    (function() {
-      if (sessionStorage.getItem('sw_killed')) return;
-      sessionStorage.setItem('sw_killed', '1');
-      var done = function() { window.location.reload(); };
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          return Promise.all(regs.map(function(r) { return r.unregister(); }));
-        }).then(function() {
-          if ('caches' in window) {
-            return caches.keys().then(function(keys) {
-              return Promise.all(keys.map(function(k) { return caches.delete(k); }));
-            });
-          }
-        }).then(done).catch(done);
-      } else {
-        done();
-      }
-    })();
-  </script>
-  <script>
-    (function() {
-      var CUR = '122';
-      var reloading = false;
-      var doReload = function() {
-        if (reloading) return;
-        reloading = true;
-        sessionStorage.setItem('sw_killed', '1');
-        window.location.reload();
-      };
-      var check = function() {
-        try {
-          fetch('/version.txt?t=' + Date.now()).then(function(r) { return r.text(); }).then(function(t) {
-            var s = (t || '').trim();
-            if (s && s !== CUR) { doReload(); }
-          }).catch(function() {});
-        } catch (e) {}
-      };
-      check();
-      setInterval(check, 10000);
-      document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'visible') check();
-      });
-      window.addEventListener('focus', check);
-    })();
-  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Acme&family=Holtwood+One+SC&family=Alfa+Slab+One&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
     *{margin:0;padding:0;box-sizing:border-box}
@@ -221,14 +174,6 @@
 </style>
 </head>
 <body>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
-      navigator.serviceWorker.addEventListener('message', function(e) {
-        if (e.data && e.data.type === 'SW_UPDATE') { location.reload(); }
-      });
-    }
-  </script>
   <div id="root">
     <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#666;font-family:sans-serif;background:#080008">
       <p>Loading BitmapCore...</p>
