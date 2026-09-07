@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bitmapcore-v118';
+const CACHE_NAME = 'bitmapcore-v119';
 const PRECACHE = [
   '/',
   '/app.html',
@@ -26,7 +26,15 @@ self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(ks) {
       return Promise.all(ks.filter(function(k) { return k !== CACHE_NAME; }).map(function(k) { return caches.delete(k); }));
-    }).then(function() { return self.clients.claim(); })
+    }).then(function() {
+      return self.clients.claim();
+    }).then(function() {
+      return self.clients.matchAll();
+    }).then(function(clients) {
+      clients.forEach(function(client) {
+        client.postMessage({type: 'SW_UPDATE'});
+      });
+    })
   );
 });
 

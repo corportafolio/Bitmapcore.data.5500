@@ -1,3 +1,8 @@
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'SW_UPDATE') { location.reload(); }
+  });
+}
 var Header = React.createElement;
 
 function HeaderBar(props) {

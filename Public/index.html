@@ -29,7 +29,7 @@
   </script>
   <script>
     (function() {
-      var CUR = '118';
+      var CUR = '119';
       var reloading = false;
       var doReload = function() {
         if (reloading) return;
@@ -224,6 +224,9 @@
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'SW_UPDATE') { location.reload(); }
+      });
     }
   </script>
   <div id="root">
