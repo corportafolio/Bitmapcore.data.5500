@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bitmapcore-v119';
+const CACHE_NAME = 'bitmapcore-v120';
 const PRECACHE = [
   '/',
   '/app.html',
@@ -39,6 +39,10 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
+  if (e.request.method !== 'GET') return;
+  if (!e.request.url.startsWith('http')) return;
+  if (e.request.url.includes('chrome-extension')) return;
+
   if (e.request.url.includes('/version.txt') || e.request.url.endsWith('/') || e.request.url.endsWith('.html')) {
     e.respondWith(
       fetch(e.request).then(function(r) {
