@@ -75,6 +75,9 @@ function BittickAgentsPage(props) {
   var _bt = React.useState(null);
   var buyToast = _bt[0];
   var setBuyToast = _bt[1];
+  var _desc = React.useState(false);
+  var showDescription = _desc[0];
+  var setShowDescription = _desc[1];
 
   var BITTICK_COLLECTION_NAME = I18n.t('marketplace.bittickAgentsTitle');
 
@@ -384,7 +387,11 @@ function BittickAgentsPage(props) {
       React.createElement('div', { className: 'flex items-stretch justify-between' },
         React.createElement('div', { className: 'flex items-center gap-2 flex-shrink-0' },
           React.createElement('img', { src: 'LogoBittick.png', alt: I18n.t('marketplace.bittickAgentsTitle'), className: 'h-[45px] w-[45px] object-contain rounded my-[2px]' }),
-          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, I18n.t('marketplace.bittickAgentsTitle'))
+          React.createElement('span', { className: 'font-alfaslab text-sm text-white tracking-wide pt-1' }, I18n.t('marketplace.bittickAgentsTitle')),
+          React.createElement('button', {
+            onClick: function(e) { e.stopPropagation(); setShowDescription(!showDescription); },
+            className: 'ml-2 px-2 py-1 text-[10px] font-acme bg-bitmap-surface text-bitmap-orange border border-bitmap-orange rounded hover:bg-bitmap-orange hover:text-black transition-colors flex-shrink-0'
+          }, I18n.t('marketplace.collectionInfo'))
         ),
         React.createElement('div', { className: 'flex items-stretch' },
           React.createElement('div', { className: 'flex flex-col items-center px-2 border-r border-[#555]' },
@@ -415,6 +422,17 @@ function BittickAgentsPage(props) {
         )
       )
     ),
+    showDescription ? React.createElement('div', { className: 'pl-14 pr-4 pb-3 border-b border-bitmap-border', style: { backgroundColor: '#1A1A1A' } },
+      React.createElement('div', { className: 'max-w-3xl' },
+        React.createElement('div', { className: 'flex items-center gap-3 mb-2' },
+          React.createElement('span', { className: 'font-acme text-[11px] text-bitmap-orange font-bold' }, I18n.t('marketplace.collectionInfo') + ':'),
+          React.createElement('span', { className: 'font-acme text-[11px] text-bitmap-muted' }, I18n.t('marketplace.supply') + ': 100')
+        ),
+        React.createElement('p', { className: 'font-acme text-[11px] text-bitmap-text leading-relaxed', style: { lineHeight: '1.6' } },
+          I18n.t('marketplace.collectionDescription')
+        )
+      )
+    ) : null,
     listingStatus && listingStatus.toast ? React.createElement('div', { className: 'pl-14 pr-4 py-1.5 border-b border-bitmap-border', style: { backgroundColor: '#141414' } },
       React.createElement('p', { className: 'font-acme text-xs', style: { color: '#FF9C4A' } }, listingStatus.toast)
     ) : null,
