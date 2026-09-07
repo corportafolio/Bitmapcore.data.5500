@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bitmapcore-static-v121';
+const CACHE_NAME = 'bitmapcore-static-v122';
 
 self.addEventListener('install', function(e) {
   self.skipWaiting();
@@ -14,6 +14,8 @@ self.addEventListener('activate', function(e) {
   );
 });
 
+var OFFLINE = new Response('Offline', {status: 503, headers: {'Content-Type': 'text/plain'}});
+
 self.addEventListener('fetch', function(e) {
   if (e.request.method !== 'GET') return;
   if (!e.request.url.startsWith('http')) return;
@@ -22,25 +24,37 @@ self.addEventListener('fetch', function(e) {
   if (e.request.url.includes('/version.txt')) return;
   if (e.request.url.includes('cdn.tailwindcss.com')) return;
 
-  if (e.request.url.endsWith('.html') || e.request.url.endsWith('/')) {
+  if (e.request.url.endsWith('.html') || e.request.url === self.location.origin + '/' || e.request.url.endsWith('/')) {
     e.respondWith(
       fetch(e.request).then(function(r) {
-        var cl = r.clone();
-        caches.open(CACHE_NAME).then(function(c) { c.put(e.request, cl); });
+        if (r && r.ok) {
+          var cl = r.clone();
+          caches.open(CACHE_NAME).then(function(c) { c.put(e.request, cl); });
+        }
         return r;
-      }).catch(function() { return caches.match(e.request); })
+      }).catch(function() {
+        return caches.match(e.request).then(function(cached) {
+          return cached || OFFLINE;
+        });
+      })
     );
     return;
   }
 
   e.respondWith(
-    caches.match(e.request).then(function(r) {
-      if (r) return r;
-      return fetch(e.request).then(function(resp) {
-        var cl = resp.clone();
-        caches.open(CACHE_NAME).then(function(c) { c.put(e.request, cl); });
-        return resp;
+    caches.match(e.request).then(function(cached) {
+      if (cached) return cached;
+      return fetch(e.request).then(function(r) {
+        if (r && r.ok) {
+          var cl = r.clone();
+          caches.open(CACHE_NAME).then(function(c) { c.put(e.request, cl); });
+        }
+        return r;
+      }).catch(function() {
+        return OFFLINE;
       });
+    }).catch(function() {
+      return OFFLINE;
     })
   );
 });
