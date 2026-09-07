@@ -79,6 +79,7 @@ app.use(express.static(publicDir, {
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
     res.set('Surrogate-Control', 'no-store');
+    res.set('Clear-Site-Data', '"cache", "service-workers", "storage"');
   }
 }));
 
