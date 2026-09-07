@@ -70,6 +70,11 @@ setInterval(() => {
 }, 21600000);
 
 const publicDir = path.join(__dirname, 'Public');
+app.get('/sw.js', function(req, res) {
+  res.set('Clear-Site-Data', '"cache", "service-workers", "storage"');
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.sendFile(path.join(publicDir, 'sw.js'));
+});
 app.use(express.static(publicDir, {
   maxAge: 0,
   etag: false,
