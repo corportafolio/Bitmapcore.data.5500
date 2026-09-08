@@ -1,5 +1,21 @@
+function fixScientificNotation(text) {
+  if (!text || typeof text !== 'string') return text;
+  var trimmed = text.trim();
+  if (/^\d+(\.\d+)?[eE][+-]?\d+$/.test(trimmed)) {
+    var num = Number(trimmed);
+    if (num > 0 && num === Math.floor(num)) {
+      var exp = 0;
+      var coeff = num;
+      while (coeff % 10 === 0) { coeff = coeff / 10; exp++; }
+      return exp > 0 ? String(coeff) + 'e' + exp : String(num);
+    }
+  }
+  return text;
+}
+
 function translateTagText(text) {
   if (!text) return text;
+  text = fixScientificNotation(text);
   if (typeof I18n === 'undefined' || !I18n.getCurrentLang) return text;
   var lang = I18n.getCurrentLang();
   if (lang === 'es' || lang === 'ja' || lang === 'zh') return text;
