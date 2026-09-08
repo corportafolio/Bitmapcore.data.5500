@@ -197,6 +197,17 @@ function HeaderBar(props) {
   );
 }
 
+function fixTag(t) {
+  if (!t || typeof t !== 'string') return t;
+  var trimmed = t.trim();
+  if (/^\d+(\.\d+)?[eE][+-]?\d+$/.test(trimmed)) {
+    var n = Number(trimmed); var e = 0; var c = n;
+    while (c % 10 === 0) { c = c / 10; e++; }
+    return e > 0 ? String(c) + 'e' + e : String(n);
+  }
+  return trimmed;
+}
+
 function Sidebar(props) {
   var isOpen = props.isOpen;
   var collapsed = props.collapsed;
@@ -301,7 +312,7 @@ function Sidebar(props) {
                     return React.createElement('span', {
                       key: ti,
                       style:{ display:'inline-block', backgroundColor:'#8B2500', color:'#000', textShadow:'-1px 0 #FE3E00, 0 1px #FE3E00, 1px 0 #FE3E00, 0 -1px #FE3E00', border:'1px solid #B53D00', boxShadow:'inset 0 2px 6px rgba(0,0,0,0.5)', fontSize:'7px', borderRadius:'8px', padding:'2px 6px', whiteSpace:'nowrap', fontFamily:'Alfa Slab One, serif', fontWeight:'bold', lineHeight:'1.2' }
-                    }, tag.trim());
+                    }, fixTag(tag.trim()));
                   })
                 ),
 React.createElement('img', {
