@@ -300,50 +300,56 @@ function LocalPage(props) {
 
     setShowListDropdown(false);
 
-    MarketplaceLister.list({
-      selected: selected,
-      listApi: {
-        create: function(items) { return MarketplaceApi.unifiedList('bitmaps', items); },
-        sign: function(listingIds, signedPsbtHexs, pubKey) { return MarketplaceApi.unifiedSign('bitmaps', listingIds, signedPsbtHexs, pubKey); }
-      },
-      toBatchItem: function(item, wallet, pubKey) {
-        var isPriceUpdate = item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice;
-        return {
-          inscriptionId: item.id,
-          price: item.priceSatoshis,
-          sellerAddress: wallet.address,
-          sellerOrdinalPublicKey: pubKey,
-          sellerPaymentAddress: wallet.paymentAddress || wallet.address,
-          name: item.name || ('Bitmap #' + item.inscriptionNumber),
-          imageUrl: '',
-          bitmapNumber: item.blockNum || extractBlockNumber(item.name),
-          inscriptionNumber: item.inscriptionNumber,
-          inscriptionUtxo: item.output,
-          inscriptionValue: item.value,
-          inscriptionContentType: '',
-          inscriptionHeight: 0,
-          isPriceUpdate: isPriceUpdate
-        };
-      }
-    }, {
-      status: function(msg) { setListingStatus({ toast: msg }); },
-      onError: function(msg) { setListingStatus({ toast: msg }); },
-      onActivated: function(activated) {
-        setSuccessItems(activated);
-        setShowSuccessMenu(true);
-      },
-      onComplete: function(activated) {
-        fetchListings();
-        fetch('/api/v1/internal/refresh-local', { method: 'POST' }).then(function() {
-          if (typeof UnifiedViewModel !== 'undefined') {
-            UnifiedViewModel.loadFromCacheOnly();
-          }
-        }).catch(function() {});
-        if (activated) {
-          setSuccessToast({ message: selected.length + ' ' + I18n.t('toast.listedSuccess'), type: 'success' });
-          setTimeout(function() { setSuccessToast(null); }, 20000);
+    var _listTrackingId = null;
+    TrackingAPI.startListing('bitmaps', selected).then(function(id) {
+      _listTrackingId = id;
+
+      MarketplaceLister.list({
+        selected: selected,
+        listApi: {
+          create: function(items) { return MarketplaceApi.unifiedList('bitmaps', items); },
+          sign: function(listingIds, signedPsbtHexs, pubKey) { return MarketplaceApi.unifiedSign('bitmaps', listingIds, signedPsbtHexs, pubKey); }
+        },
+        toBatchItem: function(item, wallet, pubKey) {
+          var isPriceUpdate = item.isListed && item.existingPrice > 0 && item.priceSatoshis !== item.existingPrice;
+          return {
+            inscriptionId: item.id,
+            price: item.priceSatoshis,
+            sellerAddress: wallet.address,
+            sellerOrdinalPublicKey: pubKey,
+            sellerPaymentAddress: wallet.paymentAddress || wallet.address,
+            name: item.name || ('Bitmap #' + item.inscriptionNumber),
+            imageUrl: '',
+            bitmapNumber: item.blockNum || extractBlockNumber(item.name),
+            inscriptionNumber: item.inscriptionNumber,
+            inscriptionUtxo: item.output,
+            inscriptionValue: item.value,
+            inscriptionContentType: '',
+            inscriptionHeight: 0,
+            isPriceUpdate: isPriceUpdate
+          };
         }
-      }
+      }, {
+        status: function(msg) { setListingStatus({ toast: msg }); TrackingAPI.updateListing(_listTrackingId, { items_json: selected.map(function(i) { return { id: i.id, name: i.name, price: i.priceSatoshis, inscriptionNumber: i.inscriptionNumber }; }) }); },
+        onError: function(msg) { setListingStatus({ toast: msg }); TrackingAPI.submitListing(_listTrackingId, 'error', msg, 'LIST_ERROR'); },
+        onActivated: function(activated) {
+          setSuccessItems(activated);
+          setShowSuccessMenu(true);
+          TrackingAPI.submitListing(_listTrackingId, 'activated', null, null);
+        },
+        onComplete: function(activated) {
+          fetchListings();
+          fetch('/api/v1/internal/refresh-local', { method: 'POST' }).then(function() {
+            if (typeof UnifiedViewModel !== 'undefined') {
+              UnifiedViewModel.loadFromCacheOnly();
+            }
+          }).catch(function() {});
+          if (activated) {
+            setSuccessToast({ message: selected.length + ' ' + I18n.t('toast.listedSuccess'), type: 'success' });
+            setTimeout(function() { setSuccessToast(null); }, 20000);
+          }
+        }
+      });
     });
   };
 
@@ -396,42 +402,53 @@ function LocalPage(props) {
     setBuyResult(null);
     setBuySuccessData(null);
 
-    var ids = selected.map(function(item) { return item.bitmapId || item.id; });
-    var feeRate = getFeeRateSats();
+    var _buyTrackingId = null;
+    TrackingAPI.startBuying('bitmaps', selected).then(function(id) {
+      _buyTrackingId = id;
 
-    MarketplaceBuyer.buy({
-      selected: selected,
-      idFromItem: function(item) { return item.bitmapId || item.id; },
-      buyIdsKey: 'ids',
-      collection: 'bitmaps',
-      assetLabel: 'bitmap',
-      nameFromItem: function(item) { return (item.bitmapNumber || '?') + '.bitmap'; },
-      transport: {
-        batchBuy: MarketplaceApi.unifiedBuy,
-        batchBroadcast: MarketplaceApi.unifiedBroadcast
-      }
-    }, {
-      feeRate: feeRate, btcPrice: btcPrice, idempotencyPrefix: 'batch_buy'
-    }, {
-      status: function(s) { setBuyStatus({ message: s.message, type: s.type }); },
-      onBatchBuy: function(buyJson) {
-        if (window.bcAnalytics) window.bcAnalytics.track('buy_api_response', { success: !!buyJson.success, itemCount: selected.length });
-      },
-      onResult: function(result) {
-        if (window.bcAnalytics && result.type === 'success') {
-          window.bcAnalytics.track('buy_completed', { successCount: result.items.length, errorCount: result.errors.length, totalPaid: result.totalPaid });
+      var ids = selected.map(function(item) { return item.bitmapId || item.id; });
+      var feeRate = getFeeRateSats();
+
+      MarketplaceBuyer.buy({
+        selected: selected,
+        idFromItem: function(item) { return item.bitmapId || item.id; },
+        buyIdsKey: 'ids',
+        collection: 'bitmaps',
+        assetLabel: 'bitmap',
+        nameFromItem: function(item) { return (item.bitmapNumber || '?') + '.bitmap'; },
+        transport: {
+          batchBuy: MarketplaceApi.unifiedBuy,
+          batchBroadcast: MarketplaceApi.unifiedBroadcast
         }
-        if (result.type === 'success' && ids.length > 0) {
-          var soldSet = {};
-          ids.forEach(function(id) { soldSet[id] = true; });
-          setListings(listings.filter(function(l) { return !soldSet[l.bitmapId || l.id]; }));
+      }, {
+        feeRate: feeRate, btcPrice: btcPrice, idempotencyPrefix: 'batch_buy'
+      }, {
+        status: function(s) { setBuyStatus({ message: s.message, type: s.type }); },
+        onBatchBuy: function(buyJson) {
+          if (window.bcAnalytics) window.bcAnalytics.track('buy_api_response', { success: !!buyJson.success, itemCount: selected.length });
+          TrackingAPI.updateBuying(_buyTrackingId, { psbt_hex: buyJson.psbtHex || null });
+        },
+        onResult: function(result) {
+          if (window.bcAnalytics && result.type === 'success') {
+            window.bcAnalytics.track('buy_completed', { successCount: result.items.length, errorCount: result.errors.length, totalPaid: result.totalPaid });
+          }
+          if (result.type === 'success') {
+            TrackingAPI.submitBuying(_buyTrackingId, 'confirmed', null, null, result.txid || null);
+          } else {
+            TrackingAPI.submitBuying(_buyTrackingId, 'error', result.errors ? result.errors.map(function(e){return e.error||''}).join('; ') : 'Unknown error', 'BUY_ERROR');
+          }
+          if (result.type === 'success' && ids.length > 0) {
+            var soldSet = {};
+            ids.forEach(function(id) { soldSet[id] = true; });
+            setListings(listings.filter(function(l) { return !soldSet[l.bitmapId || l.id]; }));
+          }
+          setBuySuccessData(result);
+          setSelectedBuyItems([]);
+          setShowBuyMenu(false);
+          fetchListings();
+          fetch('/api/v1/internal/refresh-local', { method: 'POST' }).catch(function() {});
         }
-        setBuySuccessData(result);
-        setSelectedBuyItems([]);
-        setShowBuyMenu(false);
-        fetchListings();
-        fetch('/api/v1/internal/refresh-local', { method: 'POST' }).catch(function() {});
-      }
+      });
     });
   };
 

@@ -110,8 +110,7 @@
       React.createElement(Route, { path:'/mondrian/:id', element:wrapper(safe(MondrianPreviewPage)) }),
       React.createElement(Route, { path:'/search', element:wrapper(safe(BlockSearchPage)) }),
       React.createElement(Route, { path:'/settings', element:wrapper(safe(SettingsPage)) }),
-      React.createElement(Route, { path:'/world', element:React.createElement(safe(WorldPage), { navigate:navigate }) }),
-      React.createElement(Route, { path:'/admin/analytics', element:React.createElement('div', {id:'analytics-root', style:{height:'100vh',background:'#080008',padding:'20px',overflow:'auto'}}) })
+      React.createElement(Route, { path:'/world', element:React.createElement(safe(WorldPage), { navigate:navigate }) })
     );
   }
 

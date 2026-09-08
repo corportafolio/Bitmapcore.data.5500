@@ -6,6 +6,11 @@ var AnalyticsDashboard = (function(){
   var charts = {};
   var refreshTimer = null;
   var pagesGrouped = false;
+  var trackingTab = 'collection';
+  var trackingData = { total:0, page:1, limit:50, rows:[] };
+  var trackingLoading = false;
+  var trackingFilter = { status:'', search:'', days:0 };
+  var trackingDetail = null;
 
   function api(path, params){
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
@@ -301,6 +306,285 @@ var AnalyticsDashboard = (function(){
     );
   }
 
+  function fmtDate(ts){
+    if(!ts) return '-';
+    var d = new Date(ts);
+    var locMap={en:'en-US',es:'es-AR',fr:'fr-FR'};
+    var loc=(typeof I18n!=='undefined'&&I18n.getCurrentLang)?(locMap[I18n.getCurrentLang()]||'en-US'):'en-US';
+    return d.toLocaleDateString(loc,{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'});
+  }
+
+  function statusBadge(status){
+    var map = {
+      sent:{color:'#00AA00',bg:'rgba(0,170,0,0.15)',label:'Enviada'},
+      error:{color:'#FF3333',bg:'rgba(255,51,51,0.15)',label:'Error'},
+      cancelled:{color:'#FFD700',bg:'rgba(255,215,0,0.15)',label:'Cancelada'},
+      pending:{color:'#3498DB',bg:'rgba(52,152,219,0.15)',label:'Pendiente'}
+    };
+    var s = map[status] || map.pending;
+    return React.createElement('span', {
+      style:{display:'inline-block',padding:'4px 12px',borderRadius:'12px',background:s.bg,color:s.color,fontSize:'12px',fontWeight:'bold',whiteSpace:'nowrap'}
+    }, s.label);
+  }
+
+  function loadTrackingList(){
+    trackingLoading = true;
+    var params = 'limit='+trackingData.limit+'&page='+trackingData.page;
+    if(trackingFilter.status) params += '&status='+trackingFilter.status;
+    if(trackingFilter.search) params += '&search='+encodeURIComponent(trackingFilter.search);
+    if(trackingFilter.days) params += '&days='+trackingFilter.days;
+
+    api('/tracking/collection/list?'+params).then(function(d){
+      trackingData = d;
+      trackingLoading = false;
+      renderTrackingCollectionTable();
+    }).catch(function(e){
+      trackingLoading = false;
+      console.error('Tracking load error:', e);
+    });
+  }
+
+  function renderTrackingCollectionTable(){
+    var tableRoot = document.getElementById('tracking-table-container');
+    if(!tableRoot) return;
+
+    if(trackingData.rows.length === 0){
+      tableRoot.innerHTML = '<div style="color:#666;text-align:center;padding:40px">Sin registros de seguimiento</div>';
+      return;
+    }
+
+    var btnBase = {padding:'4px 10px',borderRadius:'4px',border:'1px solid #2A2A2A',background:'#1a1a1a',color:'#B0B0B0',cursor:'pointer',fontSize:'11px',fontFamily:'Acme,monospace'};
+    var btnActive = Object.assign({}, btnBase, {background:'#FE3E00',color:'#fff',borderColor:'#FE3E00'});
+
+    var filterBar = React.createElement('div', {style:{display:'flex',gap:'8px',marginBottom:'12px',flexWrap:'wrap',alignItems:'center'}},
+      React.createElement('input', {
+        type:'text',
+        placeholder:'Buscar por nombre...',
+        value:trackingFilter.search,
+        onChange:function(e){ trackingFilter.search=e.target.value; loadTrackingList(); },
+        style:{padding:'6px 12px',borderRadius:'6px',border:'1px solid #2A2A2A',background:'#191217',color:'#fff',fontSize:'13px',fontFamily:'Acme',outline:'none',flex:'1',minWidth:'150px'}
+      }),
+      React.createElement('div', {style:{display:'flex',gap:'4px'}},
+        ['','sent','error','cancelled','pending'].map(function(s){
+          var labels = {sent:'Enviadas',error:'Errores',cancelled:'Canceladas',pending:'Pendientes',todas:'Todas'};
+          var isActive = trackingFilter.status === s;
+          return React.createElement('button', {
+            key:s||'all',
+            onClick:function(){ trackingFilter.status=s; trackingData.page=1; loadTrackingList(); },
+            style:isActive?btnActive:btnBase
+          }, labels[s]||'Todas');
+        })
+      )
+    );
+
+    var statusFilter24h = React.createElement('button', {
+      onClick:function(){ trackingFilter.days=trackingFilter.days===1?0:1; trackingData.page=1; loadTrackingList(); },
+      style:trackingFilter.days===1?btnActive:btnBase
+    }, '24h');
+
+    var statusFilter7d = React.createElement('button', {
+      onClick:function(){ trackingFilter.days=trackingFilter.days===7?0:7; trackingData.page=1; loadTrackingList(); },
+      style:trackingFilter.days===7?btnActive:btnBase
+    }, '7d');
+
+    var filterBar2 = React.createElement('div', {style:{display:'flex',gap:'4px'}}, statusFilter24h, statusFilter7d);
+
+    var headers = ['Foto','Nombre','Descripcion','inscriptions.json','meta.json','Redes','Estado','Fecha'];
+    var rows = trackingData.rows.map(function(row){
+      var img = row.image_base64
+        ? React.createElement('img', {src:row.image_base64, style:{width:'40px',height:'40px',borderRadius:'6px',objectFit:'cover',cursor:'pointer'}, onClick:(function(r){return function(){trackingDetail=r;showTrackingDetailModal();}})(row)})
+        : React.createElement('div', {style:{width:'40px',height:'40px',borderRadius:'6px',background:'#2A2A2A',display:'flex',alignItems:'center',justifyContent:'center',color:'#666',fontSize:'10px'}}, 'N/A');
+
+      var descShort = row.description ? (row.description.length > 60 ? row.description.slice(0,60)+'...' : row.description) : '-';
+      var descFull = row.description || '';
+
+      var inscPreview = row.inscriptions_size ? row.inscriptions_size+' bytes' : '-';
+      var metaPreview = row.meta_size ? row.meta_size+' bytes' : '-';
+
+      var socials = React.createElement('div', {style:{display:'flex',gap:'6px'}},
+        row.x_account ? React.createElement('span', {style:{color:'#1DA1F2',fontSize:'12px'}}, '@') : null,
+        row.discord ? React.createElement('span', {style:{color:'#7289DA',fontSize:'12px'}}, 'D') : null
+      );
+
+      var fecha = fmtDate(row.created_at);
+
+      return [
+        img,
+        React.createElement('div', null,
+          React.createElement('div', {style:{color:'#fff',fontSize:'13px',fontWeight:'bold'}}, row.collection_name || '-'),
+          React.createElement('div', {style:{color:'#666',fontSize:'11px'}}, row.collection_slug || '')
+        ),
+        React.createElement('div', {style:{maxWidth:'200px'}},
+          React.createElement('div', {style:{color:'#B0B0B0',fontSize:'12px',whiteSpace:'pre-wrap',wordBreak:'break-word'}}, descShort),
+          descFull.length > 60 ? React.createElement('button', {
+            onClick:(function(d){return function(){alert(d);}})(descFull),
+            style:{background:'none',border:'none',color:'#FE3E00',cursor:'pointer',fontSize:'11px',padding:0}
+          }, 'Expandir') : null
+        ),
+        React.createElement('div', {style:{fontSize:'12px'}},
+          row.inscriptions_size ? React.createElement('button', {
+            onClick:(function(id){return function(){window.open(API+'/tracking/collection/'+id+'/download/inscriptions?key='+TOKEN,'_blank');}})(row.id),
+            style:{background:'none',border:'1px solid #2A2A2A',borderRadius:'4px',color:'#FE3E00',cursor:'pointer',fontSize:'11px',padding:'2px 8px'}
+          }, inscPreview) : React.createElement('span', {style:{color:'#666'}}, '-')
+        ),
+        React.createElement('div', {style:{fontSize:'12px'}},
+          row.meta_size ? React.createElement('button', {
+            onClick:(function(id){return function(){window.open(API+'/tracking/collection/'+id+'/download/meta?key='+TOKEN,'_blank');}})(row.id),
+            style:{background:'none',border:'1px solid #2A2A2A',borderRadius:'4px',color:'#FE3E00',cursor:'pointer',fontSize:'11px',padding:'2px 8px'}
+          }, metaPreview) : React.createElement('span', {style:{color:'#666'}}, '-')
+        ),
+        socials,
+        statusBadge(row.status),
+        React.createElement('span', {style:{color:'#666',fontSize:'12px',whiteSpace:'nowrap'}}, fecha)
+      ];
+    });
+
+    var table = React.createElement('table', {style:{width:'100%',borderCollapse:'collapse',background:'#191217',borderRadius:'8px',overflow:'hidden'}},
+      React.createElement('thead', null,
+        React.createElement('tr', {style:{background:'#2A2A2A'}},
+          headers.map(function(h, i){
+            return React.createElement('th', {
+              key:i,
+              style:{padding:'10px 14px',color:'#B0B0B0',textAlign:'left',fontSize:'12px',textTransform:'uppercase',letterSpacing:'0.5px',whiteSpace:'nowrap'}
+            }, h);
+          })
+        )
+      ),
+      React.createElement('tbody', null,
+        rows.map(function(row, ri){
+          return React.createElement('tr', {key:ri, style:{borderBottom:'1px solid #2A2A2A'}},
+            row.map(function(cell, ci){
+              return React.createElement('td', {
+                key:ci,
+                style:{padding:'10px 14px',color:ci===0?'#fff':'#B0B0B0',textAlign:'left',fontSize:'13px',verticalAlign:'middle'}
+              }, cell);
+            })
+          );
+        })
+      )
+    );
+
+    var pagination = React.createElement('div', {style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:'12px'}},
+      React.createElement('span', {style:{color:'#666',fontSize:'12px'}}, 'Total: '+trackingData.total+' registros'),
+      React.createElement('div', {style:{display:'flex',gap:'6px'}},
+        React.createElement('button', {
+          disabled:trackingData.page<=1,
+          onClick:function(){ trackingData.page--; loadTrackingList(); },
+          style:Object.assign({}, btnBase, {opacity:trackingData.page<=1?0.4:1})
+        }, 'Anterior'),
+        React.createElement('span', {style:{color:'#B0B0B0',fontSize:'12px',padding:'4px 8px'}}, 'Pagina '+trackingData.page),
+        React.createElement('button', {
+          disabled:trackingData.rows.length<trackingData.limit,
+          onClick:function(){ trackingData.page++; loadTrackingList(); },
+          style:Object.assign({}, btnBase, {opacity:trackingData.rows.length<trackingData.limit?0.4:1})
+        }, 'Siguiente')
+      )
+    );
+
+    ReactDOM.render(React.createElement('div', null, filterBar, filterBar2, table, pagination), tableRoot);
+  }
+
+  function showTrackingDetailModal(){
+    if(!trackingDetail) return;
+    var r = trackingDetail;
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
+
+    var content = document.createElement('div');
+    content.style.cssText = 'background:#191217;border:1px solid #2A2A2A;border-radius:12px;padding:24px;max-width:700px;width:100%;max-height:80vh;overflow-y:auto;color:#fff;font-family:Acme';
+
+    content.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 style="margin:0;color:#FE3E00">'+(r.collection_name||'Sin nombre')+'</h2><button id="modal-close" style="background:none;border:none;color:#666;font-size:24px;cursor:pointer">&times;</button></div>';
+
+    if(r.image_base64){
+      var imgEl = document.createElement('img');
+      imgEl.src = r.image_base64;
+      imgEl.style.cssText = 'width:100%;max-height:300px;object-fit:contain;border-radius:8px;margin-bottom:16px';
+      content.appendChild(imgEl);
+    }
+
+    var fields = [
+      ['Slug', r.collection_slug],
+      ['Descripcion', r.description],
+      ['X Account', r.x_account],
+      ['Discord', r.discord],
+      ['Estado', r.status],
+      ['Error', r.error_message],
+      ['Creado', fmtDate(r.created_at)],
+      ['Actualizado', fmtDate(r.updated_at)],
+      ['Enviado', fmtDate(r.sent_at)]
+    ];
+    fields.forEach(function(f){
+      if(!f[1]) return;
+      var row = document.createElement('div');
+      row.style.cssText = 'margin-bottom:8px';
+      row.innerHTML = '<span style="color:#666;font-size:12px">'+f[0]+': </span><span style="color:#B0B0B0;font-size:13px">'+f[1]+'</span>';
+      content.appendChild(row);
+    });
+
+    if(r.inscriptions_size){
+      var inscBtn = document.createElement('button');
+      inscBtn.textContent = 'Descargar inscriptions.json ('+r.inscriptions_size+' bytes)';
+      inscBtn.style.cssText = 'margin-top:12px;padding:8px 16px;border-radius:6px;border:1px solid #FE3E00;background:transparent;color:#FE3E00;cursor:pointer;font-family:Acme;font-size:13px';
+      inscBtn.onclick = function(){ window.open(API+'/tracking/collection/'+r.id+'/download/inscriptions?key='+TOKEN,'_blank'); };
+      content.appendChild(inscBtn);
+    }
+
+    if(r.meta_size){
+      var metaBtn = document.createElement('button');
+      metaBtn.textContent = 'Descargar meta.json ('+r.meta_size+' bytes)';
+      metaBtn.style.cssText = 'margin-top:12px;margin-left:8px;padding:8px 16px;border-radius:6px;border:1px solid #FE3E00;background:transparent;color:#FE3E00;cursor:pointer;font-family:Acme;font-size:13px';
+      metaBtn.onclick = function(){ window.open(API+'/tracking/collection/'+r.id+'/download/meta?key='+TOKEN,'_blank'); };
+      content.appendChild(metaBtn);
+    }
+
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+
+    document.getElementById('modal-close').onclick = function(){ document.body.removeChild(overlay); };
+  }
+
+  function renderTrackingCollection(){
+    var subTabs = React.createElement('div', {style:{display:'flex',gap:'4px',marginBottom:'16px',borderBottom:'1px solid #2A2A2A',paddingBottom:'8px'}},
+      [{id:'collection',label:'Enviar Coleccion'},{id:'listing',label:'Listar Activos'},{id:'buying',label:'Comprar Activos'}].map(function(t){
+        return React.createElement('button', {
+          key:t.id,
+          onClick:function(){ trackingTab=t.id; renderTracking(); },
+          style:{
+            padding:'8px 16px',background:trackingTab===t.id?'#FE3E00':'transparent',
+            border:trackingTab===t.id?'1px solid #FE3E00':'1px solid #2A2A2A',
+            borderRadius:'6px',color:trackingTab===t.id?'#fff':'#B0B0B0',
+            fontFamily:'Acme',fontSize:'13px',cursor:'pointer',transition:'all 0.2s'
+          }
+        }, t.label);
+      })
+    );
+
+    if(trackingTab === 'listing'){
+      return React.createElement('div', null, subTabs,
+        React.createElement('div', {style:{color:'#666',textAlign:'center',padding:'40px',fontFamily:'Acme'}}, 'Seccion "Listar Activos" - Proximamente')
+      );
+    }
+    if(trackingTab === 'buying'){
+      return React.createElement('div', null, subTabs,
+        React.createElement('div', {style:{color:'#666',textAlign:'center',padding:'40px',fontFamily:'Acme'}}, 'Seccion "Comprar Activos" - Proximamente')
+      );
+    }
+
+    return React.createElement('div', null, subTabs,
+      React.createElement('div', {id:'tracking-table-container'},
+        React.createElement('div', {style:{color:'#666',textAlign:'center',padding:'40px'}}, 'Cargando...')
+      )
+    );
+  }
+
+  function renderTracking(){
+    if(trackingTab === 'collection' && trackingData.rows.length === 0 && !trackingLoading){
+      loadTrackingList();
+    }
+    return renderTrackingCollection();
+  }
+
   function drawCharts(data){
     setTimeout(function(){
       if(currentTab === 'overview'){
@@ -439,13 +723,15 @@ var AnalyticsDashboard = (function(){
       else if(currentTab === 'events') tabContent = renderEvents(data);
       else if(currentTab === 'conversions') tabContent = renderConversions(data);
       else if(currentTab === 'tech') tabContent = renderTech(data);
+      else if(currentTab === 'tracking') tabContent = renderTracking();
 
       var tabs = TabBar([
         {id:'overview', label:'Overview'},
         {id:'pages', label:'Paginas'},
         {id:'events', label:'Eventos'},
         {id:'conversions', label:'Conversiones'},
-        {id:'tech', label:'Tecnologia'}
+        {id:'tech', label:'Tecnologia'},
+        {id:'tracking', label:'Seguimiento'}
       ]);
 
       var el = React.createElement('div', null, header, tabs, tabContent);

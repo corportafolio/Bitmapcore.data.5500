@@ -280,37 +280,43 @@ function BittickAgentsPage(props) {
     if (!wallet || !wallet.address) return;
     setShowListDropdown(false);
 
-    MarketplaceLister.list({
-      selected: selected,
-      listApi: {
-        create: function(items) { return MarketplaceApi.unifiedList('bittick', items); },
-        sign: function(listingIds, signedPsbtHexs, pubKey) { return MarketplaceApi.unifiedSign('bittick', listingIds, signedPsbtHexs, pubKey); }
-      },
-      toBatchItem: function(item, wallet, pubKey) {
-        return {
-          inscriptionId: item.id,
-          price: item.priceSatoshis,
-          sellerAddress: wallet.address,
-          sellerOrdinalPublicKey: pubKey,
-          sellerPaymentAddress: wallet.paymentAddress || wallet.address,
-          name: item.name || 'Bittick Agent',
-          imageUrl: '',
-          bitmapNumber: 0,
-          inscriptionNumber: item.inscriptionNumber,
-          inscriptionUtxo: item.output,
-          inscriptionValue: item.value,
-          inscriptionContentType: '',
-          inscriptionHeight: 0,
-          isPriceUpdate: false
-        };
-      }
-    }, {
-      status: function(msg) { setListingStatus({ toast: msg }); },
-      onError: function(msg) { setListingStatus({ toast: msg }); },
-      onActivated: function(activated) {
-        setSuccessItems(activated);
-        setShowSuccessMenu(true);
-      }
+    var _listTrackingId = null;
+    TrackingAPI.startListing('bittick', selected).then(function(id) {
+      _listTrackingId = id;
+
+      MarketplaceLister.list({
+        selected: selected,
+        listApi: {
+          create: function(items) { return MarketplaceApi.unifiedList('bittick', items); },
+          sign: function(listingIds, signedPsbtHexs, pubKey) { return MarketplaceApi.unifiedSign('bittick', listingIds, signedPsbtHexs, pubKey); }
+        },
+        toBatchItem: function(item, wallet, pubKey) {
+          return {
+            inscriptionId: item.id,
+            price: item.priceSatoshis,
+            sellerAddress: wallet.address,
+            sellerOrdinalPublicKey: pubKey,
+            sellerPaymentAddress: wallet.paymentAddress || wallet.address,
+            name: item.name || 'Bittick Agent',
+            imageUrl: '',
+            bitmapNumber: 0,
+            inscriptionNumber: item.inscriptionNumber,
+            inscriptionUtxo: item.output,
+            inscriptionValue: item.value,
+            inscriptionContentType: '',
+            inscriptionHeight: 0,
+            isPriceUpdate: false
+          };
+        }
+      }, {
+        status: function(msg) { setListingStatus({ toast: msg }); TrackingAPI.updateListing(_listTrackingId, { items_json: selected.map(function(i) { return { id: i.id, name: i.name, price: i.priceSatoshis, inscriptionNumber: i.inscriptionNumber }; }) }); },
+        onError: function(msg) { setListingStatus({ toast: msg }); TrackingAPI.submitListing(_listTrackingId, 'error', msg, 'LIST_ERROR'); },
+        onActivated: function(activated) {
+          setSuccessItems(activated);
+          setShowSuccessMenu(true);
+          TrackingAPI.submitListing(_listTrackingId, 'activated', null, null);
+        }
+      });
     });
   };
 
@@ -339,34 +345,45 @@ function BittickAgentsPage(props) {
     setBuyStatus({ message: 'Preparando compra batch...', type: 'loading' });
     setBuySuccessData(null);
 
-    var feeRate = getFeeRateSats();
+    var _buyTrackingId = null;
+    TrackingAPI.startBuying('bittick', selectedBuy).then(function(id) {
+      _buyTrackingId = id;
 
-    MarketplaceBuyer.buy({
-      selected: selectedBuy,
-      idFromItem: function(item) { return item.listingId || item.id; },
-      buyIdsKey: 'ids',
-      collection: 'bittick',
-      assetLabel: 'agente',
-      nameFromItem: function(item) { return item.name || ('Agent #' + (item.inscriptionNumber || '')); },
-      transport: {
-        batchBuy: MarketplaceApi.unifiedBuy,
-        batchBroadcast: MarketplaceApi.unifiedBroadcast
-      }
-    }, {
-      feeRate: feeRate, idempotencyPrefix: 'batch_buy'
-    }, {
-      status: function(s) { setBuyStatus({ message: s.message, type: s.type }); },
-      onBatchBuy: function(buyJson) {
-        if (window.bcAnalytics) window.bcAnalytics.track('buy_api_response', { success: !!buyJson.success, itemCount: selectedBuy.length });
-      },
-      onResult: function(result) {
-        if (window.bcAnalytics && result.type === 'success') {
-          window.bcAnalytics.track('buy_completed', { successCount: result.items.length, errorCount: result.errors.length, totalPaid: result.totalPaid });
+      var feeRate = getFeeRateSats();
+
+      MarketplaceBuyer.buy({
+        selected: selectedBuy,
+        idFromItem: function(item) { return item.listingId || item.id; },
+        buyIdsKey: 'ids',
+        collection: 'bittick',
+        assetLabel: 'agente',
+        nameFromItem: function(item) { return item.name || ('Agent #' + (item.inscriptionNumber || '')); },
+        transport: {
+          batchBuy: MarketplaceApi.unifiedBuy,
+          batchBroadcast: MarketplaceApi.unifiedBroadcast
         }
-        setBuySuccessData(result);
-        setSelectedItems([]);
-        setShowBuyMenu(false);
-      }
+      }, {
+        feeRate: feeRate, idempotencyPrefix: 'batch_buy'
+      }, {
+        status: function(s) { setBuyStatus({ message: s.message, type: s.type }); },
+        onBatchBuy: function(buyJson) {
+          if (window.bcAnalytics) window.bcAnalytics.track('buy_api_response', { success: !!buyJson.success, itemCount: selectedBuy.length });
+          TrackingAPI.updateBuying(_buyTrackingId, { psbt_hex: buyJson.psbtHex || null });
+        },
+        onResult: function(result) {
+          if (window.bcAnalytics && result.type === 'success') {
+            window.bcAnalytics.track('buy_completed', { successCount: result.items.length, errorCount: result.errors.length, totalPaid: result.totalPaid });
+          }
+          if (result.type === 'success') {
+            TrackingAPI.submitBuying(_buyTrackingId, 'confirmed', null, null, result.txid || null);
+          } else {
+            TrackingAPI.submitBuying(_buyTrackingId, 'error', result.errors ? result.errors.map(function(e){return e.error||''}).join('; ') : 'Unknown error', 'BUY_ERROR');
+          }
+          setBuySuccessData(result);
+          setSelectedItems([]);
+          setShowBuyMenu(false);
+        }
+      });
     });
   };
 

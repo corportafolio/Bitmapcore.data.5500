@@ -33,9 +33,56 @@ function AddCollectionPage(props) {
   var _status = React.useState(null);
   var status = _status[0];
   var setStatus = _status[1];
+  var _trackingId = React.useState(null);
+  var trackingId = _trackingId[0];
+  var setTrackingId = _trackingId[1];
+  var submittedRef = React.useRef(false);
 
   var MAX_PNG = 512;
   var REQUIRED_COLOR = '#FF3333';
+
+  React.useEffect(function() {
+    var sessionId = (typeof Analytics !== 'undefined' && Analytics.getSessionId) ? Analytics.getSessionId() : 'web-' + Date.now();
+    var userId = (typeof WalletState !== 'undefined' && WalletState.address) ? WalletState.address : null;
+    var apiUrl = '/api/analytics';
+    var key = '348129ce15c4f41269506691816ee90c';
+    fetch(apiUrl + '/tracking/collection/start?key=' + key, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, user_id: userId })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if(d && d.id) setTrackingId(d.id);
+    }).catch(function(){});
+
+    return function() {
+      if(submittedRef.current || !trackingId) return;
+      fetch(apiUrl + '/tracking/collection/cancel?key=' + key, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: trackingId })
+      }).catch(function(){});
+    };
+  }, []);
+
+  React.useEffect(function() {
+    if(!trackingId) return;
+    var timer = setTimeout(function() {
+      var apiUrl = '/api/analytics';
+      var key = '348129ce15c4f41269506691816ee90c';
+      var payload = { id: trackingId };
+      if(metaText) {
+        try { var m = JSON.parse(metaText); payload.collection_name = m.name || ''; payload.collection_slug = m.slug || ''; payload.description = m.description || ''; } catch(e){}
+      }
+      if(xAccount) payload.x_account = xAccount;
+      if(discord) payload.discord = discord;
+      fetch(apiUrl + '/tracking/collection/update?key=' + key, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function(){});
+    }, 1000);
+    return function() { clearTimeout(timer); };
+  }, [metaText, xAccount, discord]);
 
   var validateImage = function(file) {
     return new Promise(function(resolve) {
@@ -105,7 +152,18 @@ function AddCollectionPage(props) {
     if (!imageFile) errs.image = I18n.t('addCollection.image.errorRequired');
 
     setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).length > 0) {
+      if(trackingId) {
+        var apiUrl3 = '/api/analytics';
+        var key3 = '348129ce15c4f41269506691816ee90c';
+        fetch(apiUrl3 + '/tracking/collection/submit?key=' + key3, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: trackingId, status: 'error', error_message: 'Validation failed: ' + Object.keys(errs).join(', '), error_code: 'VALIDATION_ERROR' })
+        }).catch(function(){});
+      }
+      return;
+    }
 
     setStatus({ type: 'loading', message: I18n.t('addCollection.status.validating') });
 
@@ -114,11 +172,29 @@ function AddCollectionPage(props) {
       var inscData = JSON.parse(inscText);
       var inscItems = Array.isArray(inscData) ? inscData : (inscData && inscData.items);
       if (!Array.isArray(inscItems) || inscItems.length === 0) {
+        if(trackingId) {
+          var apiUrl4 = '/api/analytics';
+          var key4 = '348129ce15c4f41269506691816ee90c';
+          fetch(apiUrl4 + '/tracking/collection/submit?key=' + key4, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: trackingId, status: 'error', error_message: I18n.t('addCollection.inscriptions.errorEmpty'), error_code: 'INSCRIPTIONS_EMPTY' })
+          }).catch(function(){});
+        }
         setStatus({ type: 'error', message: I18n.t('addCollection.inscriptions.errorEmpty') });
         setErrors({ inscriptions: I18n.t('addCollection.inscriptions.errorEmpty') });
         return;
       }
     } catch (err) {
+      if(trackingId) {
+        var apiUrl5 = '/api/analytics';
+        var key5 = '348129ce15c4f41269506691816ee90c';
+        fetch(apiUrl5 + '/tracking/collection/submit?key=' + key5, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: trackingId, status: 'error', error_message: I18n.t('addCollection.inscriptions.errorInvalid'), error_code: 'INSCRIPTIONS_INVALID' })
+        }).catch(function(){});
+      }
       setStatus({ type: 'error', message: I18n.t('addCollection.inscriptions.errorInvalid') });
       setErrors({ inscriptions: I18n.t('addCollection.inscriptions.errorInvalid') });
       return;
@@ -126,6 +202,15 @@ function AddCollectionPage(props) {
 
     var imgCheck = await validateImage(imageFile);
     if (!imgCheck.ok) {
+      if(trackingId) {
+        var apiUrl6 = '/api/analytics';
+        var key6 = '348129ce15c4f41269506691816ee90c';
+        fetch(apiUrl6 + '/tracking/collection/submit?key=' + key6, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: trackingId, status: 'error', error_message: imgCheck.error, error_code: 'IMAGE_INVALID' })
+        }).catch(function(){});
+      }
       setStatus({ type: 'error', message: imgCheck.error });
       setErrors({ image: imgCheck.error });
       return;
@@ -142,6 +227,16 @@ function AddCollectionPage(props) {
         discord: discord || ''
       });
       var slug = res && res.data && res.data.slug;
+      submittedRef.current = true;
+      if(trackingId) {
+        var apiUrl = '/api/analytics';
+        var key = '348129ce15c4f41269506691816ee90c';
+        fetch(apiUrl + '/tracking/collection/submit?key=' + key, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: trackingId, status: 'sent' })
+        }).catch(function(){});
+      }
       setStatus({
         type: 'done',
         message: I18n.t('addCollection.status.success')
@@ -152,6 +247,15 @@ function AddCollectionPage(props) {
         }, 10000);
       }
     } catch (err) {
+      if(trackingId) {
+        var apiUrl2 = '/api/analytics';
+        var key2 = '348129ce15c4f41269506691816ee90c';
+        fetch(apiUrl2 + '/tracking/collection/submit?key=' + key2, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: trackingId, status: 'error', error_message: (err && err.message) || 'Unknown error' })
+        }).catch(function(){});
+      }
       setStatus({ type: 'error', message: (err && err.message) || I18n.t('addCollection.status.error') });
     }
   };

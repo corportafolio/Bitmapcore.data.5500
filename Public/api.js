@@ -265,3 +265,87 @@ var ParcelMarketApi = {
     }).then(function(r) { return r.text(); });
   }
 };
+
+var TrackingAPI = {
+  _key: '348129ce15c4f41269506691816ee90c',
+  _api: '/api/analytics',
+
+  _getSessionId: function() {
+    return (typeof Analytics !== 'undefined' && Analytics.getSessionId) ? Analytics.getSessionId() : 'web-' + Date.now();
+  },
+  _getUserId: function() {
+    return (typeof WalletState !== 'undefined' && WalletState.address) ? WalletState.address : null;
+  },
+
+  // Listing
+  startListing: function(collection, items) {
+    return fetch(this._api + '/tracking/listing/start?key=' + this._key, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: this._getSessionId(), user_id: this._getUserId(), collection: collection, items_json: items.map(function(i) { return { id: i.id, name: i.name, price: i.priceSatoshis, inscriptionNumber: i.inscriptionNumber }; }) })
+    }).then(function(r) { return r.json(); }).then(function(d) { return d.id || null; }).catch(function() { return null; });
+  },
+
+  updateListing: function(id, fields) {
+    if (!id) return Promise.resolve();
+    return fetch(this._api + '/tracking/listing/update?key=' + this._key, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ id: id }, fields))
+    }).then(function(r) { return r.json(); }).catch(function() {});
+  },
+
+  submitListing: function(id, status, errorMessage, errorCode) {
+    if (!id) return Promise.resolve();
+    return fetch(this._api + '/tracking/listing/submit?key=' + this._key, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, status: status, error_message: errorMessage || null, error_code: errorCode || null })
+    }).then(function(r) { return r.json(); }).catch(function() {});
+  },
+
+  cancelListing: function(id) {
+    if (!id) return Promise.resolve();
+    return fetch(this._api + '/tracking/listing/cancel?key=' + this._key, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    }).then(function(r) { return r.json(); }).catch(function() {});
+  },
+
+  // Buying
+  startBuying: function(collection, items) {
+    return fetch(this._api + '/tracking/buying/start?key=' + this._key, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: this._getSessionId(), user_id: this._getUserId(), collection: collection, items_json: items.map(function(i) { return { id: i.id || i.bitmapId, name: i.name, price: i.listedPrice || i.price, inscriptionNumber: i.inscriptionNumber }; }) })
+    }).then(function(r) { return r.json(); }).then(function(d) { return d.id || null; }).catch(function() { return null; });
+  },
+
+  updateBuying: function(id, fields) {
+    if (!id) return Promise.resolve();
+    return fetch(this._api + '/tracking/buying/update?key=' + this._key, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ id: id }, fields))
+    }).then(function(r) { return r.json(); }).catch(function() {});
+  },
+
+  submitBuying: function(id, status, errorMessage, errorCode, txid) {
+    if (!id) return Promise.resolve();
+    return fetch(this._api + '/tracking/buying/submit?key=' + this._key, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, status: status, error_message: errorMessage || null, error_code: errorCode || null, txid: txid || null })
+    }).then(function(r) { return r.json(); }).catch(function() {});
+  },
+
+  cancelBuying: function(id) {
+    if (!id) return Promise.resolve();
+    return fetch(this._api + '/tracking/buying/cancel?key=' + this._key, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    }).then(function(r) { return r.json(); }).catch(function() {});
+  }
+};

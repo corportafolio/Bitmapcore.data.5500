@@ -152,34 +152,40 @@ function CollectionsMarketPage(props) {
     var selected = ownItems.filter(function(it) { return it.isSelected && listPrices[it.id] && listPrices[it.id].sats > 0; });
     if (selected.length === 0) return;
     setListStatus('Preparando listings...');
-    MarketplaceLister.list({
-      selected: selected,
-      listApi: {
-        create: function(items) { return MarketplaceApi.unifiedList(slug, items); },
-        sign: function(ids, hexs, pubKey) { return MarketplaceApi.unifiedSign(slug, ids, hexs, pubKey); }
-      },
-      toBatchItem: function(item, w, pubKey) {
-        return {
-          inscriptionId: item.id,
-          price: listPrices[item.id].sats,
-          sellerAddress: w.address,
-          sellerOrdinalPublicKey: pubKey,
-          sellerPaymentAddress: w.paymentAddress || w.address,
-          name: item.name || ((collection && collection.name) || 'Activo') + ' #' + (item.inscriptionNumber || ''),
-          imageUrl: '',
-          inscriptionNumber: item.inscriptionNumber || 0,
-          inscriptionUtxo: item.output,
-          inscriptionValue: item.value,
-          inscriptionContentType: '',
-          inscriptionHeight: 0,
-          isPriceUpdate: false
-        };
-      }
-    }, {
-      status: function(m) { setListStatus(m); },
-      onError: function(m) { setListStatus(m); },
-      onActivated: function() { setListStatus('Colección listada correctamente'); loadAll(); },
-      onComplete: function() { setShowListMenu(false); }
+
+    var _listTrackingId = null;
+    TrackingAPI.startListing(slug, selected).then(function(id) {
+      _listTrackingId = id;
+
+      MarketplaceLister.list({
+        selected: selected,
+        listApi: {
+          create: function(items) { return MarketplaceApi.unifiedList(slug, items); },
+          sign: function(ids, hexs, pubKey) { return MarketplaceApi.unifiedSign(slug, ids, hexs, pubKey); }
+        },
+        toBatchItem: function(item, w, pubKey) {
+          return {
+            inscriptionId: item.id,
+            price: listPrices[item.id].sats,
+            sellerAddress: w.address,
+            sellerOrdinalPublicKey: pubKey,
+            sellerPaymentAddress: w.paymentAddress || w.address,
+            name: item.name || ((collection && collection.name) || 'Activo') + ' #' + (item.inscriptionNumber || ''),
+            imageUrl: '',
+            inscriptionNumber: item.inscriptionNumber || 0,
+            inscriptionUtxo: item.output,
+            inscriptionValue: item.value,
+            inscriptionContentType: '',
+            inscriptionHeight: 0,
+            isPriceUpdate: false
+          };
+        }
+      }, {
+        status: function(m) { setListStatus(m); TrackingAPI.updateListing(_listTrackingId, { items_json: selected.map(function(i) { return { id: i.id, name: i.name, price: listPrices[i.id] ? listPrices[i.id].sats : 0, inscriptionNumber: i.inscriptionNumber }; }) }); },
+        onError: function(m) { setListStatus(m); TrackingAPI.submitListing(_listTrackingId, 'error', m, 'LIST_ERROR'); },
+        onActivated: function() { setListStatus('Colección listada correctamente'); loadAll(); TrackingAPI.submitListing(_listTrackingId, 'activated', null, null); },
+        onComplete: function() { setShowListMenu(false); }
+      });
     });
   };
 
@@ -198,25 +204,39 @@ function CollectionsMarketPage(props) {
     setShowBuyMenu(true);
     setBuyResult(null);
     setBuyStatus({ message: 'Preparando compra...', type: 'loading' });
-    MarketplaceBuyer.buy({
-      selected: buySelected,
-      idFromItem: function(item) { return item.listingId || item.bitmapId || item.id; },
-      buyIdsKey: 'ids',
-      collection: slug,
-      assetLabel: (collection && collection.name) ? collection.name : 'activo',
-      nameFromItem: function(item) { return item.name || ((collection && collection.name) || 'Activo'); },
-      transport: {
-        batchBuy: function(payload) { payload.collection = slug; return MarketplaceApi.unifiedBuy(payload); },
-        batchBroadcast: function(payload) { payload.collection = slug; return MarketplaceApi.unifiedBroadcast(payload); }
-      }
-    }, { feeRate: 3, idempotencyPrefix: 'collection_buy' }, {
-      status: function(s) { setBuyStatus({ message: s.message, type: s.type }); },
-      onResult: function(result) {
-        setBuyResult(result);
-        setBuyStatus({ message: result.type === 'success' ? 'Compra exitosa' : 'Error en la compra', type: result.type });
-        setSelectedIds([]);
-        setTimeout(function() { loadAll(); }, 2000);
-      }
+
+    var _buyTrackingId = null;
+    TrackingAPI.startBuying(slug, buySelected).then(function(id) {
+      _buyTrackingId = id;
+
+      MarketplaceBuyer.buy({
+        selected: buySelected,
+        idFromItem: function(item) { return item.listingId || item.bitmapId || item.id; },
+        buyIdsKey: 'ids',
+        collection: slug,
+        assetLabel: (collection && collection.name) ? collection.name : 'activo',
+        nameFromItem: function(item) { return item.name || ((collection && collection.name) || 'Activo'); },
+        transport: {
+          batchBuy: function(payload) { payload.collection = slug; return MarketplaceApi.unifiedBuy(payload); },
+          batchBroadcast: function(payload) { payload.collection = slug; return MarketplaceApi.unifiedBroadcast(payload); }
+        }
+      }, { feeRate: 3, idempotencyPrefix: 'collection_buy' }, {
+        status: function(s) { setBuyStatus({ message: s.message, type: s.type }); },
+        onBatchBuy: function(buyJson) {
+          TrackingAPI.updateBuying(_buyTrackingId, { psbt_hex: buyJson.psbtHex || null });
+        },
+        onResult: function(result) {
+          if (result.type === 'success') {
+            TrackingAPI.submitBuying(_buyTrackingId, 'confirmed', null, null, result.txid || null);
+          } else {
+            TrackingAPI.submitBuying(_buyTrackingId, 'error', result.errors ? result.errors.map(function(e){return e.error||''}).join('; ') : 'Unknown error', 'BUY_ERROR');
+          }
+          setBuyResult(result);
+          setBuyStatus({ message: result.type === 'success' ? 'Compra exitosa' : 'Error en la compra', type: result.type });
+          setSelectedIds([]);
+          setTimeout(function() { loadAll(); }, 2000);
+        }
+      });
     });
   };
 
