@@ -94,20 +94,20 @@ function HeaderBar(props) {
           onClick: function(e) { e.stopPropagation(); setShowMarketplaceDropdown(!showMarketplaceDropdown); },
           className:'wallet-header-btn text-xs px-3 py-1.5 rounded-lg border border-bitmap-orange transition-all whitespace-nowrap',
           style: { background:'linear-gradient(135deg, #B53D00 0%, #8B2500 100%)', color:'#000000', textShadow:'none' }
-        }, I18n.t('nav.marketplace')),
+        }, 'Collection'),
         showMarketplaceDropdown ? React.createElement('div', {
           className:'absolute left-1/2 -translate-x-1/2 top-full mt-1 w-48 bg-bitmap-black border border-bitmap-border rounded-lg shadow-lg z-50 py-1',
           onClick: function(e) { e.stopPropagation(); }
         },
           React.createElement('button', {
-            onClick: function() { navigate('/local'); setShowMarketplaceDropdown(false); },
+            onClick: function() { navigate('/collections/bitmap'); setShowMarketplaceDropdown(false); },
             className:'w-full px-4 py-2 text-left font-jakarta text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors flex items-center gap-2'
           },
             React.createElement('img', { src:'BITMAP.png', style:{ width:'20px', height:'20px', borderRadius:'4px', objectFit:'contain' } }),
             'Bitmap'
           ),
           React.createElement('button', {
-            onClick: function() { navigate('/bittick-agents'); setShowMarketplaceDropdown(false); },
+            onClick: function() { navigate('/collections/bitticks-agents'); setShowMarketplaceDropdown(false); },
             className:'w-full px-4 py-2 text-left font-jakarta text-sm text-bitmap-text hover:bg-bitmap-black/30 hover:text-white transition-colors flex items-center gap-2'
           },
             React.createElement('img', { src:'LogoBittick.png', style:{ width:'20px', height:'20px', borderRadius:'4px', objectFit:'contain' } }),
