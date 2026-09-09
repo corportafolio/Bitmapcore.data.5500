@@ -37,6 +37,12 @@ function AddCollectionPage(props) {
   var trackingId = _trackingId[0];
   var setTrackingId = _trackingId[1];
   var submittedRef = React.useRef(false);
+  var _inscText = React.useState(null);
+  var inscText = _inscText[0];
+  var setInscText = _inscText[1];
+  var _imgB64 = React.useState(null);
+  var imageBase64 = _imgB64[0];
+  var setImageBase64 = _imgB64[1];
 
   var MAX_PNG = 512;
   var REQUIRED_COLOR = '#FF3333';
@@ -72,9 +78,12 @@ function AddCollectionPage(props) {
       var payload = { id: trackingId };
       if(metaText) {
         try { var m = JSON.parse(metaText); payload.collection_name = m.name || ''; payload.collection_slug = m.slug || ''; payload.description = m.description || ''; } catch(e){}
+        payload.meta_json = metaText;
       }
       if(xAccount) payload.x_account = xAccount;
       if(discord) payload.discord = discord;
+      if(inscText) payload.inscriptions_json = inscText;
+      if(imageBase64) payload.image_base64 = imageBase64;
       fetch(apiUrl + '/tracking/collection/update?key=' + key, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -82,7 +91,7 @@ function AddCollectionPage(props) {
       }).catch(function(){});
     }, 1000);
     return function() { clearTimeout(timer); };
-  }, [metaText, xAccount, discord]);
+  }, [metaText, xAccount, discord, inscText, imageBase64]);
 
   var validateImage = function(file) {
     return new Promise(function(resolve) {
@@ -112,7 +121,15 @@ function AddCollectionPage(props) {
   var onImageChange = function(e) {
     var f = e.target.files && e.target.files[0];
     if (f) { setImageFileName(f.name); } else { setImageFileName(''); }
-    validateImage(f);
+    validateImage(f).then(function() {
+      if (f) {
+        var reader = new FileReader();
+        reader.onload = function() { setImageBase64(reader.result); };
+        reader.readAsDataURL(f);
+      } else {
+        setImageBase64(null);
+      }
+    });
   };
 
   var onMetaChange = function(e) {
@@ -128,6 +145,13 @@ function AddCollectionPage(props) {
     var f = e.target.files && e.target.files[0];
     setInscFile(f);
     setInscFileName(f ? f.name : '');
+    if (f) {
+      var r = new FileReader();
+      r.onload = function() { setInscText(r.result); };
+      r.readAsText(f);
+    } else {
+      setInscText(null);
+    }
   };
 
   var parseMeta = function() {
