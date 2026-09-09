@@ -260,6 +260,21 @@ function AddCollectionPage(props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: trackingId, status: 'sent' })
         }).catch(function(){});
+        if(slug) {
+          fetch('/api/v1/assets/collections/' + slug).then(function(r){return r.json();}).then(function(d){
+            var iconId = d && d.data && d.data.icon_inscription_id;
+            if(iconId) {
+              var mj = {};
+              try { mj = JSON.parse(metaText); } catch(e){}
+              mj.icon_inscription_id = iconId;
+              fetch(apiUrl + '/tracking/collection/update?key=' + key, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: trackingId, meta_json: JSON.stringify(mj) })
+              }).catch(function(){});
+            }
+          }).catch(function(){});
+        }
       }
       setStatus({
         type: 'done',
