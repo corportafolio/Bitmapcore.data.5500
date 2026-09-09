@@ -395,7 +395,7 @@ function FloatingMarketplaceMenu(props) {
     { id:'ordinalswallet', label:'Ordinalswallet', path:'/ordinalswallet', icon:'ordinalswallet_logo.png', isImage:true },
     { id:'unisat', label:'Unisat', path:'/unisat', icon:'unisat_logo.png', isImage:true },
     { id:'satflow', label:'Satflow', path:'/satflow', icon:'satflow-logo.png', isImage:true },
-    { id:'local', label:'BitmapCore', path:'/local', icon:'logo_bitmapcore_logo.png', isImage:true },
+    { id:'local', label:'BitmapCore', path:'/collections/bitmap', icon:'logo_bitmapcore_logo.png', isImage:true },
     { id:'discounts', label: I18n.t('floatMenu.discounts'), path:'/discounts', icon:'discount.svg', isImage:true },
     { id:'unified', label: I18n.t('nav.unified'), path:'/unified', icon:'layers.svg', isImage:true },
     { id:'tags', label: I18n.t('floatMenu.listedTags'), path:'/listed-tags', icon:'\uD83C\uDFF7\uFE0F', isImage:false },
