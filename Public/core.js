@@ -1,6 +1,6 @@
 (function() {
   var Router = ReactRouterDOM;
-  var HashRouter = Router.HashRouter;
+  var BrowserRouter = Router.BrowserRouter;
   var Routes = Router.Routes;
   var Route = Router.Route;
   var useNavigate = Router.useNavigate;
@@ -116,7 +116,7 @@
 
   function Root() {
     return React.createElement(ErrorBoundary, null,
-      React.createElement(HashRouter, null,
+      React.createElement(BrowserRouter, null,
         React.createElement(AppRoutes, null)
       )
     );
