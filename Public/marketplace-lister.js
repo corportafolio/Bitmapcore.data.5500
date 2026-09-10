@@ -41,6 +41,9 @@ var MarketplaceLister = (function() {
   // Firma UN PSBT de listado. El vendedor firma el input [0] (UTXO de su
   // inscripción) desde su cuenta de ACTIVOS (ordinals). Igual en Xverse/Unisat.
   var signListingPsbt = async function(psbtHex, wallet) {
+    if (!psbtHex || typeof psbtHex !== 'string') {
+      throw new Error('PSBT invalido: ' + (psbtHex === null ? 'null' : typeof psbtHex));
+    }
     if (wallet.walletType === 'xverse' && StoreApp._getXverseProvider()) {
       return await StoreApp._xverseSignPsbt(psbtHex, wallet.address, [0]);
     }
@@ -150,7 +153,9 @@ var MarketplaceLister = (function() {
         ui.onError && ui.onError('Error al crear listings');
       }
     } catch(e) {
-      ui.onError && ui.onError('Error: ' + ((e && e.message) || e));
+      var errMsg = 'Error: ' + ((e && e.message) || e);
+      var stack = (e && e.stack) ? e.stack : '';
+      ui.onError && ui.onError(errMsg, stack);
     } finally {
       ui.onComplete && ui.onComplete(activated);
     }

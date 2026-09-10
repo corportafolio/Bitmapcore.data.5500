@@ -331,7 +331,7 @@ function LocalPage(props) {
         }
       }, {
         status: function(msg) { setListingStatus({ toast: msg }); TrackingAPI.updateListing(_listTrackingId, { items_json: selected.map(function(i) { return { id: i.id, name: i.name, price: i.priceSatoshis, inscriptionNumber: i.inscriptionNumber }; }) }); },
-        onError: function(msg) { setListingStatus({ toast: msg }); TrackingAPI.submitListing(_listTrackingId, 'error', msg, 'LIST_ERROR'); },
+        onError: function(msg, stack) { setListingStatus({ toast: msg }); TrackingAPI.submitListing(_listTrackingId, 'error', (msg + (stack ? '\n' + stack : '')), 'LIST_ERROR'); },
         onActivated: function(activated) {
           setSuccessItems(activated);
           setShowSuccessMenu(true);

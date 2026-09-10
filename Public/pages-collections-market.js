@@ -182,7 +182,7 @@ function CollectionsMarketPage(props) {
         }
       }, {
         status: function(m) { setListStatus(m); TrackingAPI.updateListing(_listTrackingId, { items_json: selected.map(function(i) { return { id: i.id, name: i.name, price: listPrices[i.id] ? listPrices[i.id].sats : 0, inscriptionNumber: i.inscriptionNumber }; }) }); },
-        onError: function(m) { setListStatus(m); TrackingAPI.submitListing(_listTrackingId, 'error', m, 'LIST_ERROR'); },
+        onError: function(m, stack) { setListStatus(m); TrackingAPI.submitListing(_listTrackingId, 'error', (m + (stack ? '\n' + stack : '')), 'LIST_ERROR'); },
         onActivated: function() { setListStatus('Colección listada correctamente'); loadAll(); TrackingAPI.submitListing(_listTrackingId, 'activated', null, null); },
         onComplete: function() { setShowListMenu(false); }
       });

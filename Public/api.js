@@ -349,3 +349,39 @@ var TrackingAPI = {
     }).then(function(r) { return r.json(); }).catch(function() {});
   }
 };
+
+// Reporter global de errores — envía stack completo al collector
+(function() {
+  var _api = '/api/analytics';
+  var _key = '348129ce15c4f41269506691816ee90c';
+  var _sent = {};
+
+  function reportError(source, msg, stack, url, line, col) {
+    var fingerprint = (msg || '') + ':' + (line || '') + ':' + (col || '');
+    if (_sent[fingerprint]) return;
+    _sent[fingerprint] = true;
+    try {
+      var payload = {
+        session_id: (typeof Analytics !== 'undefined' && Analytics.getSessionId) ? Analytics.getSessionId() : 'web-' + Date.now(),
+        user_id: (typeof WalletState !== 'undefined' && WalletState.address) ? WalletState.address : null,
+        source: source,
+        message: (msg || '').substring(0, 500),
+        stack: (stack || '').substring(0, 2000),
+        url: url || '',
+        line: line || 0,
+        column: col || 0,
+        timestamp: Date.now()
+      };
+      navigator.sendBeacon(_api + '/tracking/error?key=' + _key, JSON.stringify(payload));
+    } catch(e) {}
+  }
+
+  window.addEventListener('error', function(ev) {
+    reportError('window.onerror', ev.message, ev.error ? ev.error.stack : '', ev.filename, ev.lineno, ev.colno);
+  });
+
+  window.addEventListener('unhandledrejection', function(ev) {
+    var reason = ev.reason || {};
+    reportError('unhandledrejection', reason.message || String(reason), reason.stack || '', '', 0, 0);
+  });
+})();
